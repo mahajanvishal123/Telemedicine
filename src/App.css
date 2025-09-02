@@ -43,3 +43,14 @@ body, html {
     margin-left: 0px;
   }
 }
+
+
+
+
+.table td,
+.table th {
+  white-space: nowrap;       /* text wrap na ho */
+  overflow: hidden;          /* overflow hide ho */
+  text-overflow: ellipsis;   /* lamba text ho to ... dikhaye */
+  max-width: 200px;          /* optional: jitni width chaiye utni set karo */
+}
