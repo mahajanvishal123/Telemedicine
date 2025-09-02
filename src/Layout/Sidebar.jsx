@@ -24,6 +24,30 @@ const Sidebar = ({ collapsed, setCollapsed }) => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const role = localStorage.getItem("role"); // Get user role from localStorage
 
+
+  const handleNavigate = (path) => {
+  navigate(path);
+
+  // 👇 Mobile view में menu item click पर sidebar close कर दो
+  if (isMobile) {
+    setMobileMenuOpen(false);
+    setCollapsed(true); // ensure sidebar collapses in mobile
+  }
+};
+
+const toggleMobileMenu = () => {
+  setMobileMenuOpen(!mobileMenuOpen);
+
+  // जब open करो → collapsed false कर दो ताकि menu दिखाई दे
+  if (!mobileMenuOpen) {
+    setCollapsed(false);
+  } else {
+    setCollapsed(true);
+  }
+};
+
+
+
   useEffect(() => {
     const handleResize = () => {
       const mobile = window.innerWidth <= 768;
@@ -92,17 +116,6 @@ const Sidebar = ({ collapsed, setCollapsed }) => {
   const menus = getMenuItems();
 
   const isActive = (path) => location.pathname === path;
-
-  const handleNavigate = (path) => {
-    navigate(path);
-    if (isMobile) {
-      setMobileMenuOpen(false);
-    }
-  };
-
-  const toggleMobileMenu = () => {
-    setMobileMenuOpen(!mobileMenuOpen);
-  };
 
   return (
     <>

@@ -77,7 +77,7 @@ const Profile = () => {
           />
         </div>
 
-        <button type="submit" className="btn text-white" style={{backgroundColor: '#ff4d07ff'}}>Update Profile</button>
+        <button type="submit" className="btn text-white" style={{ backgroundColor: '#ff4d07ff' }}>Update Profile</button>
       </form>
 
       {/* Password Update */}
