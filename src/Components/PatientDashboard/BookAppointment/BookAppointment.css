@@ -1,0 +1,111 @@
+.book-bg {
+    background: #f8f6f3;
+    min-height: 100vh;
+  }
+  
+  .book-header-icon {
+    background: #FF6A00;
+    border-radius: 50%;
+    padding: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 2px 8px rgba(255,106,0,0.1);
+  }
+  
+  .book-stepper {
+    flex-wrap: wrap;
+    gap: 0.5rem;
+  }
+  
+  .book-step-circle {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    background: #fff;
+    border: 2px solid #bbb;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.2em;
+    transition: border 0.2s, background 0.2s;
+  }
+  .book-step-circle.active {
+    border: 2px solid #FF6A00;
+    background: #FF6A00;
+    color: #fff;
+  }
+  .book-step-circle.done {
+    background: #FF6A00;
+    border: 2px solid #FF6A00;
+    color: #fff;
+  }
+  
+  .book-specialty-card {
+    border-radius: 16px;
+    cursor: pointer;
+    border: 2px solid #fff;
+    transition: border 0.2s, box-shadow 0.2s;
+    min-height: 120px;
+  }
+  .book-specialty-card.selected,
+  .book-specialty-card:hover {
+    border: 2px solid #FF6A00;
+    box-shadow: 0 4px 16px rgba(255,106,0,0.08);
+  }
+  .book-specialty-icon {
+    background: #FF6A00;
+    border-radius: 50%;
+    width: 38px;
+    height: 38px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  
+  .book-doctor-card {
+    border-radius: 16px;
+    border: 2px solid #fff;
+    cursor: pointer;
+    transition: border 0.2s, box-shadow 0.2s;
+  }
+  .book-doctor-card.selected,
+  .book-doctor-card:hover {
+    border: 2px solid #FF6A00;
+    box-shadow: 0 4px 16px rgba(255,106,0,0.08);
+  }
+  .book-doctor-avatar {
+    background: #FF6A00;
+    border-radius: 50%;
+    width: 38px;
+    height: 38px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+  }
+  .book-doctor-status {
+    position: absolute;
+    right: 2px;
+    top: 2px;
+    width: 10px;
+    height: 10px;
+    background: #4caf50;
+    border-radius: 50%;
+    border: 2px solid #fff;
+  }
+  
+  .book-search {
+    border-radius: 20px;
+    border: 1px solid #FF6A00;
+  }
+  
+  @media (max-width: 767px) {
+    .book-stepper {
+      flex-direction: column;
+      gap: 0.2rem;
+    }
+    .book-header-icon {
+      margin-bottom: 1rem;
+    }
+  }

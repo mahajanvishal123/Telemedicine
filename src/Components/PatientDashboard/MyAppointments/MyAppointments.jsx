@@ -110,14 +110,14 @@ const MyAppointments = () => {
         <div className="card-body p-0">
           <div className="table-responsive">
             <table className="table table-hover mb-0">
-            <thead className="bg-light" style={{ height: '60px' }}>
+            <thead className="bg-light">
   <tr>
-    <th className="align-middle">Date & Time</th>
-    <th className="align-middle">Doctor</th>
-    <th className="align-middle">Specialty</th>
-    <th className="align-middle">Status</th>
-    <th className="align-middle">Payment</th>
-    <th className="align-middle">Actions</th>
+    <th className="py-4 align-middle">Date & Time</th>
+    <th className="py-4 align-middle">Doctor</th>
+    <th className="py-4 align-middle">Specialty</th>
+    <th className="py-4 align-middle">Status</th>
+    <th className="py-4 align-middle">Payment</th>
+    <th className="py-4 align-middle">Actions</th>
   </tr>
 </thead>
               <tbody>
