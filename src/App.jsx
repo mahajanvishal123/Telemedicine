@@ -19,6 +19,10 @@ import Profile from "./Components/PatientDashboard/Profile/Profile";
 import MyDoctors from "./Components/PatientDashboard/MyDoctors/MyDoctors";
 import MyAppointments from "./Components/PatientDashboard/MyAppointments/MyAppointments";
 import BookAppointment from "./Components/PatientDashboard/BookAppointment/BookAppointment";
+import ProviderDashboard from "./Components/ProviderDoctor/ProviderDashboard";
+import MyProfile from "./Components/ProviderDoctor/MyProfile";
+import MyCalendar from "./Components/ProviderDoctor/MyCalendar";  
+import ProviderMyAppointments from "./Components/ProviderDoctor/ProviderMyAppointments";
 import Visitlog from "./Components/CaregiverDashboard/Visitlog";
 
 
@@ -83,6 +87,11 @@ function App() {
                 <Route path="/patient/my-appointments" element={<MyAppointments/>} />
                 <Route path="/patient/my-doctors" element={<MyDoctors/>} />
                 <Route path="/patient/profile" element={<Profile/>} />
+
+                <Route path="/doctor/dashboard" element={<ProviderDashboard/>} />
+                <Route path="/doctor/appointments" element={<ProviderMyAppointments/>} />
+                <Route path="/doctor/profile" element={<MyProfile/>} />
+                <Route path="/doctor/calendar" element={<MyCalendar/>} />
          
 
               </Routes>
