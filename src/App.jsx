@@ -9,6 +9,7 @@ import ForgotPassword from "./Auth/ForgotPassword";
 import Sidebar from "./Layout/Sidebar";
 import Dashobard from "./Components/AdminDashboard/Dashobard";
 import Dashboard from "./Components/CaregiverDashboard/Dashboard";
+import Clients from "./Components/CaregiverDashboard/Clients";
 // import DepartmentOKRs from "./Component/Okrs-management/Departement/DepartmentOKRs";
 
 
@@ -29,7 +30,7 @@ function App() {
   const location = useLocation();
 
   const hideLayout =
-    location.pathname === "/" ||
+    location.pathname === "/login" ||
     location.pathname === "/signup" ||
     location.pathname === "/forgot-password";
 
@@ -37,7 +38,7 @@ function App() {
     <>
       {hideLayout ? (
         <Routes>
-          <Route path="/" element={<Login />} />
+          <Route path="/login" element={<Login />} />
           <Route path="/signup" element={<Signup />} />
           <Route path="/forgot-password" element={<ForgotPassword />} />
         </Routes>
@@ -56,7 +57,8 @@ function App() {
             >
               <Routes>
                 <Route path="dashboard" element={<Dashobard />} />
-                <Route path="caregiverdashboard" element={<Dashboard />} />
+                <Route path="/caregiver/dashboard" element={<Dashboard />} />
+                <Route path="/caregiver/clients" element={<Clients />} />
                 {/* <Route path="okrs/departmentokrs" element={<DepartmentOKRs />} /> */}
               </Routes>
             </div>
