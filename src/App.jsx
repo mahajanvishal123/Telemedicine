@@ -7,10 +7,19 @@ import Login from "./Auth/Login";
 import Signup from "./Auth/Signup";
 import ForgotPassword from "./Auth/ForgotPassword";
 import Sidebar from "./Layout/Sidebar";
-import Dashobard from "./Components/AdminDashboard/Dashobard";
 import Dashboard from "./Components/CaregiverDashboard/Dashboard";
 import Clients from "./Components/CaregiverDashboard/Clients";
 // import DepartmentOKRs from "./Component/Okrs-management/Departement/DepartmentOKRs";
+import Dashobard from "./Components/AdminDashboard/Dashboard";
+import UserManagement from "./Components/AdminDashboard/UserManagement";
+import Verification from "./Components/AdminDashboard/Verification";
+import Appointments from "./Components/AdminDashboard/Appointments";
+import PatientDashboard from "./Components/PatientDashboard/Dashboard/PatientDashboard";
+import Profile from "./Components/PatientDashboard/Profile/Profile";
+import MyDoctors from "./Components/PatientDashboard/MyDoctors/MyDoctors";
+import MyAppointments from "./Components/PatientDashboard/MyAppointments/MyAppointments";
+import BookAppointment from "./Components/PatientDashboard/BookAppointment/BookAppointment";
+import Visitlog from "./Components/CaregiverDashboard/Visitlog";
 
 
 function App() {
@@ -59,7 +68,23 @@ function App() {
                 <Route path="dashboard" element={<Dashobard />} />
                 <Route path="/caregiver/dashboard" element={<Dashboard />} />
                 <Route path="/caregiver/clients" element={<Clients />} />
+                <Route path="/caregiver/visit-log" element={<Visitlog />} />
+                <Route path="/admin/dashboard" element={<Dashobard/>} />
+                 <Route path="/admin/user-management" element={<UserManagement/>} />
+                 <Route path="/admin/verification" element={<Verification/>} />
+                 <Route path="/admin/appointments" element={<Appointments/>} />
+
                 {/* <Route path="okrs/departmentokrs" element={<DepartmentOKRs />} /> */}
+
+
+
+                <Route path="/patient/dashboard" element={<PatientDashboard/>} />
+                <Route path="/patient/book-appointment" element={<BookAppointment/>} />
+                <Route path="/patient/my-appointments" element={<MyAppointments/>} />
+                <Route path="/patient/my-doctors" element={<MyDoctors/>} />
+                <Route path="/patient/profile" element={<Profile/>} />
+         
+
               </Routes>
             </div>
           </div>

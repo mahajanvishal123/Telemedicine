@@ -4,7 +4,7 @@ body, html {
 
 .sidebar-container {
   position: fixed;
-  top: 65px;
+  top: 57px;
   left: 0;
   height: 100vh;
   background-color: #fff;
@@ -40,6 +40,6 @@ body, html {
 @media (max-width: 768px) {
   .right-side-content,
   .right-side-content.collapsed {
-    margin-left: 80px;
+    margin-left: 0px;
   }
 }

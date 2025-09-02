@@ -1,0 +1,21 @@
+.custom-navbar {
+  background-color: #121e34; /* Same as sidebar */
+  color: white;
+  border-bottom: 1px solid #1d2b49;
+}
+
+.btn-orange {
+  background: linear-gradient(90deg, #FF6A00, #FF2D00);
+  color: white;
+  border: none;
+  transition: 0.3s;
+}
+
+.btn-orange:hover {
+  opacity: 0.9;
+}
+
+.bg-orange {
+  background: linear-gradient(90deg, #FF6A00, #FF2D00);
+  color: white !important;
+}
