@@ -7,19 +7,16 @@ import Login from "./Auth/Login";
 import Signup from "./Auth/Signup";
 import ForgotPassword from "./Auth/ForgotPassword";
 import Sidebar from "./Layout/Sidebar";
-<<<<<<< HEAD
 import Dashobard from "./Components/AdminDashboard/Dashboard";
 import UserManagement from "./Components/AdminDashboard/UserManagement";
 import Verification from "./Components/AdminDashboard/Verification";
 import Appointments from "./Components/AdminDashboard/Appointments";
-=======
 import Dashobard from "./Components/AdminDashboard/Dashobard";
 import PatientDashboard from "./Components/PatientDashboard/Dashboard/PatientDashboard";
 import Profile from "./Components/PatientDashboard/Profile/Profile";
 import MyDoctors from "./Components/PatientDashboard/MyDoctors/MyDoctors";
 import MyAppointments from "./Components/PatientDashboard/MyAppointments/MyAppointments";
 import BookAppointment from "./Components/PatientDashboard/BookAppointment/BookAppointment";
->>>>>>> 19f43597eaeca4161448335ec08800ab0e884251
 
 
 function App() {
@@ -65,16 +62,11 @@ function App() {
               }`}
             >
               <Routes>
-<<<<<<< HEAD
                 <Route path="/admin/dashboard" element={<Dashobard/>} />
                  <Route path="/admin/user-management" element={<UserManagement/>} />
                  <Route path="/admin/verification" element={<Verification/>} />
                  <Route path="/admin/appointments" element={<Appointments/>} />
 
-=======
-                 <Route path="/profile" element={<Profile />} />
-                <Route path="dashboard" element={<Dashobard />} />
->>>>>>> 19f43597eaeca4161448335ec08800ab0e884251
                 {/* <Route path="okrs/departmentokrs" element={<DepartmentOKRs />} /> */}
 
 
