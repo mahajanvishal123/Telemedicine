@@ -66,7 +66,7 @@ const toggleMobileMenu = () => {
 
   // Menus for each dashboard
   const patientMenuItems = [
-    { label: "Home", path: "/patient/dashboard", icon: faTachometerAlt },
+    { label: "Dashboard", path: "/patient/dashboard", icon: faTachometerAlt },
     { label: "Book Appointment", path: "/patient/book-appointment", icon: faCalendarAlt },
     { label: "My Appointments", path: "/patient/my-appointments", icon: faClipboardList },
     { label: "My Doctors", path: "/patient/my-doctors", icon: faUserMd },
@@ -74,24 +74,24 @@ const toggleMobileMenu = () => {
   ];
 
   const providerMenuItems = [
-    { label: "Home", path: "/doctor/dashboard", icon: faTachometerAlt },
+    { label: "Dashboard", path: "/doctor/dashboard", icon: faTachometerAlt },
     { label: "My Calendar", path: "/doctor/calendar", icon: faCalendarAlt },
     { label: "My Appointments", path: "/doctor/appointments", icon: faClipboardList },
     { label: "My Profile", path: "/doctor/profile", icon: faUser },
   ];
 
   const caregiverMenuItems = [
-    { label: "Home", path: "/caregiver/dashboard", icon: faTachometerAlt },
+    { label: "Dashboard", path: "/caregiver/dashboard", icon: faTachometerAlt },
     { label: "My Clients", path: "/caregiver/clients", icon: faUsers },
     { label: "Visit Log", path: "/caregiver/visit-log", icon: faStethoscope },
   ];
 
   const adminMenuItems = [
-    { label: "Home", path: "/admin/dashboard", icon: faTachometerAlt },
+    { label: "Dashboard", path: "/admin/dashboard", icon: faTachometerAlt },
     { label: "User Management", path: "/admin/user-management", icon: faUserShield },
-    { label: "Patients", path: "/admin/patients", icon: faUser },
-    { label: "Providers", path: "/admin/providers", icon: faUserMd },
-    { label: "Caregivers", path: "/admin/caregivers", icon: faUsers },
+    // { label: "Patients", path: "/admin/patients", icon: faUser },
+    // { label: "Providers", path: "/admin/providers", icon: faUserMd },
+    // { label: "Caregivers", path: "/admin/caregivers", icon: faUsers },
     { label: "Verification", path: "/admin/verification", icon: faCheckCircle },
     { label: "Appointments", path: "/admin/appointments", icon: faCalendarCheck },
   ];

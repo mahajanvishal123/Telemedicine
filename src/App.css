@@ -40,6 +40,17 @@ body, html {
 @media (max-width: 768px) {
   .right-side-content,
   .right-side-content.collapsed {
-    margin-left: 80px;
+    margin-left: 0px;
   }
+}
+
+
+
+
+.table td,
+.table th {
+  white-space: nowrap;       /* text wrap na ho */
+  overflow: hidden;          /* overflow hide ho */
+  text-overflow: ellipsis;   /* lamba text ho to ... dikhaye */
+  max-width: 200px;          /* optional: jitni width chaiye utni set karo */
 }

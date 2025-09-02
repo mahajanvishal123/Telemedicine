@@ -3,41 +3,41 @@ import React, { useState } from 'react';
 const Verification = () => {
   // Sample data for doctors awaiting approval
   const [doctors, setDoctors] = useState([
-    { 
-      id: 1, 
-      name: 'Dr. Sarah Wilson', 
-      email: 'sarah@example.com', 
-      specialty: 'Cardiology', 
+    {
+      id: 1,
+      name: 'Dr. Sarah Wilson',
+      email: 'sarah@example.com',
+      specialty: 'Cardiology',
       license: 'MD12345',
       signupDate: '2023-10-15',
       experience: '8 years',
       documents: ['medical_license.pdf', 'id_proof.pdf']
     },
-    { 
-      id: 2, 
-      name: 'Dr. James Miller', 
-      email: 'james@example.com', 
-      specialty: 'Pediatrics', 
+    {
+      id: 2,
+      name: 'Dr. James Miller',
+      email: 'james@example.com',
+      specialty: 'Pediatrics',
       license: 'MD67890',
       signupDate: '2023-10-18',
       experience: '5 years',
       documents: ['medical_certificate.pdf', 'resume.pdf']
     },
-    { 
-      id: 3, 
-      name: 'Dr. Lisa Taylor', 
-      email: 'lisa@example.com', 
-      specialty: 'Dermatology', 
+    {
+      id: 3,
+      name: 'Dr. Lisa Taylor',
+      email: 'lisa@example.com',
+      specialty: 'Dermatology',
       license: 'MD54321',
       signupDate: '2023-10-20',
       experience: '10 years',
       documents: ['license_copy.pdf', 'degree_certificate.pdf']
     },
-    { 
-      id: 4, 
-      name: 'Dr. David Clark', 
-      email: 'david@example.com', 
-      specialty: 'Orthopedics', 
+    {
+      id: 4,
+      name: 'Dr. David Clark',
+      email: 'david@example.com',
+      specialty: 'Orthopedics',
       license: 'MD09876',
       signupDate: '2023-10-22',
       experience: '7 years',
@@ -63,16 +63,10 @@ const Verification = () => {
   };
 
   return (
-    <div className="container-fluid">
+    <div className="">
       {/* Page Header */}
-      <div className="d-flex justify-content-between align-items-center mb-4 mt-3">
-        <h1 className="h3 mb-0" style={{ color: '#F95918' }}>Verification</h1>
-        <nav aria-label="breadcrumb">
-          <ol className="breadcrumb">
-            <li className="breadcrumb-item"><a href="#" style={{ color: '#F95918' }}>Home</a></li>
-            <li className="breadcrumb-item active" aria-current="page">Verification</li>
-          </ol>
-        </nav>
+      <div className="d-flex justify-content-between align-items-center mb-2">
+        <h3 className="fw-bold">Verification</h3>
       </div>
 
       {/* Info Card */}
@@ -82,7 +76,7 @@ const Verification = () => {
             <div className="card-body">
               <h5 className="card-title" style={{ color: '#F95918' }}>Pending Verifications</h5>
               <p className="card-text">
-                This section displays doctors who have signed up but not been approved yet. 
+                This section displays doctors who have signed up but not been approved yet.
                 Review their information and documents before approving or rejecting their application.
               </p>
               <p className="card-text mb-0">
@@ -96,8 +90,8 @@ const Verification = () => {
       {/* Doctors Table */}
       <div className="row">
         <div className="col-12">
-          <div className="card shadow">
-            <div className="card-header" style={{ backgroundColor: '#F95918', color: 'white' }}>
+          <div className="card border-0 shadow">
+            <div className="card-header">
               <h5 className="mb-0">Doctors Awaiting Approval</h5>
             </div>
             <div className="card-body">
@@ -138,27 +132,27 @@ const Verification = () => {
                           <td>{doctor.signupDate}</td>
                           <td>{doctor.experience}</td>
                           <td>
-                            <button 
+                            <button
                               className="btn btn-sm btn-outline-primary"
                               onClick={() => viewDocuments(doctor.documents)}
                             >
-                              <i className="fas fa-file-alt me-1"></i> View Documents
+                              <i className="fas fa-file-alt"></i> View Documents
                             </button>
                           </td>
                           <td>
                             <div className="d-flex gap-2">
-                              <button 
-                                className="btn btn-sm flex-fill"
-                                style={{ backgroundColor: '#F95918', color: 'white' }}
+                              <button
+                                className="btn btn-sm btn-outline-success flex-fill"
+
                                 onClick={() => handleApprove(doctor.id)}
                               >
-                                <i className="fas fa-check me-1"></i> Approve
+                                Approve
                               </button>
-                              <button 
+                              <button
                                 className="btn btn-sm btn-outline-danger flex-fill"
                                 onClick={() => handleReject(doctor.id)}
                               >
-                                <i className="fas fa-times me-1"></i> Reject
+                                Reject
                               </button>
                             </div>
                           </td>
@@ -173,36 +167,66 @@ const Verification = () => {
         </div>
       </div>
 
+
       {/* Statistics Section */}
-      <div className="row mt-4">
-        <div className="col-md-4">
-          <div className="card bg-primary text-white text-center shadow">
-            <div className="card-body">
-              <h5 className="card-title">Total Verified</h5>
-              <h2 className="card-text">42</h2>
-              <p className="card-text">Doctors</p>
-            </div>
-          </div>
-        </div>
-        <div className="col-md-4">
-          <div className="card bg-warning text-dark text-center shadow">
-            <div className="card-body">
-              <h5 className="card-title">Pending Verification</h5>
-              <h2 className="card-text">{doctors.length}</h2>
-              <p className="card-text">Doctors</p>
-            </div>
-          </div>
-        </div>
-        <div className="col-md-4">
-          <div className="card bg-danger text-white text-center shadow">
-            <div className="card-body">
-              <h5 className="card-title">Rejected</h5>
-              <h2 className="card-text">8</h2>
-              <p className="card-text">Applications</p>
-            </div>
-          </div>
-        </div>
-      </div>
+     <div className="row mt-4">
+  <div className="col-12 col-sm-6 col-md-4 mb-3">
+    <div
+      style={{
+        backgroundColor: "#e3f2fd", // light blue
+        color: "#0d47a1",
+        textAlign: "center",
+        borderRadius: "12px",
+        boxShadow: "0 2px 6px rgba(0,0,0,0.1)",
+        padding: "20px",
+        height: "100%", // equal height cards
+      }}
+    >
+      <h5 style={{ fontWeight: "600" }}>Total Verified</h5>
+      <h2 style={{ fontWeight: "700" }}>42</h2>
+      <p>Doctors</p>
+    </div>
+  </div>
+
+  <div className="col-12 col-sm-6 col-md-4 mb-3">
+    <div
+      style={{
+        backgroundColor: "#fff8e1", // light yellow
+        color: "#f57f17",
+        textAlign: "center",
+        borderRadius: "12px",
+        boxShadow: "0 2px 6px rgba(0,0,0,0.1)",
+        padding: "20px",
+        height: "100%",
+      }}
+    >
+      <h5 style={{ fontWeight: "600" }}>Pending Verification</h5>
+      <h2 style={{ fontWeight: "700" }}>{doctors.length}</h2>
+      <p>Doctors</p>
+    </div>
+  </div>
+
+  <div className="col-12 col-sm-6 col-md-4 mb-3">
+    <div
+      style={{
+        backgroundColor: "#ffebee", // light red/pink
+        color: "#b71c1c",
+        textAlign: "center",
+        borderRadius: "12px",
+        boxShadow: "0 2px 6px rgba(0,0,0,0.1)",
+        padding: "20px",
+        height: "100%",
+      }}
+    >
+      <h5 style={{ fontWeight: "600" }}>Rejected</h5>
+      <h2 style={{ fontWeight: "700" }}>8</h2>
+      <p>Applications</p>
+    </div>
+  </div>
+</div>
+
+
+
     </div>
   );
 };

@@ -134,7 +134,7 @@ const Login = () => {
                     onChange={handleChange}
                     className="form-control"
                     style={{ borderRadius: "0.75rem", borderColor: "#FF6B2C" }}
-                    required
+                    // required
                   />
                 </div>
 
@@ -150,7 +150,7 @@ const Login = () => {
                     onChange={handleChange}
                     className="form-control"
                     style={{ borderRadius: "0.75rem", borderColor: "#FF6B2C" }}
-                    required
+                    // required
                   />
                   <span
                     className="position-absolute top-50 end-0 translate-middle-y me-3 mt-3"
