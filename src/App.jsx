@@ -8,6 +8,7 @@ import Signup from "./Auth/Signup";
 import ForgotPassword from "./Auth/ForgotPassword";
 import Sidebar from "./Layout/Sidebar";
 import Dashobard from "./Components/AdminDashboard/Dashobard";
+import Profile from "./Profile/Profile";
 
 
 function App() {
@@ -53,6 +54,7 @@ function App() {
               }`}
             >
               <Routes>
+                 <Route path="/profile" element={<Profile />} />
                 <Route path="dashboard" element={<Dashobard />} />
                 {/* <Route path="okrs/departmentokrs" element={<DepartmentOKRs />} /> */}
               </Routes>
