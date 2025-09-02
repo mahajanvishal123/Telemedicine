@@ -1,5 +1,5 @@
 import React from 'react';
-
+import { Link } from 'react-router-dom';
 const Dashboard = () => {
   // Sample data for demonstration
   const dashboardData = {
@@ -16,16 +16,10 @@ const Dashboard = () => {
   };
 
   return (
-    <div className="container-fluid">
+    <div className="">
       {/* Page Header */}
       <div className="d-flex justify-content-between align-items-center mb-4">
-        <h1 className="h3 mb-0" style={{ color: '#f95918' }}>Dashboard</h1>
-        <nav aria-label="breadcrumb">
-          <ol className="breadcrumb">
-            <li className="breadcrumb-item"><a href="#">Home</a></li>
-            <li className="breadcrumb-item active" aria-current="page">Dashboard</li>
-          </ol>
-        </nav>
+        <h3 className="fw-bold">Dashboard</h3>
       </div>
 
       {/* Stats Cards Row */}
@@ -41,7 +35,7 @@ const Dashboard = () => {
                   <div className="h5 mb-0 font-weight-bold text-gray-800">{dashboardData.totalUsers.toLocaleString()}</div>
                 </div>
                 <div className="col-auto">
-                  <i className="fas fa-users fa-2x text-gray-300"></i>
+                  <i className="fas fa-users fa-2x text-primary"></i>
                 </div>
               </div>
             </div>
@@ -59,7 +53,7 @@ const Dashboard = () => {
                   <div className="h5 mb-0 font-weight-bold text-gray-800">{dashboardData.totalAppointments.toLocaleString()}</div>
                 </div>
                 <div className="col-auto">
-                  <i className="fas fa-calendar-check fa-2x text-gray-300"></i>
+                  <i className="fas fa-calendar-check fa-2x text-success"></i>
                 </div>
               </div>
             </div>
@@ -77,7 +71,7 @@ const Dashboard = () => {
                   <div className="h5 mb-0 font-weight-bold text-gray-800">${dashboardData.totalEarnings.toLocaleString()}</div>
                 </div>
                 <div className="col-auto">
-                  <i className="fas fa-dollar-sign fa-2x text-gray-300"></i>
+                  <i className="fas fa-dollar-sign fa-2x text-info"></i>
                 </div>
               </div>
             </div>
@@ -95,7 +89,7 @@ const Dashboard = () => {
                   <div className="h5 mb-0 font-weight-bold text-gray-800">{dashboardData.recentSignups.length}</div>
                 </div>
                 <div className="col-auto">
-                  <i className="fas fa-user-plus fa-2x text-gray-300"></i>
+                  <i className="fas fa-user-plus fa-2x text-warning"></i>
                 </div>
               </div>
             </div>
@@ -108,10 +102,12 @@ const Dashboard = () => {
         <div className="col-12">
           <div className="card shadow mb-4">
             <div className="card-header py-3 d-flex justify-content-between align-items-center">
-              <h6 className="m-0 font-weight-bold" style={{ color: '#f95918' }}>Recent Sign-ups</h6>
+              <h6 className="m-0 font-weight-bold">Recent Sign-ups</h6>
+              <Link to="/admin/user-management">
               <button className="btn btn-sm" style={{ backgroundColor: '#f95918', color: 'white' }}>
                 View All
               </button>
+              </Link>
             </div>
             <div className="card-body">
               <div className="table-responsive">

@@ -127,7 +127,7 @@ const Appointments = () => {
 
   // Get status badge class and text
   const getStatusInfo = (status) => {
-    switch(status) {
+    switch (status) {
       case 'confirmed':
         return { class: 'bg-primary', text: 'Confirmed' };
       case 'pending':
@@ -143,7 +143,7 @@ const Appointments = () => {
 
   // Get type badge class
   const getTypeClass = (type) => {
-    switch(type) {
+    switch (type) {
       case 'New Patient':
         return 'bg-info';
       case 'Follow-up':
@@ -184,28 +184,28 @@ const Appointments = () => {
       return;
     }
 
-    setAppointments(prevAppointments => 
-      prevAppointments.map(app => 
-        app.id === selectedAppointment.id 
-          ? { ...app, date: rescheduleDate, time: rescheduleTime } 
+    setAppointments(prevAppointments =>
+      prevAppointments.map(app =>
+        app.id === selectedAppointment.id
+          ? { ...app, date: rescheduleDate, time: rescheduleTime }
           : app
       )
     );
-    
+
     setShowRescheduleModal(false);
     alert('Appointment rescheduled successfully!');
   };
 
   // Handle canceling an appointment
   const handleCancel = () => {
-    setAppointments(prevAppointments => 
-      prevAppointments.map(app => 
-        app.id === selectedAppointment.id 
-          ? { ...app, status: 'cancelled' } 
+    setAppointments(prevAppointments =>
+      prevAppointments.map(app =>
+        app.id === selectedAppointment.id
+          ? { ...app, status: 'cancelled' }
           : app
       )
     );
-    
+
     setShowCancelModal(false);
     alert('Appointment cancelled successfully!');
   };
@@ -219,16 +219,10 @@ const Appointments = () => {
   };
 
   return (
-    <div className="container-fluid">
+    <div className="">
       {/* Page Header */}
-      <div className="d-flex justify-content-between align-items-center mb-4 mt-3">
-        <h1 className="h3 mb-0" style={{ color: '#F95918' }}>Appointments</h1>
-        <nav aria-label="breadcrumb">
-          <ol className="breadcrumb">
-            <li className="breadcrumb-item"><a href="#" style={{ color: '#F95918' }}>Home</a></li>
-            <li className="breadcrumb-item active" aria-current="page">Appointments</li>
-          </ol>
-        </nav>
+      <div className="d-flex justify-content-between align-items-center mb-4">
+        <h3 className="fw-bold">Appointments</h3>
       </div>
 
       {/* Info Card */}
@@ -252,7 +246,7 @@ const Appointments = () => {
       <div className="row mb-4">
         <div className="col-12">
           <div className="card shadow">
-            <div className="card-header" style={{ backgroundColor: '#F95918', color: 'white' }}>
+            <div className="card-header">
               <h6 className="mb-0">Filter Appointments</h6>
             </div>
             <div className="card-body">
@@ -311,7 +305,7 @@ const Appointments = () => {
       <div className="row">
         <div className="col-12">
           <div className="card shadow">
-            <div className="card-header d-flex justify-content-between align-items-center" style={{ backgroundColor: '#F95918', color: 'white' }}>
+            <div className="card-header d-flex justify-content-between align-items-center">
               <h5 className="mb-0">Appointments List</h5>
               <span className="badge bg-light text-dark">{filteredAppointments.length} appointments</span>
             </div>
@@ -366,14 +360,14 @@ const Appointments = () => {
                             </td>
                             <td>
                               <div className="d-flex gap-2">
-                                <button 
+                                <button
                                   className="btn btn-sm btn-outline-primary"
                                   title="View Details"
                                   onClick={() => openDetailModal(appointment)}
                                 >
                                   <i className="fas fa-eye"></i>
                                 </button>
-                                <button 
+                                <button
                                   className="btn btn-sm btn-outline-secondary"
                                   title="Reschedule"
                                   onClick={() => openRescheduleModal(appointment)}
@@ -381,7 +375,7 @@ const Appointments = () => {
                                 >
                                   <i className="fas fa-calendar-alt"></i>
                                 </button>
-                                <button 
+                                <button
                                   className="btn btn-sm btn-outline-danger"
                                   title="Cancel Appointment"
                                   onClick={() => openCancelModal(appointment)}
@@ -405,50 +399,92 @@ const Appointments = () => {
 
       {/* Statistics Section */}
       <div className="row mt-4">
-        <div className="col-md-3">
-          <div className="card bg-primary text-white text-center shadow">
-            <div className="card-body py-3">
-              <h6 className="card-title">Total</h6>
-              <h4 className="card-text">{appointments.length}</h4>
-              <small className="card-text">Appointments</small>
-            </div>
+        <div className="col-12 col-sm-6 col-md-3 mb-3">
+          <div
+            style={{
+              backgroundColor: "#e3f2fd", // light blue
+              color: "#0d47a1",
+              textAlign: "center",
+              borderRadius: "12px",
+              boxShadow: "0 2px 6px rgba(0,0,0,0.1)",
+              padding: "15px",
+              height: "100%",
+            }}
+          >
+            <h6 style={{ fontWeight: "600" }}>Total</h6>
+            <h4 style={{ fontWeight: "700" }}>{appointments.length}</h4>
+            <small>Appointments</small>
           </div>
         </div>
-        <div className="col-md-3">
-          <div className="card bg-success text-white text-center shadow">
-            <div className="card-body py-3">
-              <h6 className="card-title">Confirmed</h6>
-              <h4 className="card-text">{appointments.filter(a => a.status === 'confirmed').length}</h4>
-              <small className="card-text">Appointments</small>
-            </div>
+
+        <div className="col-12 col-sm-6 col-md-3 mb-3">
+          <div
+            style={{
+              backgroundColor: "#e8f5e9", // light green
+              color: "#1b5e20",
+              textAlign: "center",
+              borderRadius: "12px",
+              boxShadow: "0 2px 6px rgba(0,0,0,0.1)",
+              padding: "15px",
+              height: "100%",
+            }}
+          >
+            <h6 style={{ fontWeight: "600" }}>Confirmed</h6>
+            <h4 style={{ fontWeight: "700" }}>
+              {appointments.filter((a) => a.status === "confirmed").length}
+            </h4>
+            <small>Appointments</small>
           </div>
         </div>
-        <div className="col-md-3">
-          <div className="card bg-warning text-dark text-center shadow">
-            <div className="card-body py-3">
-              <h6 className="card-title">Pending</h6>
-              <h4 className="card-text">{appointments.filter(a => a.status === 'pending').length}</h4>
-              <small className="card-text">Appointments</small>
-            </div>
+
+        <div className="col-12 col-sm-6 col-md-3 mb-3">
+          <div
+            style={{
+              backgroundColor: "#fffde7", // light yellow
+              color: "#f57f17",
+              textAlign: "center",
+              borderRadius: "12px",
+              boxShadow: "0 2px 6px rgba(0,0,0,0.1)",
+              padding: "15px",
+              height: "100%",
+            }}
+          >
+            <h6 style={{ fontWeight: "600" }}>Pending</h6>
+            <h4 style={{ fontWeight: "700" }}>
+              {appointments.filter((a) => a.status === "pending").length}
+            </h4>
+            <small>Appointments</small>
           </div>
         </div>
-        <div className="col-md-3">
-          <div className="card bg-danger text-white text-center shadow">
-            <div className="card-body py-3">
-              <h6 className="card-title">Cancelled</h6>
-              <h4 className="card-text">{appointments.filter(a => a.status === 'cancelled').length}</h4>
-              <small className="card-text">Appointments</small>
-            </div>
+
+        <div className="col-12 col-sm-6 col-md-3 mb-3">
+          <div
+            style={{
+              backgroundColor: "#ffebee", // light red/pink
+              color: "#b71c1c",
+              textAlign: "center",
+              borderRadius: "12px",
+              boxShadow: "0 2px 6px rgba(0,0,0,0.1)",
+              padding: "15px",
+              height: "100%",
+            }}
+          >
+            <h6 style={{ fontWeight: "600" }}>Cancelled</h6>
+            <h4 style={{ fontWeight: "700" }}>
+              {appointments.filter((a) => a.status === "cancelled").length}
+            </h4>
+            <small>Appointments</small>
           </div>
         </div>
       </div>
+
 
       {/* Detail Modal */}
       {showDetailModal && selectedAppointment && (
         <div className="modal fade show d-block" tabIndex="-1" style={{ backgroundColor: 'rgba(0,0,0,0.5)' }}>
           <div className="modal-dialog modal-lg">
             <div className="modal-content">
-              <div className="modal-header" style={{ backgroundColor: '#F95918', color: 'white' }}>
+              <div className="modal-header" >
                 <h5 className="modal-title">Appointment Details</h5>
                 <button type="button" className="btn-close" onClick={closeModals}></button>
               </div>
@@ -498,7 +534,7 @@ const Appointments = () => {
         <div className="modal fade show d-block" tabIndex="-1" style={{ backgroundColor: 'rgba(0,0,0,0.5)' }}>
           <div className="modal-dialog">
             <div className="modal-content">
-              <div className="modal-header" style={{ backgroundColor: '#F95918', color: 'white' }}>
+              <div className="modal-header">
                 <h5 className="modal-title">Reschedule Appointment</h5>
                 <button type="button" className="btn-close" onClick={closeModals}></button>
               </div>
@@ -506,30 +542,30 @@ const Appointments = () => {
                 <p>Reschedule appointment for <strong>{selectedAppointment.patientName}</strong> with <strong>{selectedAppointment.doctorName}</strong></p>
                 <div className="mb-3">
                   <label htmlFor="rescheduleDate" className="form-label">New Date</label>
-                  <input 
-                    type="date" 
-                    className="form-control" 
-                    id="rescheduleDate" 
-                    value={rescheduleDate} 
+                  <input
+                    type="date"
+                    className="form-control"
+                    id="rescheduleDate"
+                    value={rescheduleDate}
                     onChange={(e) => setRescheduleDate(e.target.value)}
                   />
                 </div>
                 <div className="mb-3">
                   <label htmlFor="rescheduleTime" className="form-label">New Time</label>
-                  <input 
-                    type="time" 
-                    className="form-control" 
-                    id="rescheduleTime" 
-                    value={rescheduleTime} 
+                  <input
+                    type="time"
+                    className="form-control"
+                    id="rescheduleTime"
+                    value={rescheduleTime}
                     onChange={(e) => setRescheduleTime(e.target.value)}
                   />
                 </div>
               </div>
               <div className="modal-footer">
                 <button type="button" className="btn btn-secondary" onClick={closeModals}>Cancel</button>
-                <button 
-                  type="button" 
-                  className="btn" 
+                <button
+                  type="button"
+                  className="btn"
                   style={{ backgroundColor: '#F95918', color: 'white' }}
                   onClick={handleReschedule}
                 >
@@ -546,7 +582,7 @@ const Appointments = () => {
         <div className="modal fade show d-block" tabIndex="-1" style={{ backgroundColor: 'rgba(0,0,0,0.5)' }}>
           <div className="modal-dialog">
             <div className="modal-content">
-              <div className="modal-header" style={{ backgroundColor: '#F95918', color: 'white' }}>
+              <div className="modal-header">
                 <h5 className="modal-title">Cancel Appointment</h5>
                 <button type="button" className="btn-close" onClick={closeModals}></button>
               </div>
@@ -561,10 +597,11 @@ const Appointments = () => {
               </div>
               <div className="modal-footer">
                 <button type="button" className="btn btn-secondary" onClick={closeModals}>No, Keep Appointment</button>
-                <button 
-                  type="button" 
-                  className="btn btn-danger" 
+                <button
+                  type="button"
+                  className="btn btn"
                   onClick={handleCancel}
+                  style={{ backgroundColor: '#F95918', color: 'white' }}
                 >
                   Yes, Cancel Appointment
                 </button>
