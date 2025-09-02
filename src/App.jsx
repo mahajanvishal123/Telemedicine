@@ -54,7 +54,7 @@ function App() {
               }`}
             >
               <Routes>
-                <Route path="dashboard" element={<Dashobard />} />
+                <Route path="/dashboard" element={<Dashobard />} />
                 {/* <Route path="okrs/departmentokrs" element={<DepartmentOKRs />} /> */}
               </Routes>
             </div>
