@@ -7,7 +7,10 @@ import Login from "./Auth/Login";
 import Signup from "./Auth/Signup";
 import ForgotPassword from "./Auth/ForgotPassword";
 import Sidebar from "./Layout/Sidebar";
-import Dashobard from "./Components/AdminDashboard/Dashobard";
+import Dashobard from "./Components/AdminDashboard/Dashboard";
+import UserManagement from "./Components/AdminDashboard/UserManagement";
+import Verification from "./Components/AdminDashboard/Verification";
+import Appointments from "./Components/AdminDashboard/Appointments";
 
 
 function App() {
@@ -53,7 +56,11 @@ function App() {
               }`}
             >
               <Routes>
-                <Route path="/dashboard" element={<Dashobard />} />
+                <Route path="/admin/dashboard" element={<Dashobard/>} />
+                 <Route path="/admin/user-management" element={<UserManagement/>} />
+                 <Route path="/admin/verification" element={<Verification/>} />
+                 <Route path="/admin/appointments" element={<Appointments/>} />
+
                 {/* <Route path="okrs/departmentokrs" element={<DepartmentOKRs />} /> */}
               </Routes>
             </div>
