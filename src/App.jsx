@@ -19,14 +19,11 @@ import Profile from "./Components/PatientDashboard/Profile/Profile";
 import MyDoctors from "./Components/PatientDashboard/MyDoctors/MyDoctors";
 import MyAppointments from "./Components/PatientDashboard/MyAppointments/MyAppointments";
 import BookAppointment from "./Components/PatientDashboard/BookAppointment/BookAppointment";
-<<<<<<< HEAD
 import ProviderDashboard from "./Components/ProviderDoctor/ProviderDashboard";
 import MyProfile from "./Components/ProviderDoctor/MyProfile";
 import MyCalendar from "./Components/ProviderDoctor/MyCalendar";  
 import ProviderMyAppointments from "./Components/ProviderDoctor/ProviderMyAppointments";
-=======
 import Visitlog from "./Components/CaregiverDashboard/Visitlog";
->>>>>>> acd9c3f5b695bba548ff138f550a1e5258bf62a9
 
 
 function App() {

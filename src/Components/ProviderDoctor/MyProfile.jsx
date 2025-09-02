@@ -73,25 +73,25 @@ const MyProfile = () => {
   }, []);
 
   return (
-    <div className="container my-4">
-      <div className="row justify-content-center">
-        <div className="col-lg-9 col-xl-8">
+    <div className="">
+      <div className="">
+        <div className="">
           {/* Header Section */}
-          <div className="text-center mb-4 profile-section">
-            <h1 className="h3 fw-bold mb-2" style={{ color: '#F95918' }}>My Profile</h1>
+          <div className="mb-4">
+            <h1 className="h3 fw-bold mb-2">My Profile</h1>
             <p className="text-muted mb-0">Manage your professional information and availability</p>
           </div>
           
           <div className="card shadow-sm border-0 overflow-hidden">
-            <div className="card-header py-3" style={{ backgroundColor: '#F95918' }}>
-              <h2 className="h5 mb-0 text-white text-center">Professional Profile</h2>
+            <div className="card-header py-3">
+              <h2 className="h5 mb-0">Professional Profile</h2>
             </div>
             
             <div className="card-body p-3 p-md-4">
               <form onSubmit={handleSubmit}>
                 <div className="row">
                   {/* Left Column - Form Fields */}
-                  <div className="col-md-7">
+                  <div className="col-md-7 order-2 order-md-1">
                     <div className="profile-section">
                       <div className="mb-3">
                         <label htmlFor="fullName" className="form-label fw-semibold">Full Name</label>
@@ -186,7 +186,7 @@ const MyProfile = () => {
                   </div>
                   
                   {/* Right Column - Profile Picture & Availability */}
-                  <div className="col-md-5">
+                  <div className="col-md-5 order-1 order-md-2">
                     <div className="profile-section">
                       <div className="text-center mb-3">
                         <div className="position-relative d-inline-block">
@@ -262,7 +262,7 @@ const MyProfile = () => {
                     </div>
                     
                     <div className="profile-section">
-                      <div className="d-grid mt-3">
+                      <div className="d-grid mt-3 mb-3">
                         <button
                           type="submit"
                           className="btn text-white py-2 fw-bold save-btn"
