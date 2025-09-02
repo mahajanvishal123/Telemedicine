@@ -4,11 +4,11 @@ const PatientDashboard = () => {
   return (
     <div className="bg-light" style={{ minHeight: '100vh' }}>
       {/* ✅ Welcome Banner - Full Width */}
-      <div className="container-fluid px-4 mb-4">
+      <div className="container-fluid px-3 px-md-4 mb-4">
         <div
           className="card shadow-sm border-0 rounded-3"
           style={{
-            backgroundColor: '#bb3b08',
+            backgroundColor: '#FF6A00',
             color: 'white',
             transition: 'transform 0.2s ease, box-shadow 0.2s ease',
             boxShadow: '0 4px 12px rgba(187, 59, 8, 0.2)',
@@ -22,22 +22,22 @@ const PatientDashboard = () => {
             e.currentTarget.style.boxShadow = '0 4px 12px rgba(187, 59, 8, 0.2)';
           }}
         >
-          <div className="card-body p-4">
+          <div className="card-body p-3 p-md-4">
             <div className="d-flex align-items-center gap-2 mb-2">
               <span>☀️</span>
               <small style={{ opacity: 0.9 }}>Good afternoon</small>
             </div>
-            <h1 className="h4 mb-2">Welcome back, John!</h1>
-            <p className="mb-0" style={{ opacity: 0.95 }}>
+            <h1 className="h5 h-md-4 mb-2">Welcome back, John!</h1>
+            <p className="mb-0" style={{ opacity: 0.95, fontSize: '0.95rem' }}>
               You have 2 appointments scheduled for today. Stay healthy and take care!
             </p>
           </div>
         </div>
       </div>
 
-      {/* Main Content - Two Columns */}
-      <div className="container-fluid px-4">
-        <div className="row g-4">
+      {/* Main Content - Responsive Grid */}
+      <div className="container-fluid px-3 px-md-4">
+        <div className="row g-3 g-md-4">
           {/* Left Column */}
           <div className="col-lg-7 col-md-12">
             {/* ✅ Next Appointment Card */}
@@ -56,10 +56,10 @@ const PatientDashboard = () => {
                 e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,0.08)';
               }}
             >
-              <div className="card-body p-4">
-                <div className="d-flex justify-content-between align-items-center mb-3">
+              <div className="card-body p-3 p-md-4">
+                <div className="d-flex justify-content-between align-items-center mb-3 flex-wrap">
                   <h5 className="mb-0">Next Appointment</h5>
-                  <span className="badge bg-success bg-opacity-75 text-white small px-2 py-1">
+                  <span className="badge bg-success bg-opacity-75 text-white small px-2 py-1 mt-2 mt-md-0">
                     Confirmed
                   </span>
                 </div>
@@ -71,7 +71,7 @@ const PatientDashboard = () => {
                     style={{
                       width: '40px',
                       height: '40px',
-                      backgroundColor: '#bb3b08',
+                      backgroundColor: '#FF6A00',
                       color: 'white',
                       fontSize: '18px',
                     }}
@@ -85,7 +85,7 @@ const PatientDashboard = () => {
                 </div>
 
                 {/* Details */}
-                <div className="d-flex flex-wrap gap-3 mb-4">
+                <div className="d-flex flex-column gap-2 mb-4">
                   <div className="d-flex align-items-center text-muted small">
                     📅 <span className="ms-1">Today</span>
                   </div>
@@ -101,12 +101,12 @@ const PatientDashboard = () => {
                 </div>
 
                 {/* Action Buttons */}
-                <div className="d-flex gap-2">
+                <div className="d-grid gap-2 d-sm-flex">
                   <button
-                    className="btn btn-sm px-4"
+                    className="btn btn-sm flex-fill"
                     style={{
-                      backgroundColor: '#bb3b08',
-                      borderColor: '#bb3b08',
+                      backgroundColor: '#FF6A00',
+                      borderColor: '#FF6A00',
                       color: 'white',
                       fontWeight: '500',
                       transition: 'background 0.3s ease, transform 0.2s ease',
@@ -116,20 +116,20 @@ const PatientDashboard = () => {
                       e.target.style.transform = 'scale(1.05)';
                     }}
                     onMouseLeave={(e) => {
-                      e.target.style.backgroundColor = '#bb3b08';
+                      e.target.style.backgroundColor = '#FF6A00';
                       e.target.style.transform = 'scale(1)';
                     }}
                   >
                     Join Call
                   </button>
                   <button
-                    className="btn btn-sm btn-outline-secondary px-4"
+                    className="btn btn-sm btn-outline-secondary flex-fill"
                     style={{
                       transition: 'background 0.3s ease, border-color 0.3s ease, transform 0.2s ease',
                     }}
                     onMouseEnter={(e) => {
                       e.target.style.backgroundColor = '#f0f0f0';
-                      e.target.style.borderColor = '#bb3b08';
+                      e.target.style.borderColor = '#FF6A00';
                       e.target.style.transform = 'scale(1.05)';
                     }}
                     onMouseLeave={(e) => {
@@ -160,19 +160,19 @@ const PatientDashboard = () => {
                 e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,0.08)';
               }}
             >
-              <div className="card-body p-4">
-                <div className="d-flex justify-content-between align-items-center mb-3">
+              <div className="card-body p-3 p-md-4">
+                <div className="d-flex justify-content-between align-items-center mb-3 flex-wrap">
                   <h5 className="mb-0">Recent Doctors</h5>
                   <a
                     href="#"
-                    className="text-decoration-none small"
-                    style={{ color: '#bb3b08', fontWeight: '500' }}
+                    className="text-decoration-none small mt-2 mt-md-0"
+                    style={{ color: '#FF6A00', fontWeight: '500' }}
                   >
                     View All →
                   </a>
                 </div>
 
-                <div className="row g-3">
+                <div className="row g-2 g-md-3">
                   {[
                     { name: 'Dr. Sarah Johnson', specialty: 'Cardiologist', rating: 4.9, time: '2 days ago' },
                     { name: 'Dr. Michael Chen', specialty: 'Neurologist', rating: 4.8, time: '1 week ago' },
@@ -195,17 +195,19 @@ const PatientDashboard = () => {
                           e.currentTarget.style.boxShadow = '';
                         }}
                       >
-                        <div className="card-body p-3">
+                        <div className="card-body p-2 p-md-3">
                           <div className="d-flex justify-content-between align-items-center">
                             <div>
-                              <h6 className="mb-0">{doctor.name}</h6>
+                              <h6 className="mb-0" style={{ fontSize: '0.9rem' }}>
+                                {doctor.name}
+                              </h6>
                               <p className="text-muted small mb-0">{doctor.specialty}</p>
                               <div className="d-flex align-items-center gap-1 mt-1">
                                 <span className="text-warning small">★ {doctor.rating}</span>
                                 <span className="text-muted small">{doctor.time}</span>
                               </div>
                             </div>
-                            <i style={{ color: '#bb3b08' }}>→</i>
+                            <i style={{ color: '#FF6A00', fontSize: '0.9rem' }}>→</i>
                           </div>
                         </div>
                       </div>
@@ -234,7 +236,7 @@ const PatientDashboard = () => {
                 e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,0.08)';
               }}
             >
-              <div className="card-body p-4">
+              <div className="card-body p-3 p-md-4">
                 <h5 className="mb-3">Quick Stats</h5>
                 <div className="d-flex flex-column gap-3">
                   {[
@@ -246,11 +248,11 @@ const PatientDashboard = () => {
                       <div
                         className="rounded me-3 d-flex align-items-center justify-content-center"
                         style={{
-                          width: '36px',
-                          height: '36px',
+                          width: '32px',
+                          height: '32px',
                           backgroundColor: stat.color,
                           color: 'white',
-                          fontSize: '16px',
+                          fontSize: '14px',
                         }}
                       >
                         {stat.icon}
@@ -282,7 +284,7 @@ const PatientDashboard = () => {
                 e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,0.08)';
               }}
             >
-              <div className="card-body p-4">
+              <div className="card-body p-3 p-md-4">
                 <h5 className="mb-3">Quick Actions</h5>
                 <div className="list-group list-group-flush">
                   {[
@@ -303,7 +305,7 @@ const PatientDashboard = () => {
                       onMouseEnter={(e) => {
                         e.target.style.transform = 'translateY(-1px)';
                         e.target.style.backgroundColor = '#f8f9fa';
-                        e.target.style.borderColor = '#bb3b08';
+                        e.target.style.borderColor = '#FF6A00';
                       }}
                       onMouseLeave={(e) => {
                         e.target.style.transform = 'translateY(0)';
@@ -315,7 +317,7 @@ const PatientDashboard = () => {
                         <h6 className="mb-0">{action.label}</h6>
                         <small className="text-muted">{action.desc}</small>
                       </div>
-                      <i style={{ color: '#bb3b08', transition: 'color 0.2s ease' }}>→</i>
+                      <i style={{ color: '#FF6A00', transition: 'color 0.2s ease' }}>→</i>
                     </a>
                   ))}
                 </div>
