@@ -11,7 +11,6 @@ import Dashobard from "./Components/AdminDashboard/Dashboard";
 import UserManagement from "./Components/AdminDashboard/UserManagement";
 import Verification from "./Components/AdminDashboard/Verification";
 import Appointments from "./Components/AdminDashboard/Appointments";
-import Dashobard from "./Components/AdminDashboard/Dashobard";
 import PatientDashboard from "./Components/PatientDashboard/Dashboard/PatientDashboard";
 import Profile from "./Components/PatientDashboard/Profile/Profile";
 import MyDoctors from "./Components/PatientDashboard/MyDoctors/MyDoctors";
