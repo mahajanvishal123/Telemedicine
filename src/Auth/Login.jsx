@@ -7,7 +7,7 @@ const Login = () => {
   const [formData, setFormData] = useState({
     email: "",
     password: "",
-    role: "admin", // Default role
+    role: "Admin", // Default role
   });
 
   const [user, setUser] = useState(null);
@@ -56,70 +56,105 @@ const Login = () => {
   }, [user, role, navigate]);
 
   return (
-    <div className="container-fluid min-vh-100 d-flex align-items-center justify-content-center bg-light px-3">
-      <div className="card shadow w-100" style={{ maxWidth: "950px", borderRadius: "1.5rem" }}>
+    <div
+      className="container-fluid min-vh-100 d-flex align-items-center justify-content-center"
+      style={{
+        background: "linear-gradient(135deg, #ffffffff, #f7e4dcff)",
+        padding: "1rem",
+      }}
+    >
+      <div
+        className="card shadow w-100"
+        style={{
+          maxWidth: "950px",
+          borderRadius: "1.5rem",
+          overflow: "hidden",
+          border: "none",
+        }}
+      >
         <div className="row g-0">
           {/* Left image */}
           <div className="col-md-6 d-none d-md-block">
             <img
-              src="https://img.freepik.com/free-vector/login-concept-illustration_114360-739.jpg"
+              src="https://i.ibb.co/4ZhScbBS/3823521.jpg"
               alt="login"
-              className="img-fluid rounded-start"
+              className="img-fluid"
               style={{ height: "100%", objectFit: "cover" }}
             />
           </div>
 
           {/* Right form */}
-          <div className="col-md-6 d-flex align-items-center p-5">
+          <div
+            className="col-md-6 d-flex align-items-center p-5"
+            style={{ backgroundColor: "#FFFFFF" }}
+          >
             <div className="w-100">
-              <h2 className="fw-bold mb-3 text-center">Welcome Back!</h2>
-              <p className="text-muted text-center mb-4">Please login to your account</p>
+              <h2
+                className="fw-bold mb-3 text-center"
+                style={{ color: "#FF6B2C" }}
+              >
+                Welcome Back!
+              </h2>
+              <p className="text-muted text-center mb-4">
+                Please login to your account
+              </p>
 
               <form onSubmit={handleSubmit}>
                 {/* Role Select */}
                 <div className="mb-3">
-                  <label className="form-label">Select Role</label>
+                  <label className="form-label fw-semibold" style={{ color: "#1B263B" }}>
+                    Select Role
+                  </label>
                   <select
                     name="role"
                     value={formData.role}
                     onChange={handleChange}
                     className="form-select"
+                    style={{
+                      borderColor: "#FF6B2C",
+                      borderRadius: "0.75rem",
+                    }}
                   >
                     <option value="Admin">Admin</option>
                     <option value="Patient">Patient</option>
                     <option value="Doctor">Provider / Doctor</option>
                     <option value="Caregiver">Caregiver</option>
-
                   </select>
                 </div>
 
                 {/* Email */}
                 <div className="mb-3">
-                  <label className="form-label">Email address</label>
+                  <label className="form-label fw-semibold" style={{ color: "#1B263B" }}>
+                    Email address
+                  </label>
                   <input
                     type="email"
                     name="email"
                     value={formData.email}
                     onChange={handleChange}
                     className="form-control"
+                    style={{ borderRadius: "0.75rem", borderColor: "#FF6B2C" }}
                     required
                   />
                 </div>
 
                 {/* Password */}
                 <div className="mb-3 position-relative">
-                  <label className="form-label">Password</label>
+                  <label className="form-label fw-semibold" style={{ color: "#1B263B" }}>
+                    Password
+                  </label>
                   <input
                     type={showPassword ? "text" : "password"}
                     name="password"
                     value={formData.password}
                     onChange={handleChange}
                     className="form-control"
+                    style={{ borderRadius: "0.75rem", borderColor: "#FF6B2C" }}
                     required
                   />
                   <span
-                    className="position-absolute top-50 end-0 translate-middle-y me-3"
-                    style={{ cursor: "pointer" }}
+                    className="position-absolute top-50 end-0 translate-middle-y me-3 mt-3"
+                    style={{ cursor: "pointer", color: "#FF6B2C" }}
                     onClick={() => setShowPassword(!showPassword)}
                   >
                     {showPassword ? (
@@ -134,13 +169,29 @@ const Login = () => {
                 <div className="mb-3 d-flex justify-content-between align-items-center">
                   <div className="form-check">
                     <input className="form-check-input" type="checkbox" id="remember" />
-                    <label className="form-check-label" htmlFor="remember">Remember me</label>
+                    <label className="form-check-label" htmlFor="remember">
+                      Remember me
+                    </label>
                   </div>
-                  <Link to="/forgot-password" className="text-decoration-none small">Forgot Password?</Link>
+                  <Link
+                    to="/forgot-password"
+                    className="small"
+                    style={{ color: "#FF6B2C", textDecoration: "none" }}
+                  >
+                    Forgot Password?
+                  </Link>
                 </div>
 
                 {/* Submit */}
-                <button type="submit" className="btn btn-warning w-100 py-2">
+                <button
+                  type="submit"
+                  className="btn w-100 py-2 fw-bold"
+                  style={{
+                    backgroundColor: "#FF6B2C",
+                    color: "#fff",
+                    borderRadius: "0.75rem",
+                  }}
+                >
                   Login
                 </button>
               </form>
@@ -148,7 +199,15 @@ const Login = () => {
               {/* Signup link */}
               <div className="text-center mt-3">
                 <p className="mb-1">Don't have an account?</p>
-                <Link to="/signup" className="btn btn-outline-warning w-100 py-2">
+                <Link
+                  to="/signup"
+                  className="btn w-100 py-2 fw-bold"
+                  style={{
+                    border: "2px solid #FF6B2C",
+                    color: "#FF6B2C",
+                    borderRadius: "0.75rem",
+                  }}
+                >
                   Sign Up
                 </Link>
               </div>

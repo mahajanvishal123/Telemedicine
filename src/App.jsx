@@ -58,6 +58,7 @@ function App() {
               }`}
             >
               <Routes>
+                 <Route path="/profile" element={<Profile />} />
                 <Route path="dashboard" element={<Dashobard />} />
                 {/* <Route path="okrs/departmentokrs" element={<DepartmentOKRs />} /> */}
 
