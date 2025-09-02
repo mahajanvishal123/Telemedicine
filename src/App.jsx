@@ -8,7 +8,11 @@ import Signup from "./Auth/Signup";
 import ForgotPassword from "./Auth/ForgotPassword";
 import Sidebar from "./Layout/Sidebar";
 import Dashobard from "./Components/AdminDashboard/Dashobard";
-import Profile from "./Profile/Profile";
+import PatientDashboard from "./Components/PatientDashboard/Dashboard/PatientDashboard";
+import Profile from "./Components/PatientDashboard/Profile/Profile";
+import MyDoctors from "./Components/PatientDashboard/MyDoctors/MyDoctors";
+import MyAppointments from "./Components/PatientDashboard/MyAppointments/MyAppointments";
+import BookAppointment from "./Components/PatientDashboard/BookAppointment/BookAppointment";
 
 
 function App() {
@@ -57,6 +61,16 @@ function App() {
                  <Route path="/profile" element={<Profile />} />
                 <Route path="dashboard" element={<Dashobard />} />
                 {/* <Route path="okrs/departmentokrs" element={<DepartmentOKRs />} /> */}
+
+
+
+                <Route path="/patient/dashboard" element={<PatientDashboard/>} />
+                <Route path="/patient/book-appointment" element={<BookAppointment/>} />
+                <Route path="/patient/my-appointments" element={<MyAppointments/>} />
+                <Route path="/patient/my-doctors" element={<MyDoctors/>} />
+                <Route path="/patient/profile" element={<Profile/>} />
+         
+
               </Routes>
             </div>
           </div>
