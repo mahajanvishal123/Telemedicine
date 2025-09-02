@@ -20,13 +20,13 @@
   list-style: none;
   margin: 0;
   padding: 10px 0;
-
 }
 
 .sidebar .menu-text,
 .sidebar .submenu-item {
   font-size: 1rem; /* Increase text size */
 }
+
 .menu-item {
   cursor: pointer;
 }
@@ -36,19 +36,28 @@
   align-items: center;
   padding: 12px 20px;
   color: #ccc;
-  transition: 0.2s ease-in-out;
+  transition: 0.3s ease-in-out;
+  border-radius: 8px;
+  margin: 4px 8px;
 }
 
 .menu-link:hover,
 .menu-item.active > .menu-link {
-  background-color: #1d2b49;
-  color: white;
+  background: linear-gradient(90deg, #FF6A00, #FF2D00);
+  color: #fff;
 }
 
 .menu-icon {
   font-size: 16px;
   margin-right: 15px;
   min-width: 20px;
+  color: #ccc;
+  transition: color 0.3s;
+}
+
+.menu-item.active .menu-icon,
+.menu-link:hover .menu-icon {
+  color: #fff;
 }
 
 .menu-text {
@@ -67,7 +76,7 @@
 
 .submenu {
   background-color: #0e182c;
-  padding-left: 45px; /* ⬅️ Increased padding for better visual nesting */
+  padding-left: 45px; /* better nesting */
 }
 
 .submenu-item {
@@ -75,11 +84,11 @@
   font-size: 13px;
   color: #c3c3c3;
   cursor: pointer;
+  transition: color 0.3s ease-in-out;
 }
 
 .submenu-item:hover,
 .submenu-item.active-sub {
-  color: #ffffff;
-  font-weight: 500;
+  color: #FF6A00;
+  font-weight: 600;
 }
-
