@@ -1,147 +1,151 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
-  faAngleDown,
-  faGear,
-  faChartBar,
+  faTachometerAlt,
+  faCalendarAlt,
+  faUserMd,
   faUsers,
-  faFileAlt,
-  faUserGear,
-  faChartLine,
-  faCalculator,
-  faAddressBook,
-  faCircleDot,
+  faUser,
+  faClipboardList,
+  faStethoscope,
+  faUserShield,
+  faCheckCircle,
+  faCalendarCheck,
+  faBars,
+  faTimes,
 } from "@fortawesome/free-solid-svg-icons";
 import "./Sidebar.css";
 
 const Sidebar = ({ collapsed, setCollapsed }) => {
   const navigate = useNavigate();
   const location = useLocation();
-  const [activeMenu, setActiveMenu] = useState(null);
+  const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const role = localStorage.getItem("role"); // Get user role from localStorage
 
-  const toggleMenu = (menuName) => {
-    setActiveMenu(activeMenu === menuName ? null : menuName);
+  useEffect(() => {
+    const handleResize = () => {
+      const mobile = window.innerWidth <= 768;
+      setIsMobile(mobile);
+
+      if (mobile) {
+        setCollapsed(true);
+      } else {
+        setMobileMenuOpen(false);
+      }
+    };
+
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, [setCollapsed]);
+
+  // Menus for each dashboard
+  const patientMenuItems = [
+    { label: "Home", path: "/patient/dashboard", icon: faTachometerAlt },
+    { label: "Book Appointment", path: "/patient/book-appointment", icon: faCalendarAlt },
+    { label: "My Appointments", path: "/patient/my-appointments", icon: faClipboardList },
+    { label: "My Doctors", path: "/patient/my-doctors", icon: faUserMd },
+    { label: "Profile", path: "/patient/profile", icon: faUser },
+  ];
+
+  const providerMenuItems = [
+    { label: "Home", path: "/doctor/dashboard", icon: faTachometerAlt },
+    { label: "My Calendar", path: "/doctor/calendar", icon: faCalendarAlt },
+    { label: "My Appointments", path: "/doctor/appointments", icon: faClipboardList },
+    { label: "My Profile", path: "/doctor/profile", icon: faUser },
+  ];
+
+  const caregiverMenuItems = [
+    { label: "Home", path: "/caregiver/dashboard", icon: faTachometerAlt },
+    { label: "My Clients", path: "/caregiver/clients", icon: faUsers },
+    { label: "Visit Log", path: "/caregiver/visit-log", icon: faStethoscope },
+  ];
+
+  const adminMenuItems = [
+    { label: "Home", path: "/admin/dashboard", icon: faTachometerAlt },
+    { label: "User Management", path: "/admin/user-management", icon: faUserShield },
+    { label: "Patients", path: "/admin/patients", icon: faUser },
+    { label: "Providers", path: "/admin/providers", icon: faUserMd },
+    { label: "Caregivers", path: "/admin/caregivers", icon: faUsers },
+    { label: "Verification", path: "/admin/verification", icon: faCheckCircle },
+    { label: "Appointments", path: "/admin/appointments", icon: faCalendarCheck },
+  ];
+
+  // Decide menu based on role
+  const getMenuItems = () => {
+    switch (role) {
+      case "Admin":
+        return adminMenuItems;
+      case "Patient":
+        return patientMenuItems;
+      case "Doctor":
+        return providerMenuItems;
+      case "Caregiver":
+        return caregiverMenuItems;
+
+      default:
+        return [];
+    }
   };
+
+  const menus = getMenuItems();
 
   const isActive = (path) => location.pathname === path;
 
   const handleNavigate = (path) => {
     navigate(path);
-    if (window.innerWidth <= 768) setCollapsed(true);
+    if (isMobile) {
+      setMobileMenuOpen(false);
+    }
   };
 
-  const menus = [
-    {
-      name: "OKRs Management",
-      icon: faCircleDot,
-      key: "okrs",
-      subItems: [
-        { label: "Set Company OKRs", path: "/okrs/company" },
-        { label: "Department OKRs", path: "/okrs/departmentokrs" },
-        { label: "Individual OKRs", path: "/okrs/individual" },
-        { label: "OKR Progress Tracker", path: "/okrs/tracker" },
-        { label: "Alignment & Dependencies", path: "/okrs/alignment" },
-        { label: "OKR Reports", path: "/okrs/reports" },
-      ],
-    },
-    {
-      name: "KPI Tracking",
-      icon: faChartLine,
-      key: "kpi",
-      subItems: [
-        { label: "Define KPIs", path: "/kpi/define" },
-        { label: "Team KPIs", path: "/kpi/team" },
-        { label: "Performance Dashboards", path: "/kpi/performance" },
-        { label: "KPI Trends & Analytics", path: "/kpi/trends" },
-        { label: "Alerts / Threshold Management", path: "/kpi/alerts" },
-      ],
-    },
-    {
-      name: "Financial Ratio Analysis",
-      icon: faCalculator,
-      key: "finance",
-      subItems: [
-        { label: "Financial Overview", path: "/finance/overview" },
-        { label: "Ratio Analysis", path: "/finance/ratio" },
-        { label: "Liquidity Ratios", path: "/finance/liquidity" },
-        { label: "Profitability Ratios", path: "/finance/profitability" },
-        { label: "Efficiency Ratios", path: "/finance/efficiency" },
-        { label: "Solvency Ratios", path: "/finance/solvency" },
-        { label: "Balance Sheet / P&L", path: "/finance/balance" },
-        { label: "Custom Financial Metrics", path: "/finance/custom" },
-      ],
-    },
-    {
-      name: "CRM",
-      icon: faAddressBook,
-      key: "crm",
-      subItems: [
-        { label: "Leads & Prospects", path: "/crm/leads" },
-        { label: "Customer Pipeline", path: "/crm/pipeline" },
-        { label: "Contact & Company Database", path: "/crm/database" },
-        { label: "Follow-ups & Tasks", path: "/crm/tasks" },
-        { label: "Sales Forecasting", path: "/crm/forecast" },
-        { label: "CRM Reports", path: "/crm/reports" },
-      ],
-    },
-    {
-      name: "Reports",
-      icon: faFileAlt,
-      key: "reports",
-      subItems: [
-        { label: "View Reports", path: "/reports/view" },
-        { label: "Export Data", path: "/reports/export" },
-      ],
-    },
-    {
-      name: "Settings",
-      icon: faGear,
-      key: "settings",
-      subItems: [
-        { label: "User Settings", path: "/settings/user" },
-        { label: "System Preferences", path: "/settings/system" },
-      ],
-    },
-  ];
+  const toggleMobileMenu = () => {
+    setMobileMenuOpen(!mobileMenuOpen);
+  };
 
   return (
-    <div className={`sidebar-container ${collapsed ? "collapsed" : ""}`}>
-      <div className="sidebar">
-        <ul className="menu">
-          {menus.map((menu, index) => (
-            <li key={index} className="menu-item">
-              <div
-                className="menu-link"
-                onClick={() => toggleMenu(menu.key)}
+    <>
+      {/* Mobile menu toggle */}
+      {isMobile && (
+        <button className="mobile-menu-toggle" onClick={toggleMobileMenu}>
+          <FontAwesomeIcon icon={mobileMenuOpen ? faTimes : faBars} />
+        </button>
+      )}
+
+      {/* Overlay for mobile */}
+      {isMobile && mobileMenuOpen && (
+        <div
+          className="sidebar-overlay"
+          onClick={() => setMobileMenuOpen(false)}
+        ></div>
+      )}
+
+      <div
+        className={`sidebar-container ${collapsed ? "collapsed" : ""} ${isMobile ? "mobile" : ""
+          } ${mobileMenuOpen ? "mobile-open" : ""}`}
+      >
+        <div className="sidebar">
+          <ul className="menu">
+            {menus.map((menu, index) => (
+              <li
+                key={index}
+                className={`menu-item ${isActive(menu.path) ? "active" : ""}`}
+                onClick={() => handleNavigate(menu.path)}
+                data-tooltip={collapsed ? menu.label : ""}
               >
-                <FontAwesomeIcon icon={menu.icon} className="menu-icon" />
-                {!collapsed && <span className="menu-text">{menu.name}</span>}
-                {!collapsed && (
-                  <FontAwesomeIcon
-                    icon={faAngleDown}
-                    className={`arrow-icon ${activeMenu === menu.key ? "rotate" : ""}`}
-                  />
-                )}
-              </div>
-              {!collapsed && activeMenu === menu.key && (
-                <ul className="submenu">
-                  {menu.subItems.map((sub, subIndex) => (
-                    <ul
-                      key={subIndex}
-                      className={`submenu-item ${isActive(sub.path) ? "active-sub" : ""}`}
-                      onClick={() => handleNavigate(sub.path)}
-                    >
-                      {sub.label}
-                    </ul>
-                  ))}
-                </ul>
-              )}
-            </li>
-          ))}
-        </ul>
+                <div className="menu-link">
+                  <FontAwesomeIcon icon={menu.icon} className="menu-icon" />
+                  {!collapsed && (
+                    <span className="menu-text">{menu.label}</span>
+                  )}
+                </div>
+              </li>
+            ))}
+          </ul>
+        </div>
       </div>
-    </div>
+    </>
   );
 };
 

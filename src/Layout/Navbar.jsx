@@ -6,6 +6,7 @@ import {
   faUserCircle,
   faBars,
 } from "@fortawesome/free-solid-svg-icons";
+import { Link } from "react-router-dom";
 // import logo from "./your-logo-path.png"; // Replace with your logo path
 
 const Navbar = ({ toggleSidebar }) => {
@@ -107,9 +108,9 @@ const Navbar = ({ toggleSidebar }) => {
                 <hr className="dropdown-divider" />
               </li>
               <li>
-                <a className="dropdown-item" to="/login">
+                <Link className="dropdown-item" to="/login">
                   Logout
-                </a>
+                </Link>
               </li>
             </ul>
           )}
