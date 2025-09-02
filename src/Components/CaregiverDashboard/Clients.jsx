@@ -6,7 +6,7 @@ const Clients = () => {
       {/* Main Content */}
       <main className="col-md-9 col-lg-12 med-main-content">
         <div className="d-flex justify-content-between align-items-center mb-4">
-          <h1 className="h3 mb-0">My Clients</h1>
+          <h3 className="fw-bold">My Clients</h3>
           <button
             class="btn med-btn-primary"
             data-bs-toggle="modal"
@@ -247,7 +247,7 @@ const Clients = () => {
 
         <div className="med-card">
           <div className="med-card-header d-flex justify-content-between align-items-center">
-            <span>Assigned Patients</span>
+            <h6>Assigned Patients</h6>
             <span className="badge bg-secondary">5 patients</span>
           </div>
           <div className="med-card-body">

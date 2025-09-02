@@ -11,11 +11,11 @@ const Visitlog = () => {
           </p>
         </div>
         <div className="visit-card">
-          <div className="visit-card-header">
-            <h2>
-              <i className="fas fa-clipboard-list me-2" />
+          <div className="visit-card-header" >
+            <h4>
+              <i className="fas fa-clipboard-list me-2" style={{ color: "var(--primary-accent)" }} />
               Log Visit
-            </h2>
+            </h4>
           </div>
           <div className="visit-card-body">
             <form>
@@ -44,13 +44,13 @@ const Visitlog = () => {
               </div>
               <div className="visit-divider" />
               {/* Vital Signs */}
-              <h3 className="mb-4">
+              <h4 className="mb-4">
                 <i
                   className="fas fa-heartbeat me-2"
                   style={{ color: "var(--primary-accent)" }}
                 />
                 Vital Signs
-              </h3>
+              </h4>
               <div className="row">
                 <div className="col-md-6">
                   <div className="visit-input-group">
@@ -127,11 +127,6 @@ const Visitlog = () => {
               </button>
             </form>
           </div>
-        </div>
-        <div className="text-center mt-4">
-          <p className="text-muted">
-            © 2023 MediCare Dashboard. All patient data is confidential.
-          </p>
         </div>
       </div>
     </>

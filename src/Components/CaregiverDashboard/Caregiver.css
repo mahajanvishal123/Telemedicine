@@ -274,10 +274,8 @@
 }
 
 .visit-card-header {
-    background: linear-gradient(135deg, var(--primary-accent) 0%, #e04a12 100%);
-    color: white;
     padding: 1.5rem;
-    text-align: center;
+    text-align: start;
 }
 
 .visit-card-body {
