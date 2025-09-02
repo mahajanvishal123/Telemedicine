@@ -40,6 +40,6 @@ body, html {
 @media (max-width: 768px) {
   .right-side-content,
   .right-side-content.collapsed {
-    margin-left: 80px;
+    margin-left: 0px;
   }
 }
