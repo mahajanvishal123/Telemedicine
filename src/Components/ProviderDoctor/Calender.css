@@ -1,0 +1,15 @@
+/* ✅ Day names (Sun, Mon, Tue...) */
+.fc .fc-col-header-cell-cushion {
+  color: #000 !important;   /* black text */
+  text-decoration: none !important; /* remove underline */
+  font-weight: 600;
+  font-size: 0.95rem;
+}
+
+/* ✅ Day numbers (1, 2, 3...) */
+.fc .fc-daygrid-day-number {
+  color: #000 !important;   /* black text */
+  text-decoration: none !important; /* remove underline */
+  font-weight: 500;
+  font-size: 0.9rem;
+}
