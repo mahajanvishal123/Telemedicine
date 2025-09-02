@@ -35,11 +35,11 @@ const Navbar = ({ toggleSidebar }) => {
         <button className="btn btn-orange p-2" onClick={toggleSidebar}>
           <FontAwesomeIcon icon={faBars} />
         </button>
-        <img src="" alt="Logo" height="40" className="navbar-logo" />
+        <img src="https://i.ibb.co/xKF1WPkH/image.png" alt="Logo" height="45" width={60} className="navbar-logo" />
       </div>
 
       {/* Search */}
-      <div className="d-flex align-items-center">
+      {/* <div className="d-flex align-items-center">
         <div className="input-group d-none d-sm-flex">
           <input
             type="text"
@@ -54,7 +54,7 @@ const Navbar = ({ toggleSidebar }) => {
         <button className="btn btn-sm text-white d-sm-none ms-2">
           <FontAwesomeIcon icon={faSearch} />
         </button>
-      </div>
+      </div> */}
 
       {/* Notification and User */}
       <div className="d-flex align-items-center gap-3 position-relative">
