@@ -39,7 +39,7 @@ const Profile = () => {
   };
 
   return (
-    <div className="container py-4">
+    <div className="mt-3">
       <div className="card shadow-sm">
         {/* Red Header Section */}
         <div className="card-header  text-dark py-3">

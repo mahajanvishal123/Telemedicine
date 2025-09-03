@@ -382,25 +382,29 @@ const ProviderDashboard = () => {
           <motion.div
             className="card shadow-sm border-0"
             whileHover={cardHover}
-            style={{ position: 'relative', overflow: 'visible' }} // Added for dropdown visibility
+            style={{ position: "relative", overflow: "visible" }}
           >
-            <div className="card-header d-flex justify-content-between align-items-center">
-              <h5 className="mb-0">Earnings Overview (This Week)</h5>
+            <div className="card-header d-flex flex-column flex-sm-row justify-content-between align-items-start align-items-sm-center">
+              <h5 className="mb-2 mb-sm-0">Earnings Overview (This Week)</h5>
               <div>
                 <span className="badge bg-light text-dark">Total: $3,020</span>
               </div>
             </div>
-            <div className="card-body" style={{ position: 'relative', overflow: 'visible' }}>
+
+            <div
+              className="card-body"
+              style={{ position: "relative", overflow: "visible" }}
+            >
               {showEarningsDetails ? (
-                // Detailed earnings view
+                // Detailed view
                 <motion.div
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
                   transition={{ duration: 0.5 }}
                 >
                   <h5>Detailed Earnings Breakdown</h5>
-                  <div className="row">
-                    <div className="col-md-6">
+                  <div className="row gy-3">
+                    <div className="col-12 col-md-6">
                       <ul className="list-group">
                         <li className="list-group-item d-flex justify-content-between align-items-center">
                           Monday
@@ -420,7 +424,7 @@ const ProviderDashboard = () => {
                         </li>
                       </ul>
                     </div>
-                    <div className="col-md-6">
+                    <div className="col-12 col-md-6">
                       <ul className="list-group">
                         <li className="list-group-item d-flex justify-content-between align-items-center">
                           Friday
@@ -455,11 +459,14 @@ const ProviderDashboard = () => {
               ) : (
                 // Chart view
                 <>
-                  <div className="row">
-                    <div className="col-md-8">
-                      <div className="chart-container" style={{ height: '250px' }}>
-                        {/* Animated bar chart */}
-                        <div className="d-flex align-items-end h-100" style={{ gap: '15px' }}>
+                  <div className="row gy-4">
+                    {/* Chart */}
+                    <div className="col-12 col-lg-8">
+                      <div className="chart-container" style={{ height: "250px" }}>
+                        <div
+                          className="d-flex align-items-end h-100"
+                          style={{ gap: "12px" }}
+                        >
                           {weeklyEarnings.map((day, index) => (
                             <motion.div
                               key={index}
@@ -467,17 +474,21 @@ const ProviderDashboard = () => {
                               style={{ flex: 1 }}
                               initial={{ height: 0 }}
                               animate={{ height: `${(day.earnings / 700) * 100}%` }}
-                              transition={{ delay: index * 0.1 + 0.5, duration: 0.8, type: "spring" }}
+                              transition={{
+                                delay: index * 0.1 + 0.5,
+                                duration: 0.8,
+                                type: "spring",
+                              }}
                             >
                               <motion.div
                                 className="rounded"
                                 style={{
-                                  width: '100%',
-                                  height: '100%',
-                                  backgroundColor: '#F95918',
-                                  minHeight: '10px'
+                                  width: "100%",
+                                  height: "100%",
+                                  backgroundColor: "#F95918",
+                                  minHeight: "10px",
                                 }}
-                                whileHover={{ backgroundColor: '#e14a12' }}
+                                whileHover={{ backgroundColor: "#e14a12" }}
                               ></motion.div>
                               <small className="mt-2">{day.day}</small>
                               <small className="fw-bold">${day.earnings}</small>
@@ -486,18 +497,23 @@ const ProviderDashboard = () => {
                         </div>
                       </div>
                     </div>
-                    <div className="col-md-4">
+
+                    {/* Stats */}
+                    <div className="col-12 col-lg-4">
                       <div className="d-flex justify-content-between mb-3">
                         <span>Weekly Goal:</span>
                         <span className="fw-bold">$2,800</span>
                       </div>
-                      <div className="progress mb-4" style={{ height: '10px' }}>
+                      <div className="progress mb-4" style={{ height: "10px" }}>
                         <motion.div
                           className="progress-bar"
                           initial={{ width: 0 }}
-                          animate={{ width: `${(3020 / 2800) * 100 > 100 ? 100 : (3020 / 2800) * 100}%` }}
+                          animate={{
+                            width: `${3020 / 2800 * 100 > 100 ? 100 : (3020 / 2800) * 100
+                              }%`,
+                          }}
                           transition={{ delay: 0.8, duration: 1.5 }}
-                          style={{ backgroundColor: '#F95918' }}
+                          style={{ backgroundColor: "#F95918" }}
                         ></motion.div>
                       </div>
 
@@ -507,7 +523,9 @@ const ProviderDashboard = () => {
                         animate={{ opacity: 1, x: 0 }}
                         transition={{ delay: 1 }}
                       >
-                        <span><i className="fas fa-circle text-success me-2"></i>Consultations</span>
+                        <span>
+                          <i className="fas fa-circle text-success me-2"></i>Consultations
+                        </span>
                         <span>$1,840</span>
                       </motion.div>
                       <motion.div
@@ -516,7 +534,9 @@ const ProviderDashboard = () => {
                         animate={{ opacity: 1, x: 0 }}
                         transition={{ delay: 1.1 }}
                       >
-                        <span><i className="fas fa-circle text-primary me-2"></i>Procedures</span>
+                        <span>
+                          <i className="fas fa-circle text-primary me-2"></i>Procedures
+                        </span>
                         <span>$980</span>
                       </motion.div>
                       <motion.div
@@ -525,14 +545,18 @@ const ProviderDashboard = () => {
                         animate={{ opacity: 1, x: 0 }}
                         transition={{ delay: 1.2 }}
                       >
-                        <span><i className="fas fa-circle text-warning me-2"></i>Follow-ups</span>
+                        <span>
+                          <i className="fas fa-circle text-warning me-2"></i>Follow-ups
+                        </span>
                         <span>$200</span>
                       </motion.div>
                     </div>
                   </div>
-                  <div className="mt-4 text-center" style={{ position: 'relative', zIndex: 1000 }}>
-                    <div className="dropdown d-inline-block me-2" style={{ position: 'relative', zIndex: 1001 }}>
-                      <motion.button
+
+                  {/* Buttons */}
+                 <div className="mt-4 d-flex flex-column flex-md-row justify-content-center align-items-center gap-2 text-center">
+                    <div className="dropdown d-inline-block me-2">
+                      <button
                         className="btn btn-outline-secondary dropdown-toggle"
                         type="button"
                         id="exportDropdown"
@@ -542,20 +566,12 @@ const ProviderDashboard = () => {
                         whileTap={{ scale: 0.95 }}
                       >
                         <i className="fas fa-download me-2"></i>Export
-                      </motion.button>
-                      <ul
-                        className="dropdown-menu"
-                        aria-labelledby="exportDropdown"
-                        style={{
-                          position: 'absolute',
-                          zIndex: 1002,
-                          transform: 'translate3d(0px, 38px, 0px)'
-                        }}
-                      >
+                      </button>
+                      <ul className="dropdown-menu" aria-labelledby="exportDropdown">
                         <li>
                           <button
                             className="dropdown-item"
-                            onClick={() => setExportFormat('csv')}
+                            onClick={() => setExportFormat("csv")}
                           >
                             CSV Format
                           </button>
@@ -563,7 +579,7 @@ const ProviderDashboard = () => {
                         <li>
                           <button
                             className="dropdown-item"
-                            onClick={() => setExportFormat('pdf')}
+                            onClick={() => setExportFormat("pdf")}
                           >
                             PDF Format
                           </button>
@@ -571,28 +587,29 @@ const ProviderDashboard = () => {
                         <li>
                           <button
                             className="dropdown-item"
-                            onClick={() => setExportFormat('excel')}
+                            onClick={() => setExportFormat("excel")}
                           >
                             Excel Format
                           </button>
                         </li>
                       </ul>
                     </div>
-                    <motion.button
+                    <button
                       className="btn"
-                      style={{ backgroundColor: '#F95918', color: 'white' }}
+                      style={{ backgroundColor: "#F95918", color: "white" }}
                       onClick={toggleEarningsDetails}
                       whileHover={{ scale: 1.05 }}
                       whileTap={{ scale: 0.95 }}
                     >
                       <i className="fas fa-chart-line me-2"></i>Details
-                    </motion.button>
+                    </button>
                   </div>
                 </>
               )}
             </div>
           </motion.div>
         </div>
+
       </motion.div>
     </div>
   );

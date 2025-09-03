@@ -221,7 +221,7 @@ const Appointments = () => {
   return (
     <div className="">
       {/* Page Header */}
-      <div className="d-flex justify-content-between align-items-center mb-4">
+      <div className="d-flex justify-content-between align-items-center">
         <h3 className="dashboard-heading">Appointments</h3>
       </div>
 

@@ -18,7 +18,7 @@ const Dashboard = () => {
   return (
     <div className="">
       {/* Page Header */}
-      <div className="d-flex justify-content-between align-items-center mb-4">
+      <div className="d-flex justify-content-between align-items-center">
         <h1 className="dashboard-heading">Dashboard</h1>
       </div>
 

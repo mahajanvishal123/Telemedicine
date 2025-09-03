@@ -65,25 +65,22 @@ export default function MyDoctors() {
   });
 
   return (
-    <Container fluid className="mydoctors-bg py-4">
-      <Container>
+    <div fluid className="">
+      <div>
         {/* Header */}
         <Row className="align-items-center mb-4">
           <Col xs={12} md={8}>
             <div className="d-flex align-items-center">
-              <div className="mydoctors-icon">
-                <FaUserMd size={32} color="#fff" />
-              </div>
-              <div className="ms-3">
+              <div className="">
                 <h3 className="dashboard-heading">My Doctors</h3>
                 <span className="text-muted">Your trusted healthcare team</span>
               </div>
             </div>
           </Col>
-          <Col xs={12} md={4} className="text-md-end mt-3 mt-md-0">
+          {/* <Col xs={12} md={4} className="text-md-end mt-3 mt-md-0">
             <span className="text-muted">Total Doctors</span>
             <Badge style={{ background: "#FF6A00" }} className="ms-2 fs-5">{filteredDoctors.length}</Badge>
-          </Col>
+          </Col> */}
         </Row>
 
         {/* Filter Tabs */}
@@ -190,7 +187,7 @@ export default function MyDoctors() {
             ))
           )}
         </Row>
-      </Container>
-    </Container>
+      </div>
+    </div>
   );
 }

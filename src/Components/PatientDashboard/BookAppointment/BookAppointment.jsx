@@ -339,13 +339,13 @@ export default function BookAppointment() {
   }
 
   return (
-    <Container className="book-bg py-4">
-      <Container>
+    <div className="">
+      <div>
         <Header step={step} />
         {/* Stepper Row */}
-        <Row className="justify-content-center mb-4">
+        <Row className=" mb-4">
           <Col xs={12}>
-            <div className="book-stepper-row d-flex justify-content-center align-items-center gap-3 flex-wrap">
+            <div className="book-stepper-row d-flex gap-3 flex-wrap mb-3 mt-2">
               {steps.map((s, idx) => (
                 <div key={s.label} className="d-flex align-items-center">
                   <div
@@ -635,21 +635,18 @@ export default function BookAppointment() {
             {step === steps.length - 1 ? "Finish" : "Next"} <FaChevronRight />
           </Button>
         </div>
-      </Container>
-    </Container>
+      </div>
+    </div>
   );
 }
 
 // Stepper Header
 function Header({ step }) {
   return (
-    <div className="d-flex align-items-center mb-2">
-      <div className="book-header-icon">
-        <FaUserMd size={28} color="#fff" />
-      </div>
-      <div className="ms-3">
+    <div className="mb-3">
+      <div className="">
         <h3 className="dashboard-heading">Book Appointment</h3>
-        <div className="text-muted" style={{ fontSize: "1.1em" }}>Schedule your medical consultation</div>
+        <div className="text-muted">Schedule your medical consultation</div>
       </div>
     </div>
   );
