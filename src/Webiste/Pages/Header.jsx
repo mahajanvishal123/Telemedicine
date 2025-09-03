@@ -23,12 +23,12 @@ const Header = () => {
 
                     {/* Desktop Navigation */}
                     <nav className="hidden md:flex space-x-8">
-                        <Link to="/" className="text-[#424649] hover:text-[#ff6a03] transition-colors cursor-pointer">Home</Link>
-                        <Link to="/aboutus" className="text-[#424649] hover:text-[#ff6a03] transition-colors cursor-pointer">About</Link>
+                        <Link to="/" className="text-[#424649] hover:text-[#ff6a03] transition-colors cursor-pointer text-decoration-none">Home</Link>
+                        <Link to="/aboutus" className="text-[#424649] hover:text-[#ff6a03] transition-colors cursor-pointer text-decoration-none">About</Link>
                         {/* <a href="#services" className="text-[#424649] hover:text-[#ff6a03] transition-colors cursor-pointer">Services</a> */}
-                        <Link to="/forprovider" className="text-[#424649] hover:text-[#ff6a03] transition-colors cursor-pointer">For Providers</Link>
-                        <Link to="/forpatients" className="text-[#424649] hover:text-[#ff6a03] transition-colors cursor-pointer">For Patients</Link>
-                        <Link to="/carebridge" className="text-[#424649] hover:text-[#ff6a03] transition-colors cursor-pointer">CareBridge™</Link>
+                        <Link to="/forprovider" className="text-[#424649] hover:text-[#ff6a03] transition-colors cursor-pointer text-decoration-none">For Providers</Link>
+                        <Link to="/forpatients" className="text-[#424649] hover:text-[#ff6a03] transition-colors cursor-pointer text-decoration-none">For Patients</Link>
+                        <Link to="/carebridge" className="text-[#424649] hover:text-[#ff6a03] transition-colors cursor-pointer text-decoration-none">CareBridge™</Link>
 
                         {/* <Link to="/contactus" className="text-[#424649] hover:text-[#ff6a03] transition-colors cursor-pointer">Contact Us</Link> */}
                     </nav>
@@ -68,12 +68,12 @@ const Header = () => {
                 {isMenuOpen && (
                     <div className="md:hidden">
                         <div className="px-2 pt-2 pb-3 space-y-1 sm:px-3 bg-white border-t">
-                            <Link to="/" className="block px-3 py-2 text-[#424649] hover:text-[#ff6a03] transition-colors cursor-pointer">Home</Link>
-                            <Link to="/aboutus" className="block px-3 py-2 text-[#424649] hover:text-[#ff6a03] transition-colors cursor-pointer">About</Link>
+                            <Link to="/" className="block px-3 py-2 text-[#424649] hover:text-[#ff6a03] transition-colors cursor-pointer text-decoration-none">Home</Link>
+                            <Link to="/aboutus" className="block px-3 py-2 text-[#424649] hover:text-[#ff6a03] transition-colors cursor-pointer text-decoration-none">About</Link>
                             {/* <a href="#services" className="block px-3 py-2 text-[#424649] hover:text-[#ff6a03] transition-colors cursor-pointer">Services</a> */}
-                            <Link to="/forprovider" className="block px-3 py-2 text-[#424649] hover:text-[#ff6a03] transition-colors cursor-pointer">For Providers</Link>
-                            <Link to="/forpatients" className="block px-3 py-2 text-[#424649] hover:text-[#ff6a03] transition-colors cursor-pointer">For Patients</Link>
-                            <Link to="/carebridge" className="block px-3 py-2 text-[#424649] hover:text-[#ff6a03] transition-colors cursor-pointer">CareBridge™</Link>
+                            <Link to="/forprovider" className="block px-3 py-2 text-[#424649] hover:text-[#ff6a03] transition-colors cursor-pointer text-decoration-none">For Providers</Link>
+                            <Link to="/forpatients" className="block px-3 py-2 text-[#424649] hover:text-[#ff6a03] transition-colors cursor-pointer text-decoration-none">For Patients</Link>
+                            <Link to="/carebridge" className="block px-3 py-2 text-[#424649] hover:text-[#ff6a03] transition-colors cursor-pointer text-decoration-none">CareBridge™</Link>
 
                             {/* <Link to="/contactus" className="block px-3 py-2 text-[#424649] hover:text-[#ff6a03] transition-colors cursor-pointer">Contact Us</Link> */}
                             <div className="pt-2">
