@@ -104,7 +104,7 @@ const MyProfile = () => {
         <div className="">
           {/* Header Section */}
           <div className="mb-4">
-            <h1 className="h3 fw-bold mb-2">My Profile</h1>
+            <h1 className="dashboard-heading mb-2">My Profile</h1>
             <p className="text-muted mb-0">Manage your professional information and availability</p>
           </div>
           

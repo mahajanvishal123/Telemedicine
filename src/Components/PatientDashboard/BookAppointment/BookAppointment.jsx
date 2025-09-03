@@ -648,7 +648,7 @@ function Header({ step }) {
         <FaUserMd size={28} color="#fff" />
       </div>
       <div className="ms-3">
-        <h3 className="mb-0 fw-bold">Book Appointment</h3>
+        <h3 className="dashboard-heading">Book Appointment</h3>
         <div className="text-muted" style={{ fontSize: "1.1em" }}>Schedule your medical consultation</div>
       </div>
     </div>

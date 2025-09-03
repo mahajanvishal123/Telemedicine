@@ -31,7 +31,7 @@ const Footer = () => {
                                 <li>
                                     <Link
                                         to="/"
-                                        className="text-gray-300 hover:text-[#ff6a03] transition-colors cursor-pointer"
+                                        className="text-gray-300 hover:text-[#ff6a03] transition-colors cursor-pointer text-decoration-none"
                                     >
                                         Home
                                     </Link>
@@ -39,7 +39,7 @@ const Footer = () => {
                                 <li>
                                     <Link
                                         to="/aboutus"
-                                        className="text-gray-300 hover:text-[#ff6a03] transition-colors cursor-pointer"
+                                        className="text-gray-300 hover:text-[#ff6a03] transition-colors cursor-pointer text-decoration-none"
                                     >
                                         About
                                     </Link>
@@ -47,7 +47,7 @@ const Footer = () => {
                                 <li>
                                     <Link
                                         to="/forprovider"
-                                        className="text-gray-300 hover:text-[#ff6a03] transition-colors cursor-pointer"
+                                        className="text-gray-300 hover:text-[#ff6a03] transition-colors cursor-pointer text-decoration-none"
                                     >
                                         For Providers
                                     </Link>
@@ -55,7 +55,7 @@ const Footer = () => {
                                 <li>
                                     <Link
                                         to="/forpatients"
-                                        className="text-gray-300 hover:text-[#ff6a03] transition-colors cursor-pointer"
+                                        className="text-gray-300 hover:text-[#ff6a03] transition-colors cursor-pointer text-decoration-none"
                                     >
                                         For Patients
                                     </Link>
@@ -63,7 +63,7 @@ const Footer = () => {
                                 <li>
                                     <Link
                                         to="/carebridge"
-                                        className="text-gray-300 hover:text-[#ff6a03] transition-colors cursor-pointer"
+                                        className="text-gray-300 hover:text-[#ff6a03] transition-colors cursor-pointer text-decoration-none"
                                     >
                                         CareBridge™
                                     </Link>
@@ -71,7 +71,7 @@ const Footer = () => {
                                 <li>
                                     <Link
                                         to="/contactus"
-                                        className="text-gray-300 hover:text-[#ff6a03] transition-colors cursor-pointer"
+                                        className="text-gray-300 hover:text-[#ff6a03] transition-colors cursor-pointer text-decoration-none"
                                     >
                                         Contact Us
                                     </Link>

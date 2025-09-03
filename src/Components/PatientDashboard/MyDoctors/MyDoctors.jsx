@@ -75,7 +75,7 @@ export default function MyDoctors() {
                 <FaUserMd size={32} color="#fff" />
               </div>
               <div className="ms-3">
-                <h3 className="mb-0 fw-bold">My Doctors</h3>
+                <h3 className="dashboard-heading">My Doctors</h3>
                 <span className="text-muted">Your trusted healthcare team</span>
               </div>
             </div>

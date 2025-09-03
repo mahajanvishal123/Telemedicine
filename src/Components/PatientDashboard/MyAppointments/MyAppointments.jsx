@@ -88,7 +88,7 @@ const MyAppointments = () => {
       {/* Header */}
       <div className="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center mb-4">
         <div>
-          <h3 className="fw-bold mb-1">My Appointments</h3>
+          <h3 className="dashboard-heading mb-1">My Appointments</h3>
           <p className="text-muted mb-0">
             Manage your healthcare appointments and consultations
           </p>

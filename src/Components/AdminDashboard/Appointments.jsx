@@ -222,7 +222,7 @@ const Appointments = () => {
     <div className="">
       {/* Page Header */}
       <div className="d-flex justify-content-between align-items-center mb-4">
-        <h3 className="fw-bold">Appointments</h3>
+        <h3 className="dashboard-heading">Appointments</h3>
       </div>
 
       {/* Info Card */}

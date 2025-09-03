@@ -66,7 +66,7 @@ const Verification = () => {
     <div className="">
       {/* Page Header */}
       <div className="d-flex justify-content-between align-items-center mb-2">
-        <h3 className="fw-bold">Verification</h3>
+        <h3 className="dashboard-heading">Verification</h3>
       </div>
 
       {/* Info Card */}

@@ -115,7 +115,7 @@ const Clients = () => {
       {/* Main Content */}
       <main className="col-md-9 col-lg-12 med-main-content">
         <div className="d-flex justify-content-between align-items-center mb-4">
-          <h3 className="fw-bold">My Clients</h3>
+          <h3 className="dashboard-heading">My Clients</h3>
           <button
             className="btn med-btn-primary text-white healthcare-btn-primary"
             data-bs-toggle="modal"

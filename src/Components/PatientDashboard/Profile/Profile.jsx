@@ -43,7 +43,7 @@ const Profile = () => {
       <div className="card shadow-sm">
         {/* Red Header Section */}
         <div className="card-header  text-dark py-3">
-          <h4 className="mb-1 fw-bold">Personal Information</h4>
+          <h4 className="mb-1 dashboard-heading">Personal Information</h4>
           <p className="mb-0">Keep your profile up to date for better healthcare experience.</p>
         </div>
         

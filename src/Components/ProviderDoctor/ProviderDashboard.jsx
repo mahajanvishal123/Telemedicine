@@ -159,7 +159,7 @@ const ProviderDashboard = () => {
         <div className="col-12">
           <div className="d-flex justify-content-between align-items-center">
             <div>
-              <h3 className='fw-bold'>Provider Dashboard</h3>
+              <h3 className='dashboard-heading'>Provider Dashboard</h3>
               <p className="text-muted">{formatDate(currentTime)} | {formatTime(currentTime)}</p>
             </div>
             <div className="d-flex align-items-center">

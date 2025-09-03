@@ -155,7 +155,7 @@ const ProviderMyAppointments = () => {
   return (
     <div className="">
       <div className="">
-        <h3 className="fw-bold">My Appointment</h3>
+        <h3 className="dashboard-heading">My Appointment</h3>
         <p className="text-muted mb-0">Manage your patient appointments and consultations</p>
       </div>
       <div className="card shadow-lg border-0">
