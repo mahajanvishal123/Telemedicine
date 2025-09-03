@@ -9,7 +9,6 @@ import ForgotPassword from "./Auth/ForgotPassword";
 import Sidebar from "./Layout/Sidebar";
 import Dashboard from "./Components/CaregiverDashboard/Dashboard";
 import Clients from "./Components/CaregiverDashboard/Clients";
-// import DepartmentOKRs from "./Component/Okrs-management/Departement/DepartmentOKRs";
 import Dashobard from "./Components/AdminDashboard/Dashboard";
 import UserManagement from "./Components/AdminDashboard/UserManagement";
 import Verification from "./Components/AdminDashboard/Verification";
@@ -21,10 +20,20 @@ import MyAppointments from "./Components/PatientDashboard/MyAppointments/MyAppoi
 import BookAppointment from "./Components/PatientDashboard/BookAppointment/BookAppointment";
 import ProviderDashboard from "./Components/ProviderDoctor/ProviderDashboard";
 import MyProfile from "./Components/ProviderDoctor/MyProfile";
-import MyCalendar from "./Components/ProviderDoctor/MyCalendar";  
+import MyCalendar from "./Components/ProviderDoctor/MyCalendar";
 import ProviderMyAppointments from "./Components/ProviderDoctor/ProviderMyAppointments";
 import Visitlog from "./Components/CaregiverDashboard/Visitlog";
-
+// import Landing from "./Webiste/Demo/Landing";
+// import InvestorsPage from "./Webiste/Demo/InvestorsPage";
+import Home from "./Webiste/Pages/Home";
+import AboutUs from "./Webiste/Pages/AboutUs";
+import ForProviders from "./Webiste/Pages/ForProviders";
+import ForPatients from "./Webiste/Pages/ForPatients";
+import CareBridge from "./Webiste/Pages/CareBridge";
+import ContactUs from "./Webiste/Pages/ContactUs";
+import ScrollToTop from "./Webiste/ScrollToTop/ScrollToTop";
+import PrivacyPolicy from "./Webiste/Pages/PrivacyPolicy";
+import TermsConditions from "./Webiste/Pages/TermsConditions";
 
 function App() {
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
@@ -45,12 +54,36 @@ function App() {
   const hideLayout =
     location.pathname === "/login" ||
     location.pathname === "/signup" ||
-    location.pathname === "/forgot-password";
+    location.pathname === "/forgot-password" ||
+    location.pathname === "/" ||
+    location.pathname === "/aboutus" ||
+    location.pathname === "/forprovider" ||
+    location.pathname === "/forpatients" ||
+    location.pathname === "/carebridge" ||
+    location.pathname === "/contactus" ||
+    location.pathname === "/privacypolicy" ||
+    location.pathname === "/termsconditions";
 
   return (
     <>
+      {/* ✅ Yeh har route change pe scroll karega top par */}
+      <ScrollToTop />
+
       {hideLayout ? (
         <Routes>
+          {/* <Route path="/investorspage" element={<InvestorsPage />} /> */}
+          {/* <Route path="/" element={<Landing />} /> */}
+
+          <Route path="/" element={<Home />} />
+          <Route path="/aboutus" element={<AboutUs />} />
+          <Route path="/forprovider" element={<ForProviders />} />
+          <Route path="/forpatients" element={<ForPatients />} />
+          <Route path="/carebridge" element={<CareBridge />} />
+          <Route path="/contactus" element={<ContactUs />} />
+
+           <Route path="/privacypolicy" element={<PrivacyPolicy />} />
+            <Route path="/termsconditions" element={<TermsConditions />} />
+
           <Route path="/login" element={<Login />} />
           <Route path="/signup" element={<Signup />} />
           <Route path="/forgot-password" element={<ForgotPassword />} />
@@ -73,27 +106,44 @@ function App() {
                 <Route path="/caregiver/dashboard" element={<Dashboard />} />
                 <Route path="/caregiver/clients" element={<Clients />} />
                 <Route path="/caregiver/visit-log" element={<Visitlog />} />
-                <Route path="/admin/dashboard" element={<Dashobard/>} />
-                 <Route path="/admin/user-management" element={<UserManagement/>} />
-                 <Route path="/admin/verification" element={<Verification/>} />
-                 <Route path="/admin/appointments" element={<Appointments/>} />
+                <Route path="/admin/dashboard" element={<Dashobard />} />
+                <Route
+                  path="/admin/user-management"
+                  element={<UserManagement />}
+                />
+                <Route path="/admin/verification" element={<Verification />} />
+                <Route path="/admin/appointments" element={<Appointments />} />
 
                 {/* <Route path="okrs/departmentokrs" element={<DepartmentOKRs />} /> */}
 
+                <Route
+                  path="/patient/dashboard"
+                  element={<PatientDashboard />}
+                />
+                <Route
+                  path="/patient/book-appointment"
+                  element={<BookAppointment />}
+                />
+                <Route
+                  path="/patient/my-appointments"
+                  element={<MyAppointments />}
+                />
+                <Route
+                  path="/patient/my-doctors"
+                  element={<MyDoctors />}
+                />
+                <Route path="/patient/profile" element={<Profile />} />
 
-
-                <Route path="/patient/dashboard" element={<PatientDashboard/>} />
-                <Route path="/patient/book-appointment" element={<BookAppointment/>} />
-                <Route path="/patient/my-appointments" element={<MyAppointments/>} />
-                <Route path="/patient/my-doctors" element={<MyDoctors/>} />
-                <Route path="/patient/profile" element={<Profile/>} />
-
-                <Route path="/doctor/dashboard" element={<ProviderDashboard/>} />
-                <Route path="/doctor/appointments" element={<ProviderMyAppointments/>} />
-                <Route path="/doctor/profile" element={<MyProfile/>} />
-                <Route path="/doctor/calendar" element={<MyCalendar/>} />
-         
-
+                <Route
+                  path="/doctor/dashboard"
+                  element={<ProviderDashboard />}
+                />
+                <Route
+                  path="/doctor/appointments"
+                  element={<ProviderMyAppointments />}
+                />
+                <Route path="/doctor/profile" element={<MyProfile />} />
+                <Route path="/doctor/calendar" element={<MyCalendar />} />
               </Routes>
             </div>
           </div>
