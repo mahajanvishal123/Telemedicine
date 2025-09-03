@@ -34,6 +34,7 @@ import ContactUs from "./Webiste/Pages/ContactUs";
 import ScrollToTop from "./Webiste/ScrollToTop/ScrollToTop";
 import PrivacyPolicy from "./Webiste/Pages/PrivacyPolicy";
 import TermsConditions from "./Webiste/Pages/TermsConditions";
+import DoctorViewProfile from "./Components/CaregiverDashboard/DoctorViewProfile";
 
 function App() {
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
@@ -113,6 +114,12 @@ function App() {
                 />
                 <Route path="/admin/verification" element={<Verification />} />
                 <Route path="/admin/appointments" element={<Appointments />} />
+                <Route path="/admin/dashboard" element={<Dashobard/>} />
+                 <Route path="/admin/user-management" element={<UserManagement/>} />
+                 <Route path="/admin/verification" element={<Verification/>} />
+                 <Route path="/admin/appointments" element={<Appointments/>} />
+                 <Route path="/caregiver/clients/profile" element={<DoctorViewProfile/>} />
+
 
                 {/* <Route path="okrs/departmentokrs" element={<DepartmentOKRs />} /> */}
 

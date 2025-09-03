@@ -1,0 +1,112 @@
+.mydoctors-bg {
+    background: #f8f6f3;
+    min-height: 100vh;
+  }
+  
+  .mydoctors-icon {
+    background: #FF6A00;
+    border-radius: 50%;
+    padding: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 2px 8px rgba(255,106,0,0.1);
+  }
+  
+  .mydoctors-search input {
+    border-radius: 20px;
+    border: 1px solid #FF6A00;
+  }
+  
+  .mydoctors-tabs {
+    border-bottom: none;
+    margin-bottom: 10px;
+    gap: 10px;
+  }
+  
+  .mydoctors-tab-btn {
+    border-radius: 20px !important;
+    color: #FF6A00 !important;
+    border: 1px solid #FF6A00 !important;
+    background: #fff !important;
+    margin-right: 8px;
+    padding: 6px 24px;
+    font-weight: 500;
+    transition: background 0.2s, color 0.2s;
+  }
+  
+  .mydoctors-tab-btn.active,
+  .mydoctors-tab-btn:hover {
+    background: #FF6A00 !important;
+    color: #fff !important;
+    border: 1px solid #FF6A00 !important;
+  }
+  
+  .mydoctors-card {
+    border-radius: 18px;
+    background: #fff;
+    transition: box-shadow 0.2s;
+    display: flex;
+    flex-direction: column;
+    min-height: 420px;
+  }
+  
+  .mydoctors-card:hover {
+    box-shadow: 0 4px 24px rgba(255,106,0,0.12);
+  }
+  
+  .mydoctors-avatar {
+    background: #FF6A00;
+    border-radius: 50%;
+    width: 40px;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+  }
+  
+  .mydoctors-avatar.online::after {
+    content: "";
+    position: absolute;
+    right: 4px;
+    top: 4px;
+    width: 10px;
+    height: 10px;
+    background: #4caf50;
+    border-radius: 50%;
+    border: 2px solid #fff;
+  }
+  
+  .mydoctors-avatar.busy::after {
+    content: "";
+    position: absolute;
+    right: 4px;
+    top: 4px;
+    width: 10px;
+    height: 10px;
+    background: #FF6A00;
+    border-radius: 50%;
+    border: 2px solid #fff;
+  }
+  
+  .mydoctors-info-box {
+    background: #f5f5f5;
+    border-radius: 10px;
+    padding: 8px 0;
+    text-align: center;
+  }
+  
+  @media (max-width: 767px) {
+    .mydoctors-card {
+      margin-bottom: 20px;
+      min-height: 0;
+    }
+    .mydoctors-search {
+      margin-bottom: 12px;
+    }
+    .mydoctors-tabs {
+      flex-wrap: wrap;
+      gap: 5px;
+    }
+  }
