@@ -9,14 +9,14 @@ const ProviderDashboard = () => {
     type: 'Follow-up Consultation',
     status: 'Confirmed'
   });
-  
+
   const [todayStats, setTodayStats] = useState({
     appointments: 8,
     completed: 3,
     pending: 5,
     earnings: 420
   });
-  
+
   const [weeklyEarnings, setWeeklyEarnings] = useState([
     { day: 'Mon', earnings: 380 },
     { day: 'Tue', earnings: 520 },
@@ -69,7 +69,7 @@ const ProviderDashboard = () => {
     const timer = setInterval(() => {
       setCurrentTime(new Date());
     }, 60000);
-    
+
     return () => clearInterval(timer);
   }, []);
 
@@ -93,20 +93,20 @@ const ProviderDashboard = () => {
   // Check if it's time for the next appointment (within 15 minutes)
   const isAppointmentTime = () => {
     if (!nextAppointment.time) return false;
-    
+
     const now = currentTime;
     const [time, modifier] = nextAppointment.time.split(' ');
     let [hours, minutes] = time.split(':').map(Number);
-    
+
     if (modifier === 'PM' && hours < 12) hours += 12;
     if (modifier === 'AM' && hours === 12) hours = 0;
-    
+
     const appointmentTime = new Date(now);
     appointmentTime.setHours(hours, minutes, 0, 0);
-    
+
     const diffMs = appointmentTime - now;
     const diffMins = Math.round(diffMs / 60000);
-    
+
     return diffMins >= 0 && diffMins <= 15;
   };
 
@@ -114,7 +114,7 @@ const ProviderDashboard = () => {
   const handleExport = (format) => {
     // In a real application, this would generate and download a file
     console.log(`Exporting earnings data in ${format} format`);
-    
+
     // Simulate export process
     alert(`Earnings data exported as ${format.toUpperCase()} successfully!`);
   };
@@ -132,7 +132,7 @@ const ProviderDashboard = () => {
 
   // Handle profile dropdown actions
   const handleProfileAction = (action) => {
-    switch(action) {
+    switch (action) {
       case 'profile':
         alert('Navigating to profile page');
         break;
@@ -148,75 +148,132 @@ const ProviderDashboard = () => {
   };
 
   return (
-    <div className="container-fluid" style={{ padding: '20px', backgroundColor: '#f8f9fa', minHeight: '100vh' }}>
+    <div className="">
       {/* Header Section */}
-      <motion.div 
+      <motion.div
         className="row mb-4"
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5 }}
       >
         <div className="col-12">
-          <div className="d-flex justify-content-between align-items-center mt-3">
+          <div className="d-flex justify-content-between align-items-center">
             <div>
-              <h2 style={{ color: '#F95918', fontWeight: 'bold' }}>Provider Dashboard</h2>
+              <h3 className='fw-bold'>Provider Dashboard</h3>
               <p className="text-muted">{formatDate(currentTime)} | {formatTime(currentTime)}</p>
             </div>
             <div className="d-flex align-items-center">
               <div className="me-3">
                 <span className="badge bg-success">Online</span>
               </div>
-              <div className="dropdown">
-                <button className="btn btn-outline-secondary dropdown-toggle" type="button" id="profileDropdown" data-bs-toggle="dropdown" aria-expanded="false">
-                  <i className="fas fa-user-md me-2"></i>Dr. Smith
-                </button>
-                <ul className="dropdown-menu" aria-labelledby="profileDropdown">
-                  <li>
-                    <button className="dropdown-item" onClick={() => handleProfileAction('profile')}>
-                      <i className="fas fa-user me-2"></i>Profile
-                    </button>
-                  </li>
-                  <li>
-                    <button className="dropdown-item" onClick={() => handleProfileAction('settings')}>
-                      <i className="fas fa-cog me-2"></i>Settings
-                    </button>
-                  </li>
-                  <li><hr className="dropdown-divider" /></li>
-                  <li>
-                    <button className="dropdown-item" onClick={() => handleProfileAction('logout')}>
-                      <i className="fas fa-sign-out-alt me-2"></i>Logout
-                    </button>
-                  </li>
-                </ul>
-              </div>
             </div>
           </div>
         </div>
+
+        {/* Quick Stats */}
+        {/* Quick Stats */}
+        <motion.div
+          className="row"
+          variants={containerVariants}
+          initial="hidden"
+          animate="visible"
+        >
+          {[
+            {
+              icon: "fas fa-user-injured",
+              value: "142",
+              label: "Total Patients",
+              color: "#3498db",
+              bg: "rgba(52, 152, 219, 0.15)"
+            },
+            {
+              icon: "fas fa-calendar-check",
+              value: "28",
+              label: "Appointments This Week",
+              color: "#2ecc71",
+              bg: "rgba(46, 204, 113, 0.15)"
+            },
+            {
+              icon: "fas fa-star",
+              value: "4.8",
+              label: "Average Rating",
+              color: "#f1c40f",
+              bg: "rgba(241, 196, 15, 0.15)"
+            },
+            {
+              icon: "fas fa-clock",
+              value: "12 min",
+              label: "Average Wait Time",
+              color: "#e67e22",
+              bg: "rgba(230, 126, 34, 0.15)"
+            }
+          ].map((stat, i) => (
+            <motion.div className="col-md-3 mb-4" key={i} variants={itemVariants}>
+              <motion.div
+                className="card shadow-sm border-0 h-100 rounded-4"
+                whileHover={{
+                  scale: 1.05,
+                  boxShadow: "0 12px 30px rgba(0,0,0,0.15)"
+                }}
+                style={{
+                  background: `linear-gradient(135deg, ${stat.bg} 0%, #ffffff 100%)`,
+                  border: "1px solid rgba(0,0,0,0.05)"
+                }}
+              >
+                <div className="card-body text-center">
+                  <motion.div
+                    className="rounded-circle d-inline-flex align-items-center justify-content-center mb-3 shadow-sm"
+                    style={{
+                      width: "70px",
+                      height: "70px",
+                      backgroundColor: stat.bg
+                    }}
+                    whileHover={{ rotate: 360 }}
+                    transition={{ duration: 0.6 }}
+                  >
+                    <i
+                      className={stat.icon}
+                      style={{ color: stat.color, fontSize: "22px" }}
+                    ></i>
+                  </motion.div>
+                  <h4 className="fw-bold" style={{ color: stat.color }}>
+                    {stat.value}
+                  </h4>
+                  <p className="text-muted mb-0">{stat.label}</p>
+                </div>
+              </motion.div>
+            </motion.div>
+          ))}
+        </motion.div>
+
+
+
       </motion.div>
 
+
       {/* Welcome Message & Next Appointment */}
-      <motion.div 
+      <motion.div
         className="row mb-4"
         variants={containerVariants}
         initial="hidden"
         animate="visible"
       >
         <motion.div className="col-lg-8 mb-4 mb-lg-0" variants={itemVariants}>
-          <motion.div 
+          <motion.div
             className="card shadow-sm h-100 border-0"
             whileHover={cardHover}
           >
-            <div className="card-header" style={{ backgroundColor: '#F95918', color: 'white', border: 'none' }}>
+            <div className="card-header">
               <h5 className="mb-0">Welcome back, Dr. Smith!</h5>
             </div>
             <div className="card-body">
-              <p>You have <strong>{todayStats.appointments} appointments</strong> scheduled for today. 
-                {todayStats.completed > 0 && ` ${todayStats.completed} have been completed`} 
+              <p>You have <strong>{todayStats.appointments} appointments</strong> scheduled for today.
+                {todayStats.completed > 0 && ` ${todayStats.completed} have been completed`}
                 {todayStats.pending > 0 && ` and ${todayStats.pending} are upcoming.`}</p>
-              
+
               <div className="mt-4">
                 <h6 className="text-muted">NEXT APPOINTMENT</h6>
-                <motion.div 
+                <motion.div
                   className="d-flex align-items-center mt-3 p-3 rounded"
                   style={{ backgroundColor: '#FFF5EF' }}
                   initial={{ opacity: 0, x: -20 }}
@@ -239,18 +296,18 @@ const ProviderDashboard = () => {
             </div>
           </motion.div>
         </motion.div>
-        
+
         <motion.div className="col-lg-4" variants={itemVariants}>
-          <motion.div 
+          <motion.div
             className="card shadow-sm h-100 border-0"
             whileHover={cardHover}
           >
-            <div className="card-header" style={{ backgroundColor: '#F95918', color: 'white', border: 'none' }}>
+            <div className="card-header">
               <h5 className="mb-0">Today's Summary</h5>
             </div>
             <div className="card-body">
               <div className="row text-center">
-                <motion.div 
+                <motion.div
                   className="col-6 mb-3"
                   whileHover={{ scale: 1.05 }}
                   transition={{ type: "spring", stiffness: 300 }}
@@ -260,7 +317,7 @@ const ProviderDashboard = () => {
                     <small>Total Appointments</small>
                   </div>
                 </motion.div>
-                <motion.div 
+                <motion.div
                   className="col-6 mb-3"
                   whileHover={{ scale: 1.05 }}
                   transition={{ type: "spring", stiffness: 300 }}
@@ -270,7 +327,7 @@ const ProviderDashboard = () => {
                     <small>Earnings</small>
                   </div>
                 </motion.div>
-                <motion.div 
+                <motion.div
                   className="col-6"
                   whileHover={{ scale: 1.05 }}
                   transition={{ type: "spring", stiffness: 300 }}
@@ -280,7 +337,7 @@ const ProviderDashboard = () => {
                     <small>Completed</small>
                   </div>
                 </motion.div>
-                <motion.div 
+                <motion.div
                   className="col-6"
                   whileHover={{ scale: 1.05 }}
                   transition={{ type: "spring", stiffness: 300 }}
@@ -291,16 +348,16 @@ const ProviderDashboard = () => {
                   </div>
                 </motion.div>
               </div>
-              
+
               {isAppointmentTime() && (
-                <motion.div 
+                <motion.div
                   className="mt-4 text-center"
                   initial={{ opacity: 0, scale: 0.8 }}
                   animate={{ opacity: 1, scale: 1 }}
                   transition={{ type: "spring", stiffness: 200 }}
                 >
-                  <button 
-                    className="btn btn-lg w-100" 
+                  <button
+                    className="btn btn-lg w-100"
                     style={{ backgroundColor: '#F95918', color: 'white' }}
                     onClick={handleStartCall}
                   >
@@ -315,19 +372,19 @@ const ProviderDashboard = () => {
       </motion.div>
 
       {/* Earnings Overview */}
-      <motion.div 
+      <motion.div
         className="row mb-4"
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.3, duration: 0.5 }}
       >
         <div className="col-12">
-          <motion.div 
+          <motion.div
             className="card shadow-sm border-0"
             whileHover={cardHover}
             style={{ position: 'relative', overflow: 'visible' }} // Added for dropdown visibility
           >
-            <div className="card-header d-flex justify-content-between align-items-center" style={{ backgroundColor: '#F95918', color: 'white', border: 'none' }}>
+            <div className="card-header d-flex justify-content-between align-items-center">
               <h5 className="mb-0">Earnings Overview (This Week)</h5>
               <div>
                 <span className="badge bg-light text-dark">Total: $3,020</span>
@@ -385,7 +442,7 @@ const ProviderDashboard = () => {
                     </div>
                   </div>
                   <div className="mt-3 text-center">
-                    <motion.button 
+                    <motion.button
                       className="btn btn-outline-secondary"
                       onClick={toggleEarningsDetails}
                       whileHover={{ scale: 1.05 }}
@@ -404,19 +461,19 @@ const ProviderDashboard = () => {
                         {/* Animated bar chart */}
                         <div className="d-flex align-items-end h-100" style={{ gap: '15px' }}>
                           {weeklyEarnings.map((day, index) => (
-                            <motion.div 
-                              key={index} 
-                              className="d-flex flex-column align-items-center" 
+                            <motion.div
+                              key={index}
+                              className="d-flex flex-column align-items-center"
                               style={{ flex: 1 }}
                               initial={{ height: 0 }}
                               animate={{ height: `${(day.earnings / 700) * 100}%` }}
                               transition={{ delay: index * 0.1 + 0.5, duration: 0.8, type: "spring" }}
                             >
-                              <motion.div 
-                                className="rounded" 
-                                style={{ 
-                                  width: '100%', 
-                                  height: '100%', 
+                              <motion.div
+                                className="rounded"
+                                style={{
+                                  width: '100%',
+                                  height: '100%',
                                   backgroundColor: '#F95918',
                                   minHeight: '10px'
                                 }}
@@ -435,16 +492,16 @@ const ProviderDashboard = () => {
                         <span className="fw-bold">$2,800</span>
                       </div>
                       <div className="progress mb-4" style={{ height: '10px' }}>
-                        <motion.div 
-                          className="progress-bar" 
+                        <motion.div
+                          className="progress-bar"
                           initial={{ width: 0 }}
                           animate={{ width: `${(3020 / 2800) * 100 > 100 ? 100 : (3020 / 2800) * 100}%` }}
                           transition={{ delay: 0.8, duration: 1.5 }}
                           style={{ backgroundColor: '#F95918' }}
                         ></motion.div>
                       </div>
-                      
-                      <motion.div 
+
+                      <motion.div
                         className="d-flex justify-content-between mb-2"
                         initial={{ opacity: 0, x: 20 }}
                         animate={{ opacity: 1, x: 0 }}
@@ -453,7 +510,7 @@ const ProviderDashboard = () => {
                         <span><i className="fas fa-circle text-success me-2"></i>Consultations</span>
                         <span>$1,840</span>
                       </motion.div>
-                      <motion.div 
+                      <motion.div
                         className="d-flex justify-content-between mb-2"
                         initial={{ opacity: 0, x: 20 }}
                         animate={{ opacity: 1, x: 0 }}
@@ -462,7 +519,7 @@ const ProviderDashboard = () => {
                         <span><i className="fas fa-circle text-primary me-2"></i>Procedures</span>
                         <span>$980</span>
                       </motion.div>
-                      <motion.div 
+                      <motion.div
                         className="d-flex justify-content-between mb-2"
                         initial={{ opacity: 0, x: 20 }}
                         animate={{ opacity: 1, x: 0 }}
@@ -475,7 +532,7 @@ const ProviderDashboard = () => {
                   </div>
                   <div className="mt-4 text-center" style={{ position: 'relative', zIndex: 1000 }}>
                     <div className="dropdown d-inline-block me-2" style={{ position: 'relative', zIndex: 1001 }}>
-                      <motion.button 
+                      <motion.button
                         className="btn btn-outline-secondary dropdown-toggle"
                         type="button"
                         id="exportDropdown"
@@ -486,34 +543,34 @@ const ProviderDashboard = () => {
                       >
                         <i className="fas fa-download me-2"></i>Export
                       </motion.button>
-                      <ul 
-                        className="dropdown-menu" 
+                      <ul
+                        className="dropdown-menu"
                         aria-labelledby="exportDropdown"
-                        style={{ 
-                          position: 'absolute', 
+                        style={{
+                          position: 'absolute',
                           zIndex: 1002,
-                          transform: 'translate3d(0px, 38px, 0px)' 
+                          transform: 'translate3d(0px, 38px, 0px)'
                         }}
                       >
                         <li>
-                          <button 
-                            className="dropdown-item" 
+                          <button
+                            className="dropdown-item"
                             onClick={() => setExportFormat('csv')}
                           >
                             CSV Format
                           </button>
                         </li>
                         <li>
-                          <button 
-                            className="dropdown-item" 
+                          <button
+                            className="dropdown-item"
                             onClick={() => setExportFormat('pdf')}
                           >
                             PDF Format
                           </button>
                         </li>
                         <li>
-                          <button 
-                            className="dropdown-item" 
+                          <button
+                            className="dropdown-item"
                             onClick={() => setExportFormat('excel')}
                           >
                             Excel Format
@@ -521,7 +578,7 @@ const ProviderDashboard = () => {
                         </li>
                       </ul>
                     </div>
-                    <motion.button 
+                    <motion.button
                       className="btn"
                       style={{ backgroundColor: '#F95918', color: 'white' }}
                       onClick={toggleEarningsDetails}
@@ -537,109 +594,6 @@ const ProviderDashboard = () => {
           </motion.div>
         </div>
       </motion.div>
-
-      {/* Quick Stats */}
-      <motion.div 
-        className="row"
-        variants={containerVariants}
-        initial="hidden"
-        animate="visible"
-      >
-        <motion.div className="col-md-3 mb-4" variants={itemVariants}>
-          <motion.div 
-            className="card shadow-sm border-0 h-100"
-            whileHover={{ 
-              scale: 1.05,
-              boxShadow: "0 10px 25px rgba(0,0,0,0.1)"
-            }}
-          >
-            <div className="card-body text-center">
-              <motion.div 
-                className="rounded-circle d-inline-flex align-items-center justify-content-center mb-3"
-                style={{ width: '60px', height: '60px', backgroundColor: 'rgba(249, 89, 24, 0.1)' }}
-                whileHover={{ rotate: 360 }}
-                transition={{ duration: 0.5 }}
-              >
-                <i className="fas fa-user-injured fa-lg" style={{ color: '#F95918' }}></i>
-              </motion.div>
-              <h4 style={{ color: '#F95918' }}>142</h4>
-              <p className="text-muted mb-0">Total Patients</p>
-            </div>
-          </motion.div>
-        </motion.div>
-        
-        <motion.div className="col-md-3 mb-4" variants={itemVariants}>
-          <motion.div 
-            className="card shadow-sm border-0 h-100"
-            whileHover={{ 
-              scale: 1.05,
-              boxShadow: "0 10px 25px rgba(0,0,0,0.1)"
-            }}
-          >
-            <div className="card-body text-center">
-              <motion.div 
-                className="rounded-circle d-inline-flex align-items-center justify-content-center mb-3"
-                style={{ width: '60px', height: '60px', backgroundColor: 'rgba(249, 89, 24, 0.1)' }}
-                whileHover={{ rotate: 360 }}
-                transition={{ duration: 0.5 }}
-              >
-                <i className="fas fa-calendar-check fa-lg" style={{ color: '#F95918' }}></i>
-              </motion.div>
-              <h4 style={{ color: '#F95918' }}>28</h4>
-              <p className="text-muted mb-0">Appointments This Week</p>
-            </div>
-          </motion.div>
-        </motion.div>
-        
-        <motion.div className="col-md-3 mb-4" variants={itemVariants}>
-          <motion.div 
-            className="card shadow-sm border-0 h-100"
-            whileHover={{ 
-              scale: 1.05,
-              boxShadow: "0 10px 25px rgba(0,0,0,0.1)"
-            }}
-          >
-            <div className="card-body text-center">
-              <motion.div 
-                className="rounded-circle d-inline-flex align-items-center justify-content-center mb-3"
-                style={{ width: '60px', height: '60px', backgroundColor: 'rgba(249, 89, 24, 0.1)' }}
-                whileHover={{ rotate: 360 }}
-                transition={{ duration: 0.5 }}
-              >
-                <i className="fas fa-star fa-lg" style={{ color: '#F95918' }}></i>
-              </motion.div>
-              <h4 style={{ color: '#F95918' }}>4.8</h4>
-              <p className="text-muted mb-0">Average Rating</p>
-            </div>
-          </motion.div>
-        </motion.div>
-        
-        <motion.div className="col-md-3 mb-4" variants={itemVariants}>
-          <motion.div 
-            className="card shadow-sm border-0 h-100"
-            whileHover={{ 
-              scale: 1.05,
-              boxShadow: "0 10px 25px rgba(0,0,0,0.1)"
-            }}
-          >
-            <div className="card-body text-center">
-              <motion.div 
-                className="rounded-circle d-inline-flex align-items-center justify-content-center mb-3"
-                style={{ width: '60px', height: '60px', backgroundColor: 'rgba(249, 89, 24, 0.1)' }}
-                whileHover={{ rotate: 360 }}
-                transition={{ duration: 0.5 }}
-              >
-                <i className="fas fa-clock fa-lg" style={{ color: '#F95918' }}></i>
-              </motion.div>
-              <h4 style={{ color: '#F95918' }}>12 min</h4>
-              <p className="text-muted mb-0">Average Wait Time</p>
-            </div>
-          </motion.div>
-        </motion.div>
-      </motion.div>
-
-      {/* Bootstrap JS for dropdown functionality */}
-      <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
     </div>
   );
 };
