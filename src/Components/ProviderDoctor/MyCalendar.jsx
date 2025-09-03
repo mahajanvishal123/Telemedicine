@@ -4,7 +4,6 @@ import { motion, AnimatePresence } from 'framer-motion';
 const MyCalendar = () => {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [showAvailabilityModal, setShowAvailabilityModal] = useState(false);
-  const [viewMode, setViewMode] = useState('week'); // 'week', 'month', 'day'
   const [availability, setAvailability] = useState({
     monday: { start: '09:00', end: '17:00', available: true },
     tuesday: { start: '09:00', end: '17:00', available: true },
@@ -97,15 +96,46 @@ const MyCalendar = () => {
     alert('Availability saved successfully!');
   };
 
-  // Check if a date is today
-  const isToday = (date) => {
-    const today = new Date();
-    return date.getDate() === today.getDate() && 
-           date.getMonth() === today.getMonth() && 
-           date.getFullYear() === today.getFullYear();
+  // Animation variants
+  const containerVariants = {
+    hidden: { opacity: 0 },
+    visible: {
+      opacity: 1,
+      transition: {
+        delayChildren: 0.3,
+        staggerChildren: 0.1
+      }
+    }
   };
 
-  // Animation variants
+  const itemVariants = {
+    hidden: { y: 20, opacity: 0 },
+    visible: {
+      y: 0,
+      opacity: 1
+    }
+  };
+
+  const dayVariants = {
+    hidden: { scale: 0.9, opacity: 0 },
+    visible: {
+      scale: 1,
+      opacity: 1,
+      transition: {
+        type: "spring",
+        stiffness: 300
+      }
+    },
+    hover: {
+      scale: 1.02,
+      boxShadow: "0 5px 15px rgba(0,0,0,0.08)",
+      transition: {
+        type: "spring",
+        stiffness: 400
+      }
+    }
+  };
+
   const modalVariants = {
     hidden: { 
       opacity: 0,
@@ -132,6 +162,14 @@ const MyCalendar = () => {
   const overlayVariants = {
     hidden: { opacity: 0 },
     visible: { opacity: 1 }
+  };
+
+  // Check if a date is today
+  const isToday = (date) => {
+    const today = new Date();
+    return date.getDate() === today.getDate() && 
+           date.getMonth() === today.getMonth() && 
+           date.getFullYear() === today.getFullYear();
   };
 
   return (
@@ -201,7 +239,7 @@ const MyCalendar = () => {
                 whileTap={{ scale: 0.95 }}
                 onClick={() => setShowAvailabilityModal(true)}
               >
-                <i className="fas fa-clock me-1"></i> Set Availability
+                <i className="fas fa-plus me-1"></i> Add Availability
               </motion.button>
             </div>
           </div>
@@ -213,24 +251,9 @@ const MyCalendar = () => {
             </div>
             <div className="col-md-4 text-md-end mt-2 mt-md-0">
               <div className="btn-group">
-                <button 
-                  className={`btn ${viewMode === 'week' ? 'btn-secondary' : 'btn-outline-secondary'}`}
-                  onClick={() => setViewMode('week')}
-                >
-                  Week
-                </button>
-                <button 
-                  className={`btn ${viewMode === 'month' ? 'btn-secondary' : 'btn-outline-secondary'}`}
-                  onClick={() => setViewMode('month')}
-                >
-                  Month
-                </button>
-                <button 
-                  className={`btn ${viewMode === 'day' ? 'btn-secondary' : 'btn-outline-secondary'}`}
-                  onClick={() => setViewMode('day')}
-                >
-                  Day
-                </button>
+                <button className="btn btn-outline-secondary active">Week</button>
+                <button className="btn btn-outline-secondary">Month</button>
+                <button className="btn btn-outline-secondary">Day</button>
               </div>
             </div>
           </div>
@@ -239,14 +262,14 @@ const MyCalendar = () => {
         {/* Calendar View */}
         <div style={{ backgroundColor: 'white', borderRadius: '12px', boxShadow: '0 5px 15px rgba(0,0,0,0.05)', marginBottom: '1.5rem', border: 'none', overflow: 'hidden' }}>
           <div style={{ background: 'linear-gradient(135deg, #f9591a 0%, #e04a12 100%)', color: 'white', padding: '1.25rem 1.5rem' }}>
-            <h2 className="mb-0"><i className="fas fa-calendar-alt me-2"></i>Calendar View - {viewMode.charAt(0).toUpperCase() + viewMode.slice(1)}</h2>
+            <h2 className="mb-0"><i className="fas fa-calendar-alt me-2"></i>Calendar View</h2>
           </div>
           <div style={{ padding: '1.5rem' }}>
             {/* Week Header */}
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: '8px', marginBottom: '12px', textAlign: 'center' }}>
               {dayNames.map(day => (
                 <div key={day} style={{ padding: '0.75rem', backgroundColor: '#ffefe8', borderRadius: '6px', fontWeight: '600', color: '#2c3e50' }}>
-                  {day.substring(0, 3)}
+                  {day}
                 </div>
               ))}
             </div>
@@ -269,22 +292,15 @@ const MyCalendar = () => {
                         border: '2px solid #f9591a'
                       })
                     }}
-                    whileHover={{ scale: 1.02, boxShadow: "0 5px 15px rgba(0,0,0,0.08)" }}
+                    variants={dayVariants}
+                    whileHover="hover"
                   >
                     <div style={{ 
                       fontWeight: '700', 
                       marginBottom: '0.75rem', 
-                      color: isToday(date) ? '#f9591a' : '#2c3e50',
-                      display: 'flex',
-                      justifyContent: 'space-between',
-                      alignItems: 'center'
+                      color: isToday(date) ? '#f9591a' : '#2c3e50'
                     }}>
-                      <span>{date.getDate()}</span>
-                      {isToday(date) && (
-                        <span style={{ fontSize: '0.7rem', backgroundColor: '#f9591a', color: 'white', padding: '2px 6px', borderRadius: '10px' }}>
-                          Today
-                        </span>
-                      )}
+                      {date.getDate()}
                     </div>
                     
                     {/* Appointment Indicators */}
@@ -318,8 +334,8 @@ const MyCalendar = () => {
                         </div>
                       )}
                       {dayAppointments.length === 0 && (
-                        <div className="text-center text-muted mt-3" style={{ fontSize: '0.8rem' }}>
-                          <i className="fas fa-umbrella-beach mb-1"></i>
+                        <div className="text-center text-muted mt-3">
+                          <i className="fas fa-umbrella-beach fa-2x mb-2"></i>
                           <p>No appointments</p>
                         </div>
                       )}
@@ -345,81 +361,70 @@ const MyCalendar = () => {
             onClick={() => setShowAvailabilityModal(false)}
           >
             <motion.div 
-              className="modal-dialog modal-dialog-centered"
-              style={{ maxWidth: '600px' }}
+              className="modal-dialog modal-lg modal-dialog-centered"
               variants={modalVariants}
               initial="hidden"
               animate="visible"
               exit="exit"
               onClick={(e) => e.stopPropagation()}
+              style={{ maxWidth: 'none', margin: '1.75rem auto' }}
             >
               <div className="modal-content" style={{ borderRadius: '12px', border: 'none', boxShadow: '0 5px 25px rgba(0,0,0,0.15)' }}>
-                <div className="modal-header" style={{ backgroundColor: '#ffefe8', borderBottom: '2px solid #f9591a', padding: '1rem 1.5rem', borderRadius: '12px 12px 0 0' }}>
-                  <h5 className="modal-title" style={{ color: '#2c3e50', fontWeight: '700', fontSize: '1.25rem' }}>
+                <div className="modal-header" style={{ backgroundColor: '#ffefe8', borderBottom: '2px solid #f9591a', padding: '1.5rem', borderRadius: '12px 12px 0 0' }}>
+                  <h5 className="modal-title" style={{ color: '#2c3e50', fontWeight: '700', fontSize: '1.5rem' }}>
                     <i className="fas fa-clock me-2"></i>Set Weekly Availability
                   </h5>
                   <button type="button" className="btn-close" onClick={() => setShowAvailabilityModal(false)} aria-label="Close"></button>
                 </div>
-                <div className="modal-body" style={{ padding: '1.5rem' }}>
-                  <p className="text-muted mb-3" style={{ fontSize: '0.9rem' }}>Set your regular working hours for each day. Patients will be able to book appointments during available time slots.</p>
+                <div className="modal-body" style={{ padding: '2rem' }}>
+                  <p className="text-muted mb-4">Set your regular working hours for the week. Patients will be able to book appointments during these available time slots.</p>
                   
-                  <div className="row g-2">
-                    {Object.entries(availability).map(([day, config]) => (
-                      <div key={day} className="col-12">
-                        <div style={{ 
-                          display: 'flex', 
-                          alignItems: 'center', 
-                          padding: '0.75rem', 
-                          border: '1px solid #e9ecef', 
-                          borderRadius: '8px', 
-                          backgroundColor: config.available ? '#f8f9fa' : '#f8f9fa',
-                          opacity: config.available ? 1 : 0.7
-                        }}>
-                          <div style={{ minWidth: '90px', fontWeight: '600', color: '#2c3e50', textTransform: 'capitalize', fontSize: '0.9rem' }}>
-                            {day}
-                          </div>
-                          
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flex: 1 }}>
-                            <input
-                              type="time"
-                              className="form-control form-control-sm"
-                              value={config.start}
-                              onChange={(e) => handleAvailabilityChange(day, 'start', e.target.value)}
-                              disabled={!config.available}
-                              style={{ padding: '0.3rem', border: '1px solid #e9ecef', borderRadius: '4px', fontSize: '0.8rem', width: '80px' }}
-                            />
-                            <span style={{ margin: '0 0.25rem', fontWeight: '600', fontSize: '0.8rem' }}>to</span>
-                            <input
-                              type="time"
-                              className="form-control form-control-sm"
-                              value={config.end}
-                              onChange={(e) => handleAvailabilityChange(day, 'end', e.target.value)}
-                              disabled={!config.available}
-                              style={{ padding: '0.3rem', border: '1px solid #e9ecef', borderRadius: '4px', fontSize: '0.8rem', width: '80px' }}
-                            />
-                          </div>
-                          
-                          <div className="form-check form-switch ms-2">
-                            <input
-                              className="form-check-input"
-                              type="checkbox"
-                              role="switch"
-                              checked={config.available}
-                              onChange={() => toggleDayAvailability(day)}
-                              style={{ backgroundColor: config.available ? '#f9591a' : '', borderColor: '#f9591a' }}
-                            />
-                          </div>
-                        </div>
+                  {Object.entries(availability).map(([day, config]) => (
+                    <div key={day} style={{ display: 'flex', alignItems: 'center', marginBottom: '1rem', padding: '1rem', border: '1px solid #e9ecef', borderRadius: '8px', backgroundColor: '#f8f9fa' }}>
+                      <div style={{ minWidth: '120px', fontWeight: '600', color: '#2c3e50', textTransform: 'capitalize' }}>
+                        {day}
                       </div>
-                    ))}
-                  </div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                        <input
+                          type="time"
+                          className="form-control"
+                          value={config.start}
+                          onChange={(e) => handleAvailabilityChange(day, 'start', e.target.value)}
+                          disabled={!config.available}
+                          style={{ padding: '0.5rem', border: '1px solid #e9ecef', borderRadius: '4px', width: '100px' }}
+                        />
+                        <span style={{ margin: '0 0.5rem', fontWeight: '600' }}>to</span>
+                        <input
+                          type="time"
+                          className="form-control"
+                          value={config.end}
+                          onChange={(e) => handleAvailabilityChange(day, 'end', e.target.value)}
+                          disabled={!config.available}
+                          style={{ padding: '0.5rem', border: '1px solid #e9ecef', borderRadius: '4px', width: '100px' }}
+                        />
+                      </div>
+                      <div className="form-check form-switch ms-3">
+                        <input
+                          className="form-check-input"
+                          type="checkbox"
+                          role="switch"
+                          checked={config.available}
+                          onChange={() => toggleDayAvailability(day)}
+                          style={{ backgroundColor: config.available ? '#f9591a' : '', borderColor: '#f9591a', width: '48px' }}
+                        />
+                        <label className="form-check-label ms-2" style={{ fontWeight: '600' }}>
+                          Available
+                        </label>
+                      </div>
+                    </div>
+                  ))}
                 </div>
-                <div className="modal-footer" style={{ borderTop: '1px solid #e9ecef', padding: '1rem 1.5rem', borderRadius: '0 0 12px 12px' }}>
+                <div className="modal-footer" style={{ borderTop: '1px solid #e9ecef', padding: '1.5rem', borderRadius: '0 0 12px 12px' }}>
                   <motion.button 
                     type="button" 
-                    className="btn btn-sm"
-                    style={{ backgroundColor: 'transparent', color: '#6c757d', border: '1px solid #6c757d', padding: '0.4rem 1rem', borderRadius: '6px', fontWeight: '500' }}
-                    whileHover={{ backgroundColor: '#f8f9fa', scale: 1.05 }}
+                    className="btn"
+                    style={{ backgroundColor: 'transparent', color: '#f9591a', border: '1px solid #f9591a', padding: '0.5rem 1.25rem', borderRadius: '6px', fontWeight: '600' }}
+                    whileHover={{ backgroundColor: '#ffefe8', scale: 1.05 }}
                     whileTap={{ scale: 0.95 }}
                     onClick={() => setShowAvailabilityModal(false)}
                   >
@@ -427,13 +432,13 @@ const MyCalendar = () => {
                   </motion.button>
                   <motion.button 
                     type="button" 
-                    className="btn btn-sm"
-                    style={{ backgroundColor: '#f9591a', color: 'white', border: 'none', padding: '0.5rem 1.25rem', borderRadius: '6px', fontWeight: '500' }}
+                    className="btn"
+                    style={{ backgroundColor: '#f9591a', color: 'white', border: 'none', padding: '0.6rem 1.5rem', borderRadius: '6px', fontWeight: '600' }}
                     whileHover={{ backgroundColor: '#e04a12', scale: 1.05 }}
                     whileTap={{ scale: 0.95 }}
                     onClick={saveAvailability}
                   >
-                    Save Changes
+                    Save Availability
                   </motion.button>
                 </div>
               </div>
