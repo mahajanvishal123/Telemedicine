@@ -156,7 +156,7 @@ const ProviderDashboard = () => {
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5 }}
       >
-        <div className="col-12">
+        <div className="col-12 mb-3">
           <div className="d-flex justify-content-between align-items-center">
             <div>
               <h3 className='dashboard-heading'>Provider Dashboard</h3>

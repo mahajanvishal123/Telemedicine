@@ -117,7 +117,7 @@ const Clients = () => {
     <>
       {/* Main Content */}
       <div className="col-md-9 col-lg-12 med-main-content">
-        <div className="d-flex flex-column flex-md-row justify-content-between align-items-center mb-4 text-center text-md-start">
+        <div className="d-flex flex-column flex-md-row mb-4">
           <h3 className="dashboard-heading mb-3 mb-md-0">My Clients</h3>
           <button
             className="btn med-btn-primary text-white healthcare-btn-primary"

@@ -155,7 +155,7 @@ const UserManagement = () => {
     <div className="">
       {/* Page Header */}
       <div className="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center gap-3 mb-4">
-        <h3 className="dashboard-heading mb-0 mt-0">User Management</h3>
+        <h3 className="dashboard-heading">User Management</h3>
         <button
           className="btn text-white"
           style={{ backgroundColor: "#F95918" }}
