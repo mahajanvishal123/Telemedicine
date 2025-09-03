@@ -24,7 +24,7 @@ import MyProfile from "./Components/ProviderDoctor/MyProfile";
 import MyCalendar from "./Components/ProviderDoctor/MyCalendar";  
 import ProviderMyAppointments from "./Components/ProviderDoctor/ProviderMyAppointments";
 import Visitlog from "./Components/CaregiverDashboard/Visitlog";
-
+import DoctorViewProfile from "./Components/CaregiverDashboard/DoctorViewProfile";
 
 function App() {
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
@@ -77,6 +77,8 @@ function App() {
                  <Route path="/admin/user-management" element={<UserManagement/>} />
                  <Route path="/admin/verification" element={<Verification/>} />
                  <Route path="/admin/appointments" element={<Appointments/>} />
+                 <Route path="/caregiver/clients/profile" element={<DoctorViewProfile/>} />
+
 
                 {/* <Route path="okrs/departmentokrs" element={<DepartmentOKRs />} /> */}
 
