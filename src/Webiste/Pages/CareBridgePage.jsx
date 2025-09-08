@@ -2,7 +2,7 @@ import React from 'react';
 import 'bootstrap/dist/css/bootstrap.min.css';
 import { Container, Row, Col, Button } from 'react-bootstrap';
 import { FaHome, FaUsers, FaHeart } from 'react-icons/fa';
-
+import { Link } from 'react-router-dom';
 const CareBridgePage = () => {
   return (
     <div className="" style={{ backgroundColor: '#f9eeeb', color: '#001f4d' }}>
@@ -187,6 +187,8 @@ const CareBridgePage = () => {
           <p className="mb-4" style={{ color: '#ff6a03' }}>
             Join our early access program and be among the first to experience the future of connected, compassionate care.
           </p>
+
+          <Link to="/signup">
           <Button
             className="px-5 py-2 fs-6 fw-bold"
             style={{
@@ -204,6 +206,7 @@ const CareBridgePage = () => {
           >
             Join Early Access →
           </Button>
+          </Link>
         </div>
       </Container>
     </div>

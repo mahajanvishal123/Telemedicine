@@ -2,6 +2,7 @@
 import React from 'react';
 import { Container, Row, Col, Card, Button, Image } from 'react-bootstrap';
 import { FiSearch } from 'react-icons/fi';
+import { Link } from 'react-router-dom';
 // import DoctorImg from '../assets/doctor_img.jpg'
 
 const FeaturesPage = () => {
@@ -218,7 +219,7 @@ const FeaturesPage = () => {
                         ))}
                     </Row>
 
-                    <div className="text-center mt-4">
+                    {/* <div className="text-center mt-4">
                         <button className="btn px-3 px-md-4 py-2 border-0" style={{
                             background: "linear-gradient(90deg, #ff6a00, #662f02ff)",
                             fontWeight: '500',
@@ -227,7 +228,7 @@ const FeaturesPage = () => {
                         }}>
                             View All Specialties →
                         </button>
-                    </div>
+                    </div> */}
                 </section>
 
                 {/* Section 3: Healthcare that adapts to you */}
@@ -322,9 +323,10 @@ const FeaturesPage = () => {
                                 ))}
                             </div>
 
-                            <div className="d-grid d-md-inline mt-3 mt-md-4 text-center text-md-start">
+                            <div className="d-grid d-md-inline mt-5 mt-md-4 text-center">
+                               <Link to="/signup">
                                 <Button
-                                    className="fw-bold px-4 py-2 border-0 w-100 w-md-auto"
+                                    className="fw-bold px-4 mt-4 py-2 border-0 w-100 w-md-auto"
                                     style={{
                                         background: "linear-gradient(90deg, #ff6a00, #612701ff)",
                                         color: "#fff",
@@ -334,6 +336,7 @@ const FeaturesPage = () => {
                                 >
                                     Start Your Journey →
                                 </Button>
+                               </Link>
                             </div>
                         </Col>
 
@@ -446,17 +449,19 @@ const FeaturesPage = () => {
                             </div>
 
                             <div className="d-grid d-md-inline mt-3 mt-md-4 text-center text-md-start">
+                               <Link to="/signup">
                                 <Button
-                                    className="fw-bold px-4 py-2 border-0 w-100 w-md-auto"
+                                    className="fw-bold px-4 mt-4 py-2 border-0 w-100 w-md-auto"
                                     style={{
-                                        background: "linear-gradient(90deg, #ff6a00, #7c3d02ff)",
+                                        background: "linear-gradient(90deg, #ff6a00, #612701ff)",
                                         color: "#fff",
                                         borderRadius: 10,
                                         fontSize: "clamp(1rem, 2.5vw, 1.05rem)",
                                     }}
                                 >
-                                    Join as Provider →
+                                  Join as Provider →
                                 </Button>
+                               </Link>
                             </div>
                         </Col>
 
@@ -967,7 +972,7 @@ const FeaturesPage = () => {
                         ))}
                     </Row>
 
-                    <div className="text-center mt-4 mb-5">
+                    {/* <div className="text-center mt-4 mb-5">
                         <Button className="px-4 border-0 py-2 fw-bold" style={{
                             background: "linear-gradient(90deg, #ff6a00, #834104ff)",
                             borderColor: '#ff6a03',
@@ -976,7 +981,7 @@ const FeaturesPage = () => {
                         }}>
                             Browse All Providers
                         </Button>
-                    </div>
+                    </div> */}
                 </section>
             </div>
         </div>

@@ -30,16 +30,20 @@ const HeroSection = () => {
             providers, caregivers, insurers, and labs across borders.
           </p>
           <div className="d-flex justify-content-center gap-3 mt-4">
-            <button style={{
-              background: "linear-gradient(90deg, #ff6a00, #140d01ff)",color: "#fff"
-            }} size="lg" className="btn btn fw-bold px-4 border-0">
-              Find a Doctor →
-            </button>
-            <button style={{
-              color: "#ff6a00",background: "#fff"
-            }} size="lg" className="btn btn fw-bold px-4">
-              How it Works
-            </button>
+            <a href="#finddoctor">
+              <button style={{
+                background: "linear-gradient(90deg, #ff6a00, #140d01ff)", color: "#fff"
+              }} size="lg" className="btn btn fw-bold px-4 border-0">
+                Find a Doctor →
+              </button>
+            </a>
+            <a href="#features">
+              <button style={{
+                color: "#ff6a00", background: "#fff"
+              }} size="lg" className="btn btn fw-bold px-4">
+                How it Works
+              </button>
+            </a>
           </div>
 
           {/* Bottom Features */}

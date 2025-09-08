@@ -76,9 +76,11 @@ const PatientsPage = () => {
             <p className="mb-4 text-white">
               Join thousands of patients who trust TeleMediBridge for their healthcare needs. Start your journey to accessible, quality care today.
             </p>
-            <Button variant="dark" className="px-5 py-2 fs-6">
+           <a href="#finddoctor">
+             <Button variant="dark" className="px-5 py-2 fs-6">
               Find a Doctor →
             </Button>
+           </a>
           </div>
         </Container>
       </section>

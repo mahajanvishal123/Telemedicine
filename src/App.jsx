@@ -23,8 +23,8 @@ import MyProfile from "./Components/ProviderDoctor/MyProfile";
 import MyCalendar from "./Components/ProviderDoctor/MyCalendar";
 import ProviderMyAppointments from "./Components/ProviderDoctor/ProviderMyAppointments";
 import Visitlog from "./Components/CaregiverDashboard/Visitlog";
-import Landing from "./Webiste/Demo/Landing";
-import InvestorsPage from "./Webiste/Demo/InvestorsPage";
+import Landing from "./Webiste/Pages/Landing";
+import InvestorsPage from "./Webiste/Pages/InvestorsPage";
 
 
 // import Home from "./Webiste/Pages/Home";
