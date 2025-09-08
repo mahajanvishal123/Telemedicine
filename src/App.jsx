@@ -23,18 +23,20 @@ import MyProfile from "./Components/ProviderDoctor/MyProfile";
 import MyCalendar from "./Components/ProviderDoctor/MyCalendar";
 import ProviderMyAppointments from "./Components/ProviderDoctor/ProviderMyAppointments";
 import Visitlog from "./Components/CaregiverDashboard/Visitlog";
-// import Landing from "./Webiste/Demo/Landing";
-// import InvestorsPage from "./Webiste/Demo/InvestorsPage";
-import Home from "./Webiste/Pages/Home";
-import AboutUs from "./Webiste/Pages/AboutUs";
-import ForProviders from "./Webiste/Pages/ForProviders";
-import ForPatients from "./Webiste/Pages/ForPatients";
-import CareBridge from "./Webiste/Pages/CareBridge";
-import ContactUs from "./Webiste/Pages/ContactUs";
+import Landing from "./Webiste/Demo/Landing";
+import InvestorsPage from "./Webiste/Demo/InvestorsPage";
+
+
+// import Home from "./Webiste/Pages/Home";
+// import AboutUs from "./Webiste/Pages/AboutUs";
+// import ForProviders from "./Webiste/Pages/ForProviders";
+// import ForPatients from "./Webiste/Pages/ForPatients";
+// import CareBridge from "./Webiste/Pages/CareBridge";
+// import ContactUs from "./Webiste/Pages/ContactUs";
 import ScrollToTop from "./Webiste/ScrollToTop/ScrollToTop";
 import PrivacyPolicy from "./Webiste/Pages/PrivacyPolicy";
 import TermsConditions from "./Webiste/Pages/TermsConditions";
-import DoctorViewProfile from "./Components/CaregiverDashboard/DoctorViewProfile";
+// import DoctorViewProfile from "./Components/CaregiverDashboard/DoctorViewProfile";
 
 function App() {
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
@@ -63,7 +65,8 @@ function App() {
     location.pathname === "/carebridge" ||
     location.pathname === "/contactus" ||
     location.pathname === "/privacypolicy" ||
-    location.pathname === "/termsconditions";
+    location.pathname === "/termsconditions" ||
+    location.pathname === "/investorspage";
 
   return (
     <>
@@ -72,18 +75,18 @@ function App() {
 
       {hideLayout ? (
         <Routes>
-          {/* <Route path="/investorspage" element={<InvestorsPage />} /> */}
-          {/* <Route path="/" element={<Landing />} /> */}
+          <Route path="/investorspage" element={<InvestorsPage />} />
+          <Route path="/" element={<Landing />} />
 
-          <Route path="/" element={<Home />} />
+          {/* <Route path="/" element={<Home />} />
           <Route path="/aboutus" element={<AboutUs />} />
           <Route path="/forprovider" element={<ForProviders />} />
           <Route path="/forpatients" element={<ForPatients />} />
           <Route path="/carebridge" element={<CareBridge />} />
-          <Route path="/contactus" element={<ContactUs />} />
+          <Route path="/contactus" element={<ContactUs />} /> */}
 
-           <Route path="/privacypolicy" element={<PrivacyPolicy />} />
-            <Route path="/termsconditions" element={<TermsConditions />} />
+          <Route path="/privacypolicy" element={<PrivacyPolicy />} />
+          <Route path="/termsconditions" element={<TermsConditions />} />
 
           <Route path="/login" element={<Login />} />
           <Route path="/signup" element={<Signup />} />
@@ -98,9 +101,8 @@ function App() {
               setCollapsed={setIsSidebarCollapsed}
             />
             <div
-              className={`right-side-content ${
-                isSidebarCollapsed ? "collapsed" : ""
-              }`}
+              className={`right-side-content ${isSidebarCollapsed ? "collapsed" : ""
+                }`}
             >
               <Routes>
                 <Route path="dashboard" element={<Dashobard />} />
@@ -114,11 +116,11 @@ function App() {
                 />
                 <Route path="/admin/verification" element={<Verification />} />
                 <Route path="/admin/appointments" element={<Appointments />} />
-                <Route path="/admin/dashboard" element={<Dashobard/>} />
-                 <Route path="/admin/user-management" element={<UserManagement/>} />
-                 <Route path="/admin/verification" element={<Verification/>} />
-                 <Route path="/admin/appointments" element={<Appointments/>} />
-                 <Route path="/caregiver/clients/profile" element={<DoctorViewProfile/>} />
+                <Route path="/admin/dashboard" element={<Dashobard />} />
+                <Route path="/admin/user-management" element={<UserManagement />} />
+                <Route path="/admin/verification" element={<Verification />} />
+                <Route path="/admin/appointments" element={<Appointments />} />
+                <Route path="/caregiver/clients/profile" element={<DoctorViewProfile />} />
 
 
                 {/* <Route path="okrs/departmentokrs" element={<DepartmentOKRs />} /> */}

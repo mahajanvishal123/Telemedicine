@@ -67,48 +67,48 @@ const Clients = () => {
   // Patient Card Component
   const PatientCard = ({ patient }) => {
     return (
-    <div className="col-12 col-sm-6 col-lg-4 p-3">
-  <div className="card healthcare-task-card h-100">
-    <div className="card-body">
-      <div className="healthcare-patient-header mb-3">
-        <div className="d-flex justify-content-between align-items-start">
-          <h5 className="card-title mb-1 fw-bold">{patient.name}</h5>
+      <div className="col-12 col-sm-6 col-lg-4 p-3">
+        <div className="card healthcare-task-card h-100">
+          <div className="card-body">
+            <div className="healthcare-patient-header mb-3">
+              <div className="d-flex justify-content-between align-items-start">
+                <h5 className="card-title mb-1 fw-bold">{patient.name}</h5>
+              </div>
+            </div>
+
+            <div className="mb-3">
+              <p className="card-text mb-3">
+                <i
+                  className="fas fa-stethoscope me-2"
+                  style={{ color: "#f9591a" }}
+                />
+                <strong>Primary Condition:</strong> {patient.condition}
+              </p>
+              <p className="card-text mb-2">
+                <i
+                  className="fas fa-map-marker-alt me-2"
+                  style={{ color: "#f9591a" }}
+                />
+                <strong>Contact:</strong>
+                <small className="text-muted"> {patient.contact}</small>
+              </p>
+            </div>
+
+            <div className="d-flex justify-content-between align-items-center flex-wrap gap-2">
+              <span className={patient.statusClass}>
+                <i className={patient.statusIcon + " me-1"} />
+                {patient.status.charAt(0).toUpperCase() + patient.status.slice(1)}
+              </span>
+              <button
+                className="btn btn-sm text-white healthcare-btn-primary"
+                onClick={() => navigate(`/caregiver/clients/profile`)}
+              >
+                View Profile
+              </button>
+            </div>
+          </div>
         </div>
       </div>
-
-      <div className="mb-3">
-        <p className="card-text mb-3">
-          <i
-            className="fas fa-stethoscope me-2"
-            style={{ color: "#f9591a" }}
-          />
-          <strong>Primary Condition:</strong> {patient.condition}
-        </p>
-        <p className="card-text mb-2">
-          <i
-            className="fas fa-map-marker-alt me-2"
-            style={{ color: "#f9591a" }}
-          />
-          <strong>Contact:</strong>
-          <small className="text-muted"> {patient.contact}</small>
-        </p>
-      </div>
-
-      <div className="d-flex justify-content-between align-items-center flex-wrap gap-2">
-        <span className={patient.statusClass}>
-          <i className={patient.statusIcon + " me-1"} />
-          {patient.status.charAt(0).toUpperCase() + patient.status.slice(1)}
-        </span>
-        <button
-          className="btn btn-sm text-white healthcare-btn-primary"
-          onClick={() => navigate(`/caregiver/clients/profile`)}
-        >
-          View Profile
-        </button>
-      </div>
-    </div>
-  </div>
-</div>
 
     );
   };
@@ -117,8 +117,10 @@ const Clients = () => {
     <>
       {/* Main Content */}
       <div className="col-md-9 col-lg-12 med-main-content">
-        <div className="d-flex flex-column flex-md-row mb-4">
-          <h3 className="dashboard-heading mb-3 mb-md-0">My Clients</h3>
+        <div className="d-flex flex-column flex-md-row justify-content-between mb-4">
+          <h3 className="dashboard-heading mb-3 mb-md-0">
+            My Clients
+          </h3>
           <button
             className="btn med-btn-primary text-white healthcare-btn-primary"
             data-bs-toggle="modal"
