@@ -7,6 +7,7 @@ const Verification = () => {
       id: 1,
       profile: 'https://cdn.pixabay.com/photo/2015/10/05/22/37/blank-profile-picture-973460_960_720.png',
       name: 'Dr. Sarah Wilson',
+      gender:'Female',
       email: 'sarah@example.com',
       specialty: 'Cardiology',
       license: 'MD12345',
@@ -21,6 +22,7 @@ const Verification = () => {
       id: 2,
       profile: 'https://cdn.pixabay.com/photo/2015/10/05/22/37/blank-profile-picture-973460_960_720.png',
       name: 'Dr. James Miller',
+      gender:'Male',
       email: 'james@example.com',
       specialty: 'Pediatrics',
       license: 'MD67890',
@@ -35,6 +37,7 @@ const Verification = () => {
       id: 3,
       profile: 'https://cdn.pixabay.com/photo/2015/10/05/22/37/blank-profile-picture-973460_960_720.png',
       name: 'Dr. Lisa Taylor',
+      gender:'Female',
       email: 'lisa@example.com',
       specialty: 'Dermatology',
       license: 'MD54321',
@@ -49,6 +52,7 @@ const Verification = () => {
       id: 4,
       profile: 'https://cdn.pixabay.com/photo/2015/10/05/22/37/blank-profile-picture-973460_960_720.png',
       name: 'Dr. David Clark',
+      gender:'Male',
       email: 'david@example.com',
       specialty: 'Orthopedics',
       license: 'MD09876',
@@ -125,6 +129,7 @@ const Verification = () => {
                         <th>Doctor ID</th>
                         <th>Profile</th>
                         <th>Name</th>
+                        <th>Gender</th>
                         <th>Email</th>
                         <th>Specialty</th>
                         <th>License No.</th>
@@ -146,6 +151,9 @@ const Verification = () => {
                           </td>
                           <td>
                             <strong>{doctor.name}</strong>
+                          </td>
+                          <td>
+                            {doctor.gender}
                           </td>
                           <td>{doctor.email}</td>
                           <td>
