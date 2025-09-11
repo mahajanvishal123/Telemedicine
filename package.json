@@ -14,10 +14,7 @@
     "@fortawesome/free-solid-svg-icons": "^7.0.0",
     "@fortawesome/react-fontawesome": "^3.0.2",
     "bootstrap": "^5.3.8",
-<<<<<<< HEAD
-=======
     "framer-motion": "^12.23.12",
->>>>>>> 5d4ac30c9eb167f25a26d2cf92b97a1b73b5694a
     "react": "^19.1.1",
     "react-bootstrap": "^2.10.10",
     "react-dom": "^19.1.1",
