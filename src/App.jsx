@@ -16,7 +16,7 @@ import Appointments from "./Components/AdminDashboard/Appointments";
 import PatientDashboard from "./Components/PatientDashboard/Dashboard/PatientDashboard";
 import Profile from "./Components/PatientDashboard/Profile/Profile";
 import MyDoctors from "./Components/PatientDashboard/MyDoctors/MyDoctors";
-// import MyCaregiver from "./Components/PatientDashboard/MyCaregiver/MyCaregiver";
+
 import MyAppointments from "./Components/PatientDashboard/MyAppointments/MyAppointments";
 import BookAppointment from "./Components/PatientDashboard/BookAppointment/BookAppointment";
 import ProviderDashboard from "./Components/ProviderDoctor/ProviderDashboard";
@@ -40,6 +40,7 @@ import ScrollToTop from "./Webiste/ScrollToTop/ScrollToTop";
 import PrivacyPolicy from "./Webiste/Pages/PrivacyPolicy";
 import TermsConditions from "./Webiste/Pages/TermsConditions";
 import DoctorViewProfile from "./Components/CaregiverDashboard/DoctorViewProfile";
+import MyCaregiver from "./Components/PatientDashboard/MyCaregiver.jsx/MyCaregiver";
 
 function App() {
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
@@ -148,7 +149,7 @@ function App() {
                   path="/patient/my-doctors"
                   element={<MyDoctors />}
                 />
-                 {/* <Route path="/patient/my-caregiver" element={<MyCaregiver />} /> */}
+              <Route path="/patient/my-caregiver" element={<MyCaregiver />} />
 
                 <Route path="/patient/profile" element={<Profile />} />
 
