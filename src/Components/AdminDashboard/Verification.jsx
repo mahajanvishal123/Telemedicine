@@ -16,6 +16,7 @@ const Verification = () => {
       availableDays: 'Mon-Sat',
       openingClosingTime: '9:00 AM - 5:00 PM',
       experience: '8 years',
+      consultationFee: '$100',
       documents: ['medical_license.pdf', 'id_proof.pdf']
     },
     {
@@ -31,6 +32,7 @@ const Verification = () => {
       availableDays: 'Mon-Fri',
       openingClosingTime: '10:00 AM - 6:00 PM',
       experience: '5 years',
+      consultationFee: '$30',
       documents: ['medical_certificate.pdf', 'resume.pdf']
     },
     {
@@ -46,6 +48,7 @@ const Verification = () => {
       availableDays: 'Tue-Sun',
       openingClosingTime: '8:00 AM - 4:00 PM',
       experience: '10 years',
+      consultationFee: '$100',
       documents: ['license_copy.pdf', 'degree_certificate.pdf']
     },
     {
@@ -61,6 +64,7 @@ const Verification = () => {
       availableDays: 'Mon-Sat',
       openingClosingTime: '11:00 AM - 7:00 PM',
       experience: '7 years',
+      consultationFee: '$70',
       documents: ['certification.pdf', 'id_card.pdf']
     }
   ]);
@@ -138,6 +142,7 @@ const Verification = () => {
                         <th>Available Days</th>
                         <th>Opening-Closing Time</th>
                         <th>Experience</th>
+                        <th>Consultation Fee</th>
                         <th>Documents</th>
                         <th>Actions</th>
                       </tr>
@@ -165,6 +170,8 @@ const Verification = () => {
                           <td>{doctor.availableDays}</td>
                           <td>{doctor.openingClosingTime}</td>
                           <td>{doctor.experience}</td>
+                          
+                          <td>{doctor.consultationFee}</td>
                           <td>
                             <button
                               className="btn btn-sm btn-outline-primary"
