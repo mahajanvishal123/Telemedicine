@@ -36,7 +36,7 @@ import InvestorsPage from "./Webiste/Pages/InvestorsPage";
 import ScrollToTop from "./Webiste/ScrollToTop/ScrollToTop";
 import PrivacyPolicy from "./Webiste/Pages/PrivacyPolicy";
 import TermsConditions from "./Webiste/Pages/TermsConditions";
-// import DoctorViewProfile from "./Components/CaregiverDashboard/DoctorViewProfile";
+import DoctorViewProfile from "./Components/CaregiverDashboard/DoctorViewProfile";
 
 function App() {
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
