@@ -2,44 +2,64 @@ import React, { useState } from 'react';
 
 const Verification = () => {
   // Sample data for doctors awaiting approval
-  const [doctors, setDoctors] = useState([
+ const [doctors, setDoctors] = useState([
     {
       id: 1,
+      profile: 'https://cdn.pixabay.com/photo/2015/10/05/22/37/blank-profile-picture-973460_960_720.png',
       name: 'Dr. Sarah Wilson',
+      gender:'Female',
       email: 'sarah@example.com',
       specialty: 'Cardiology',
       license: 'MD12345',
       signupDate: '2023-10-15',
+      // UPDATED FIELDS
+      availableDays: 'Mon-Sat',
+      openingClosingTime: '9:00 AM - 5:00 PM',
       experience: '8 years',
       documents: ['medical_license.pdf', 'id_proof.pdf']
     },
     {
       id: 2,
+      profile: 'https://cdn.pixabay.com/photo/2015/10/05/22/37/blank-profile-picture-973460_960_720.png',
       name: 'Dr. James Miller',
+      gender:'Male',
       email: 'james@example.com',
       specialty: 'Pediatrics',
       license: 'MD67890',
       signupDate: '2023-10-18',
+      // UPDATED FIELDS
+      availableDays: 'Mon-Fri',
+      openingClosingTime: '10:00 AM - 6:00 PM',
       experience: '5 years',
       documents: ['medical_certificate.pdf', 'resume.pdf']
     },
     {
       id: 3,
+      profile: 'https://cdn.pixabay.com/photo/2015/10/05/22/37/blank-profile-picture-973460_960_720.png',
       name: 'Dr. Lisa Taylor',
+      gender:'Female',
       email: 'lisa@example.com',
       specialty: 'Dermatology',
       license: 'MD54321',
       signupDate: '2023-10-20',
+      // UPDATED FIELDS
+      availableDays: 'Tue-Sun',
+      openingClosingTime: '8:00 AM - 4:00 PM',
       experience: '10 years',
       documents: ['license_copy.pdf', 'degree_certificate.pdf']
     },
     {
       id: 4,
+      profile: 'https://cdn.pixabay.com/photo/2015/10/05/22/37/blank-profile-picture-973460_960_720.png',
       name: 'Dr. David Clark',
+      gender:'Male',
       email: 'david@example.com',
       specialty: 'Orthopedics',
       license: 'MD09876',
       signupDate: '2023-10-22',
+      // UPDATED FIELDS
+      availableDays: 'Mon-Sat',
+      openingClosingTime: '11:00 AM - 7:00 PM',
       experience: '7 years',
       documents: ['certification.pdf', 'id_card.pdf']
     }
@@ -107,11 +127,16 @@ const Verification = () => {
                     <thead>
                       <tr>
                         <th>Doctor ID</th>
+                        <th>Profile</th>
                         <th>Name</th>
+                        <th>Gender</th>
                         <th>Email</th>
                         <th>Specialty</th>
                         <th>License No.</th>
                         <th>Signup Date</th>
+                        {/* NEW COLUMNS ADDED IN HEADER */}
+                        <th>Available Days</th>
+                        <th>Opening-Closing Time</th>
                         <th>Experience</th>
                         <th>Documents</th>
                         <th>Actions</th>
@@ -122,7 +147,13 @@ const Verification = () => {
                         <tr key={doctor.id}>
                           <td>#{doctor.id}</td>
                           <td>
+                            <img src={doctor.profile} alt="Profile" className="img-fluid rounded-circle" style={{ width: '50px', height: '50px' }} />
+                          </td>
+                          <td>
                             <strong>{doctor.name}</strong>
+                          </td>
+                          <td>
+                            {doctor.gender}
                           </td>
                           <td>{doctor.email}</td>
                           <td>
@@ -130,6 +161,9 @@ const Verification = () => {
                           </td>
                           <td>{doctor.license}</td>
                           <td>{doctor.signupDate}</td>
+                          {/* NEW COLUMNS ADDED IN BODY */}
+                          <td>{doctor.availableDays}</td>
+                          <td>{doctor.openingClosingTime}</td>
                           <td>{doctor.experience}</td>
                           <td>
                             <button
@@ -143,7 +177,6 @@ const Verification = () => {
                             <div className="d-flex gap-2">
                               <button
                                 className="btn btn-sm btn-outline-success flex-fill"
-
                                 onClick={() => handleApprove(doctor.id)}
                               >
                                 Approve

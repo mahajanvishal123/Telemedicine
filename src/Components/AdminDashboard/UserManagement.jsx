@@ -154,7 +154,7 @@ const UserManagement = () => {
   return (
     <div className="">
       {/* Page Header */}
-      <div className="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center gap-3 mb-4">
+      {/* <div className="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center gap-3 mb-4">
         <h3 className="dashboard-heading">User Management</h3>
         <button
           className="btn text-white"
@@ -163,11 +163,11 @@ const UserManagement = () => {
         >
           + Add User
         </button>
-      </div>
+      </div> */}
 
 
       {/* Small Button Tabs */}
-      <div className="mb-3">
+      <div className="mb-3 mt-5">
         <div className="d-flex flex-wrap gap-2">
           {["patients", "providers", "caregivers"].map((tab) => (
             <button
