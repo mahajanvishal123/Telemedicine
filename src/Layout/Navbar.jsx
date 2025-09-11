@@ -276,28 +276,6 @@ const Navbar = ({ toggleSidebar }) => {
   };
 
   return (
-<<<<<<< HEAD
-    <nav className="navbar navbar-expand px-3 py-2 custom-navbar d-flex justify-content-between align-items-center fixed-top">
-      {/* Sidebar Toggle + Logo */}
-      <div className="d-flex align-items-center gap-3">
-        <button className="btn btn-orange p-2" onClick={toggleSidebar}>
-          <FontAwesomeIcon icon={faBars} />
-        </button>
-        <img src="https://i.ibb.co/xKF1WPkH/image.png" alt="Logo" height="45" width={60} className="navbar-logo" 
-                      onClick={() => navigate("/")}
-        
-        />
-      </div>
-
-      {/* Search */}
-      {/* <div className="d-flex align-items-center">
-        <div className="input-group d-none d-sm-flex">
-          <input
-            type="text"
-            className="form-control form-control-sm bg-white text-dark border-0"
-            placeholder="Search"
-            aria-label="Search"
-=======
     <>
       <nav className="navbar navbar-expand px-3 py-2 custom-navbar d-flex justify-content-between align-items-center fixed-top">
         <div className="d-flex align-items-center gap-3">
@@ -310,7 +288,8 @@ const Navbar = ({ toggleSidebar }) => {
             height="45"
             width={60}
             className="navbar-logo"
->>>>>>> 82912612c79d0e7e1f3e35da36a8229c6b86f672
+            onClick={() => navigate("/")}
+
           />
         </div>
 
