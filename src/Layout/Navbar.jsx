@@ -140,11 +140,7 @@ const Navbar = ({ toggleSidebar }) => {
                   Profile
                 </Link>
               </li>
-              <li>
-                <a className="dropdown-item" href="#">
-                  Settings
-                </a>
-              </li>
+             
               <li>
                 <hr className="dropdown-divider" />
               </li>
