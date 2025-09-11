@@ -16,15 +16,18 @@ import Appointments from "./Components/AdminDashboard/Appointments";
 import PatientDashboard from "./Components/PatientDashboard/Dashboard/PatientDashboard";
 import Profile from "./Components/PatientDashboard/Profile/Profile";
 import MyDoctors from "./Components/PatientDashboard/MyDoctors/MyDoctors";
+
 import MyAppointments from "./Components/PatientDashboard/MyAppointments/MyAppointments";
 import BookAppointment from "./Components/PatientDashboard/BookAppointment/BookAppointment";
 import ProviderDashboard from "./Components/ProviderDoctor/ProviderDashboard";
 import MyProfile from "./Components/ProviderDoctor/MyProfile";
 import MyCalendar from "./Components/ProviderDoctor/MyCalendar";
+import AssignCaregiver from "./Components/ProviderDoctor/AssignCaregiver";
 import ProviderMyAppointments from "./Components/ProviderDoctor/ProviderMyAppointments";
 import Visitlog from "./Components/CaregiverDashboard/Visitlog";
 import Landing from "./Webiste/Pages/Landing";
 import InvestorsPage from "./Webiste/Pages/InvestorsPage";
+import Caregiver from "./Components/AdminDashboard/Caregiver";
 
 
 // import Home from "./Webiste/Pages/Home";
@@ -37,6 +40,7 @@ import ScrollToTop from "./Webiste/ScrollToTop/ScrollToTop";
 import PrivacyPolicy from "./Webiste/Pages/PrivacyPolicy";
 import TermsConditions from "./Webiste/Pages/TermsConditions";
 import DoctorViewProfile from "./Components/CaregiverDashboard/DoctorViewProfile";
+import MyCaregiver from "./Components/PatientDashboard/MyCaregiver.jsx/MyCaregiver";
 
 function App() {
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
@@ -120,6 +124,10 @@ function App() {
                 <Route path="/admin/user-management" element={<UserManagement />} />
                 <Route path="/admin/verification" element={<Verification />} />
                 <Route path="/admin/appointments" element={<Appointments />} />
+                 <Route
+                  path="/admin/caregiver"
+                  element={<Caregiver />}
+                />
                 <Route path="/caregiver/clients/profile" element={<DoctorViewProfile />} />
 
 
@@ -141,6 +149,8 @@ function App() {
                   path="/patient/my-doctors"
                   element={<MyDoctors />}
                 />
+              <Route path="/patient/my-caregiver" element={<MyCaregiver />} />
+
                 <Route path="/patient/profile" element={<Profile />} />
 
                 <Route
@@ -151,6 +161,7 @@ function App() {
                   path="/doctor/appointments"
                   element={<ProviderMyAppointments />}
                 />
+                 <Route path="/doctor/assign-caregiver" element={<AssignCaregiver />} />
                 <Route path="/doctor/profile" element={<MyProfile />} />
                 <Route path="/doctor/calendar" element={<MyCalendar />} />
               </Routes>

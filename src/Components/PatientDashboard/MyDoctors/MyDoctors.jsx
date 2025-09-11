@@ -24,7 +24,7 @@ const doctors = [
     status: "Available",
     nextAvailable: "Today 2:30 PM",
     price: "$150",
-    languages: "English, Spanish",
+ 
     rating: 4.9,
   },
   {
@@ -36,7 +36,7 @@ const doctors = [
     status: "Busy",
     nextAvailable: "Tomorrow 10:00 AM",
     price: "$180",
-    languages: "English, Mandarin",
+
     rating: 4.8,
   },
   {
@@ -48,7 +48,7 @@ const doctors = [
     status: "Available",
     nextAvailable: "Today 4:45 PM",
     price: "$120",
-    languages: "English, Spanish",
+   
     rating: 4.7,
   },
 ];
@@ -211,17 +211,8 @@ export default function MyDoctors() {
                       <span className="fw-bold" style={{ color: "#FF6A00" }}>{doc.price}</span>
                       <small className="text-muted ms-1">/ consultation</small>
                     </div>
-                    <Button
-                      style={{ background: "#FF6A00", border: "none" }}
-                      className="w-100 mb-2 mt-auto"
-                      onClick={() => handleShowModal(doc)}
-                    >
-                      Book Again
-                    </Button>
-                    <div className="text-muted" style={{ fontSize: "0.9em" }}>
-                      <FaUserMd className="me-1" />
-                      Language: {doc.languages}
-                    </div>
+                   
+                   
                   </Card.Body>
                 </Card>
               </Col>
@@ -229,77 +220,7 @@ export default function MyDoctors() {
           )}
         </Row>
 
-        {/* Booking Modal */}
-        <Modal show={showModal} onHide={handleCloseModal} centered>
-          <Modal.Header closeButton>
-            <Modal.Title>Book Appointment</Modal.Title>
-          </Modal.Header>
-          <Modal.Body>
-            {selectedDoctor && (
-              <>
-                <div className="d-flex align-items-center mb-3">
-                  <div className="mydoctors-avatar me-3">
-                    <FaUserMd size={24} />
-                  </div>
-                  <div>
-                    <h5 className="mb-0">{selectedDoctor.name}</h5>
-                    <p className="mb-0 text-muted">{selectedDoctor.specialty}</p>
-                  </div>
-                </div>
-
-                <Form>
-                  <Form.Group className="mb-3">
-                    <Form.Label>
-                      <FaCalendarAlt className="me-2" />
-                      Select Date
-                    </Form.Label>
-                    <Form.Control
-                      type="date"
-                      value={selectedDate}
-                      onChange={(e) => setSelectedDate(e.target.value)}
-                      min={new Date().toISOString().split('T')[0]}
-                    />
-                  </Form.Group>
-
-                  <Form.Group className="mb-3">
-                    <Form.Label>
-                      <FaClock className="me-2" />
-                      Select Time
-                    </Form.Label>
-                    <Form.Select
-                      value={selectedTime}
-                      onChange={(e) => setSelectedTime(e.target.value)}
-                    >
-                      <option value="">Select a time</option>
-                      {timeSlots.map((time, index) => (
-                        <option key={index} value={time}>{time}</option>
-                      ))}
-                    </Form.Select>
-                  </Form.Group>
-
-                  <div className="d-flex justify-content-between align-items-center mt-4">
-                    <div>
-                      <span className="text-muted">Consultation Fee:</span>
-                      <span className="fw-bold ms-2" style={{ color: "#FF6A00" }}>{selectedDoctor.price}</span>
-                    </div>
-                  </div>
-                </Form>
-              </>
-            )}
-          </Modal.Body>
-          <Modal.Footer>
-            <Button variant="secondary" onClick={handleCloseModal}>
-              Cancel
-            </Button>
-            <Button
-              style={{ background: "#FF6A00", border: "none" }}
-              onClick={handleBookAppointment}
-              disabled={!selectedDate || !selectedTime}
-            >
-              Confirm Booking
-            </Button>
-          </Modal.Footer>
-        </Modal>
+     
       </div>
     </div>
   );

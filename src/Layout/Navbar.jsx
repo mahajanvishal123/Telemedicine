@@ -8,7 +8,7 @@ import {
   faTimes,
   faCamera,
 } from "@fortawesome/free-solid-svg-icons";
-import { Link } from "react-router-dom";
+import { Link,useNavigate} from "react-router-dom";
 import "./Navbar.css";
 
 // Profile Modal Component (Editable)
@@ -252,7 +252,7 @@ const Navbar = ({ toggleSidebar }) => {
 
   const dropdownRef = useRef();
   const notifRef = useRef();
-
+  const navigate = useNavigate();
   useEffect(() => {
     const handleClickOutside = (event) => {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {

@@ -4,8 +4,7 @@ import { Link, useNavigate } from "react-router-dom";
 const Signup = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [role, setRole] = useState("patient");
-  const [firstName, setFirstName] = useState("");
-  const [lastName, setLastName] = useState("");
+  const [fullName, setFullName] = useState(""); // 👈 Replaces firstName & lastName
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -18,15 +17,38 @@ const Signup = () => {
   const [licenseNo, setLicenseNo] = useState("");
   const [experience, setExperience] = useState("");
   const [availableDays, setAvailableDays] = useState("Monday-Saturday");
-  const [openingTime, setOpeningTime] = useState("10:00"); // Default 10 AM
-  const [closingTime, setClosingTime] = useState("18:00"); // Default 6 PM
+  const [openingTime, setOpeningTime] = useState("10:00");
+  const [closingTime, setClosingTime] = useState("18:00");
   const [documents, setDocuments] = useState(null);
+
+  // Patient-specific fields 👇
+  const [dob, setDob] = useState(""); // Date of Birth
+  const [age, setAge] = useState(""); // Age (can be auto-calculated or manual)
+  const [bloodGroup, setBloodGroup] = useState(""); // Blood Group
 
   // Profile Image & Gender (for both roles)
   const [profileImage, setProfileImage] = useState(null);
   const [gender, setGender] = useState("");
 
   const navigate = useNavigate();
+
+  // Auto-calculate age when DOB changes (optional enhancement)
+  const handleDobChange = (e) => {
+    const selectedDob = e.target.value;
+    setDob(selectedDob);
+    if (selectedDob) {
+      const today = new Date();
+      const birthDate = new Date(selectedDob);
+      let calculatedAge = today.getFullYear() - birthDate.getFullYear();
+      const monthDiff = today.getMonth() - birthDate.getMonth();
+      if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
+        calculatedAge--;
+      }
+      setAge(calculatedAge.toString());
+    } else {
+      setAge("");
+    }
+  };
 
   const handleSignup = async (e) => {
     e.preventDefault();
@@ -54,8 +76,7 @@ const Signup = () => {
 
       const userData = {
         role,
-        firstName,
-        lastName,
+        fullName, // 👈 Single field now
         email,
         gender,
         profileImage: profileImage ? profileImage.name : null,
@@ -67,6 +88,11 @@ const Signup = () => {
           openingTime,
           closingTime,
           documents: documents ? documents.name : null,
+        }),
+        ...(role === "patient" && {
+          dob,
+          age,
+          bloodGroup,
         }),
       };
 
@@ -100,22 +126,39 @@ const Signup = () => {
         }}
       >
         <div className="p-5 text-center">
-          <h2
-            className="h4 fw-bold mb-4"
-            style={{
-              background: "linear-gradient(90deg, #FF6A00, #FF2D00)",
-              WebkitBackgroundClip: "text",
-              WebkitTextFillColor: "transparent",
-            }}
-          >
-            Create an Account
-          </h2>
-          <p className="text-muted mb-4">Fill in your details to register</p>
+          <div className="d-flex align-items-center mb-4">
+            <img
+              src="https://i.ibb.co/xKF1WPkH/image.png"
+              alt="Logo"
+              style={{
+                width: "50px",
+                height: "50px",
+                cursor: "pointer",
+                borderRadius: "8px",
+                objectFit: "cover",
+                marginRight: "16px",
+              }}
+              onClick={() => navigate("/")}
+            />
+            <div>
+              <h2
+                className="h4 fw-bold mb-1"
+                style={{
+                  background: "linear-gradient(90deg, #FF6A00, #FF2D00)",
+                  WebkitBackgroundClip: "text",
+                  WebkitTextFillColor: "transparent",
+                }}
+              >
+                Create an Account
+              </h2>
+              <p className="text-muted mb-0">Fill in your details to register</p>
+            </div>
+          </div>
 
           <form onSubmit={handleSignup}>
             {/* Role Selection */}
             <div className="mb-4">
-              <label className="form-label fw-semibold d-block text-start">I am a</label>
+              <label className="form-label fw-semibold d-block text-center">I am a</label>
               <div className="d-flex gap-3 justify-content-center">
                 <div className="form-check">
                   <input
@@ -148,7 +191,7 @@ const Signup = () => {
               </div>
             </div>
 
-            {/* First Name */}
+            {/* 👇 Full Name (Replaces First + Last Name) */}
             <div className="mb-3 position-relative">
               <i
                 className="bi bi-person position-absolute top-50 start-0 translate-middle-y ms-3"
@@ -157,25 +200,9 @@ const Signup = () => {
               <input
                 type="text"
                 className="form-control ps-5"
-                placeholder="First Name"
-                value={firstName}
-                onChange={(e) => setFirstName(e.target.value)}
-                required
-              />
-            </div>
-
-            {/* Last Name */}
-            <div className="mb-3 position-relative">
-              <i
-                className="bi bi-person-fill position-absolute top-50 start-0 translate-middle-y ms-3"
-                style={{ color: "#FF6A00" }}
-              ></i>
-              <input
-                type="text"
-                className="form-control ps-5"
-                placeholder="Last Name"
-                value={lastName}
-                onChange={(e) => setLastName(e.target.value)}
+                placeholder="Full Name"
+                value={fullName}
+                onChange={(e) => setFullName(e.target.value)}
                 required
               />
             </div>
@@ -240,7 +267,7 @@ const Signup = () => {
               <p className="text-danger small mb-3">Passwords do not match</p>
             )}
 
-            {/* 👇👇 PROFILE IMAGE & GENDER — SHOW ONLY AFTER ROLE IS SELECTED 👇👇 */}
+            {/* Profile & Gender */}
             {role && (
               <>
                 <hr className="my-4" />
@@ -306,6 +333,61 @@ const Signup = () => {
                       <label className="form-check-label" htmlFor="other">Other</label>
                     </div>
                   </div>
+                </div>
+              </>
+            )}
+
+            {/* ===== PATIENT-SPECIFIC FIELDS ===== */}
+            {role === "patient" && (
+              <>
+                <hr className="my-4" />
+                <h6 className="fw-bold text-start mb-3">Patient Details</h6>
+
+                {/* Date of Birth */}
+                <div className="mb-3 text-start">
+                  <label className="form-label">Date of Birth</label>
+                  <input
+                    type="date"
+                    className="form-control"
+                    value={dob}
+                    onChange={handleDobChange} // 👈 Auto-calculates age
+                    required
+                  />
+                </div>
+
+                {/* Age (auto-filled or editable) */}
+                <div className="mb-3 text-start">
+                  <label className="form-label">Age</label>
+                  <input
+                    type="number"
+                    className="form-control"
+                    placeholder="Auto-calculated or enter manually"
+                    value={age}
+                    onChange={(e) => setAge(e.target.value)}
+                    required
+                    min="0"
+                  />
+                </div>
+
+                {/* Blood Group */}
+                <div className="mb-3 text-start">
+                  <label className="form-label">Blood Group</label>
+                  <select
+                    className="form-select"
+                    value={bloodGroup}
+                    onChange={(e) => setBloodGroup(e.target.value)}
+                    required
+                  >
+                    <option value="">Select Blood Group</option>
+                    <option value="A+">A+</option>
+                    <option value="A-">A-</option>
+                    <option value="B+">B+</option>
+                    <option value="B-">B-</option>
+                    <option value="AB+">AB+</option>
+                    <option value="AB-">AB-</option>
+                    <option value="O+">O+</option>
+                    <option value="O-">O-</option>
+                  </select>
                 </div>
               </>
             )}
