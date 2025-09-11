@@ -6,7 +6,7 @@ import {
   faUserCircle,
   faBars,
 } from "@fortawesome/free-solid-svg-icons";
-import { Link } from "react-router-dom";
+import { Link,useNavigate} from "react-router-dom";
 import "./Navbar.css";
 
 const Navbar = ({ toggleSidebar }) => {
@@ -14,7 +14,7 @@ const Navbar = ({ toggleSidebar }) => {
   const [notifOpen, setNotifOpen] = useState(false); // 🔔 notification state
   const dropdownRef = useRef();
   const notifRef = useRef();
-
+  const navigate = useNavigate();
   useEffect(() => {
     const handleClickOutside = (event) => {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
@@ -35,7 +35,10 @@ const Navbar = ({ toggleSidebar }) => {
         <button className="btn btn-orange p-2" onClick={toggleSidebar}>
           <FontAwesomeIcon icon={faBars} />
         </button>
-        <img src="https://i.ibb.co/xKF1WPkH/image.png" alt="Logo" height="45" width={60} className="navbar-logo" />
+        <img src="https://i.ibb.co/xKF1WPkH/image.png" alt="Logo" height="45" width={60} className="navbar-logo" 
+                      onClick={() => navigate("/")}
+        
+        />
       </div>
 
       {/* Search */}
