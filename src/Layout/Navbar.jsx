@@ -59,7 +59,7 @@ const Navbar = ({ toggleSidebar }) => {
       {/* Notification and User */}
       <div className="d-flex align-items-center gap-3 position-relative">
         {/* 🔔 Notification Dropdown */}
-        <div className="dropdown" ref={notifRef}>
+        {/* <div className="dropdown" ref={notifRef}>
           <div
             className="position-relative cursor-pointer text-white"
             role="button"
@@ -106,17 +106,9 @@ const Navbar = ({ toggleSidebar }) => {
                   ✅ Backup completed successfully
                 </a>
               </li>
-              {/* <li>
-                <hr className="dropdown-divider" />
-              </li> */}
-              {/* <li>
-                <a className="dropdown-item text-center text-primary" href="#">
-                  View all notifications
-                </a>
-              </li> */}
             </ul>
           )}
-        </div>
+        </div> */}
 
         {/* 👤 User Profile */}
         <div className="dropdown" ref={dropdownRef}>

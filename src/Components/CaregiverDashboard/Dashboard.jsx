@@ -7,22 +7,22 @@ const Dashboard = () => {
       {/* Dashboard Home Section */}
       <>
         {/* Header */}
-     <div className="row align-items-center mb-4">
-  {/* Left Section: Heading + Subtitle */}
-  <div className="col-12 col-md-8">
-    <h3 className="healthcare-section-header fw-bold mb-1">Dashboard Home</h3>
-    <p className="text-muted mb-0">
-      Welcome back! Here's your overview for today.
-    </p>
-  </div>
+        <div className="row align-items-center mb-4">
+          {/* Left Section: Heading + Subtitle */}
+          <div className="col-12 col-md-8">
+            <h3 className="dashboard-heading mb-1">Dashboard</h3>
+            <p className="text-muted mb-0">
+              Welcome back! Here's your overview for today.
+            </p>
+          </div>
 
-  {/* Right Section: Date */}
-  <div className="col-12 col-md-4 text-md-end mt-2 mt-md-0">
-    <small className="text-muted">
-      Today: Tuesday, September 02, 2025
-    </small>
-  </div>
-</div>
+          {/* Right Section: Date */}
+          <div className="col-12 col-md-4 text-md-end mt-2 mt-md-0">
+            <small className="text-muted">
+              Today: Tuesday, September 02, 2025
+            </small>
+          </div>
+        </div>
 
         {/* Stats Cards */}
         <div className="row mb-4">

@@ -4,7 +4,12 @@ const MyProfile = () => {
   const [isAvailable, setIsAvailable] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState(false);
-  const [profileImage, setProfileImage] = useState('https://via.placeholder.com/150');
+  
+  // Get profile image from localStorage if available, otherwise use default
+  const [profileImage, setProfileImage] = useState(
+    localStorage.getItem('profileImage') || 'https://via.placeholder.com/150'
+  );
+  
   const fileInputRef = useRef(null);
   
   const [profileData, setProfileData] = useState({
@@ -40,7 +45,10 @@ const MyProfile = () => {
     if (file) {
       const reader = new FileReader();
       reader.onload = (event) => {
-        setProfileImage(event.target.result);
+        const imageDataUrl = event.target.result;
+        setProfileImage(imageDataUrl);
+        // Save to localStorage for persistence
+        localStorage.setItem('profileImage', imageDataUrl);
       };
       reader.readAsDataURL(file);
     }
@@ -49,6 +57,10 @@ const MyProfile = () => {
   const handleSubmit = (e) => {
     e.preventDefault();
     setIsSaving(true);
+    
+    // Save profile data to localStorage
+    localStorage.setItem('profileData', JSON.stringify(profileData));
+    localStorage.setItem('isAvailable', isAvailable.toString());
     
     // Simulate API call
     setTimeout(() => {
@@ -61,6 +73,20 @@ const MyProfile = () => {
       }, 3000);
     }, 1500);
   };
+
+  // Load saved data on component mount
+  useEffect(() => {
+    const savedProfileData = localStorage.getItem('profileData');
+    const savedAvailability = localStorage.getItem('isAvailable');
+    
+    if (savedProfileData) {
+      setProfileData(JSON.parse(savedProfileData));
+    }
+    
+    if (savedAvailability) {
+      setIsAvailable(savedAvailability === 'true');
+    }
+  }, []);
 
   // Animation effect for section entrance
   useEffect(() => {
@@ -78,7 +104,7 @@ const MyProfile = () => {
         <div className="">
           {/* Header Section */}
           <div className="mb-4">
-            <h1 className="h3 fw-bold mb-2">My Profile</h1>
+            <h1 className="dashboard-heading mb-2">My Profile</h1>
             <p className="text-muted mb-0">Manage your professional information and availability</p>
           </div>
           

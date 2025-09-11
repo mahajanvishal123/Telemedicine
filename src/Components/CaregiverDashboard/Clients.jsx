@@ -1,20 +1,135 @@
-import React from "react";
+import React, { useState } from "react";
+import { useNavigate } from "react-router-dom";
 
 const Clients = () => {
+  const navigate = useNavigate();
+  const [searchQuery, setSearchQuery] = useState("");
+
+  // Patient data array - you can move this to a separate file or fetch from API
+  const patientsData = [
+    {
+      id: 1,
+      name: "John Doe",
+      condition: "Diabetes",
+      contact: "+91 98765 43210",
+      status: "active",
+      statusClass: "healthcare-status-completed",
+      statusIcon: "fas fa-check"
+    },
+    {
+      id: 2,
+      name: "Jane Smith",
+      condition: "Hypertension",
+      contact: "+91 98765 43210",
+      status: "active",
+      statusClass: "healthcare-status-completed",
+      statusIcon: "fas fa-check"
+    },
+    {
+      id: 3,
+      name: "Mike Johnson",
+      condition: "Diabetes",
+      contact: "+91 98765 43210",
+      status: "pending",
+      statusClass: "healthcare-status-pending",
+      statusIcon: "fas fa-clock"
+    },
+    {
+      id: 4,
+      name: "Sarah Wilson",
+      condition: "Hypertension",
+      contact: "+91 98765 43210",
+      status: "pending",
+      statusClass: "healthcare-status-pending",
+      statusIcon: "fas fa-clock"
+    },
+    {
+      id: 5,
+      name: "Robert Brown",
+      condition: "Asthma",
+      contact: "+91 98765 43210",
+      status: "pending",
+      statusClass: "healthcare-status-pending",
+      statusIcon: "fas fa-clock"
+    }
+  ];
+
+  // Filter patients based on search query
+  const filteredPatients = patientsData.filter(patient => {
+    const query = searchQuery.toLowerCase();
+    return (
+      patient.name.toLowerCase().includes(query) ||
+      patient.condition.toLowerCase().includes(query) ||
+      patient.contact.toLowerCase().includes(query)
+    );
+  });
+
+  // Patient Card Component
+  const PatientCard = ({ patient }) => {
+    return (
+      <div className="col-12 col-sm-6 col-lg-4 p-3">
+        <div className="card healthcare-task-card h-100">
+          <div className="card-body">
+            <div className="healthcare-patient-header mb-3">
+              <div className="d-flex justify-content-between align-items-start">
+                <h5 className="card-title mb-1 fw-bold">{patient.name}</h5>
+              </div>
+            </div>
+
+            <div className="mb-3">
+              <p className="card-text mb-3">
+                <i
+                  className="fas fa-stethoscope me-2"
+                  style={{ color: "#f9591a" }}
+                />
+                <strong>Primary Condition:</strong> {patient.condition}
+              </p>
+              <p className="card-text mb-2">
+                <i
+                  className="fas fa-map-marker-alt me-2"
+                  style={{ color: "#f9591a" }}
+                />
+                <strong>Contact:</strong>
+                <small className="text-muted"> {patient.contact}</small>
+              </p>
+            </div>
+
+            <div className="d-flex justify-content-between align-items-center flex-wrap gap-2">
+              <span className={patient.statusClass}>
+                <i className={patient.statusIcon + " me-1"} />
+                {patient.status.charAt(0).toUpperCase() + patient.status.slice(1)}
+              </span>
+              <button
+                className="btn btn-sm text-white healthcare-btn-primary"
+                onClick={() => navigate(`/caregiver/clients/profile`)}
+              >
+                View Profile
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    );
+  };
+
   return (
     <>
       {/* Main Content */}
-      <main className="col-md-9 col-lg-12 med-main-content">
-        <div className="d-flex justify-content-between align-items-center mb-4">
-          <h3 className="fw-bold">My Clients</h3>
+      <div className="col-md-9 col-lg-12 med-main-content">
+        <div className="d-flex flex-column flex-md-row justify-content-between mb-4">
+          <h3 className="dashboard-heading mb-3 mb-md-0">
+            My Clients
+          </h3>
           <button
-            class="btn med-btn-primary"
+            className="btn med-btn-primary text-white healthcare-btn-primary"
             data-bs-toggle="modal"
             data-bs-target="#newPatientModal"
           >
-            <i class="fas fa-plus me-1"></i> New Patient
+            <i className="fas fa-plus me-1"></i> New Patient
           </button>
         </div>
+
 
         {/* New Patient Modal */}
         <div
@@ -88,7 +203,7 @@ const Clients = () => {
                             className="form-select med-form-select"
                             id="patientGender"
                           >
-                            <option selected="" disabled="">
+                            <option selected disabled>
                               Select Gender
                             </option>
                             <option value="male">Male</option>
@@ -181,7 +296,7 @@ const Clients = () => {
                             className="form-select med-form-select"
                             id="patientBloodType"
                           >
-                            <option selected="" disabled="">
+                            <option selected disabled>
                               Select Blood Type
                             </option>
                             <option value="a+">A+</option>
@@ -232,12 +347,12 @@ const Clients = () => {
               <div className="modal-footer med-modal-footer">
                 <button
                   type="button"
-                  className="btn btn-outline-dark"
+                  className="btn btn-secondary"
                   data-bs-dismiss="modal"
                 >
                   Cancel
                 </button>
-                <button type="button" className="btn med-btn-primary">
+                <button type="button" className="btn" style={{ backgroundColor: "#f9591a", color: "white" }}>
                   Add Patient
                 </button>
               </div>
@@ -248,7 +363,7 @@ const Clients = () => {
         <div className="med-card">
           <div className="med-card-header d-flex justify-content-between align-items-center">
             <h6>Assigned Patients</h6>
-            <span className="badge bg-secondary">5 patients</span>
+            <span className="badge bg-secondary">{filteredPatients.length} patients</span>
           </div>
           <div className="med-card-body">
             <div className="med-search-container">
@@ -256,218 +371,34 @@ const Clients = () => {
               <input
                 type="text"
                 className="form-control med-search-input"
-                placeholder="Search patients..."
+                placeholder="Search Patients"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                style={{
+                  paddingLeft: "50px",
+                  fontSize: "16px",
+                }}
               />
             </div>
-            <div className="card-body p-0">
-              <div className="row g-0">
-                {/* Task 1 - Completed */}
-                <div className="col-md-6 col-lg-4 p-3">
-                  <div className="card healthcare-task-card h-100">
-                    <div className="card-body">
-                      <div className="healthcare-patient-header mb-3">
-                        <div className="d-flex justify-content-between align-items-start">
-                          <h5 className="card-title mb-1 fw-bold">John Doe</h5>
-                        </div>
-                      </div>
-                      <div className="mb-3">
-                        <p className="card-text mb-3">
-                          <i
-                            className="fas fa-stethoscope me-2"
-                            style={{ color: "#f9591a" }}
-                          />
-                          <strong>Primary Condition:</strong> Diabetes
-                        </p>
-                        <p className="card-text mb-2">
-                          <i
-                            className="fas fa-map-marker-alt me-2"
-                            style={{ color: "#f9591a" }}
-                          />
-                          <strong>Contact:</strong>
-                          <small className="text-muted">+91 98765 43210</small>
-                        </p>
-                      </div>
-                      <div className="d-flex justify-content-between align-items-center">
-                        <span className="healthcare-status-completed">
-                          <i className="fas fa-check me-1" />
-                          Active
-                        </span>
-                        <button className="btn btn-sm healthcare-btn-primary">
-                          View Profile
-                        </button>
-                      </div>
-                    </div>
-                  </div>
+            <div className="">
+              {filteredPatients.length === 0 ? (
+                <div className="text-center py-5">
+                  <i className="fas fa-search fa-3x mb-3 text-muted"></i>
+                  <p className="text-muted">No patients found matching your search.</p>
                 </div>
-                {/* Task 2 - Completed */}
-                <div className="col-md-6 col-lg-4 p-3">
-                  <div className="card healthcare-task-card h-100">
-                    <div className="card-body">
-                      <div className="healthcare-patient-header mb-3">
-                        <div className="d-flex justify-content-between align-items-start">
-                          <h5 className="card-title mb-1 fw-bold">
-                            Jane Smith
-                          </h5>
-                        </div>
-                      </div>
-                      <div className="mb-3">
-                        <p className="card-text mb-3">
-                          <i
-                            className="fas fa-stethoscope me-2"
-                            style={{ color: "#f9591a" }}
-                          />
-                          <strong>Primary Condition:</strong> Hypertension
-                        </p>
-                        <p className="card-text mb-2">
-                          <i
-                            className="fas fa-map-marker-alt me-2"
-                            style={{ color: "#f9591a" }}
-                          />
-                          <strong>Contact:</strong>
-                          <small className="text-muted">+91 98765 43210</small>
-                        </p>
-                      </div>
-                      <div className="d-flex justify-content-between align-items-center">
-                        <span className="healthcare-status-completed">
-                          <i className="fas fa-check me-1" />
-                          Active
-                        </span>
-                        <button className="btn btn-sm healthcare-btn-primary">
-                          View Profile
-                        </button>
-                      </div>
-                    </div>
-                  </div>
+              ) : (
+                <div className="row g-0">
+                  {filteredPatients.map(patient => (
+                    <PatientCard key={patient.id} patient={patient} />
+                  ))}
                 </div>
-                {/* Task 3 - Pending */}
-                <div className="col-md-6 col-lg-4 p-3">
-                  <div className="card healthcare-task-card h-100">
-                    <div className="card-body">
-                      <div className="healthcare-patient-header mb-3">
-                        <div className="d-flex justify-content-between align-items-start">
-                          <h5 className="card-title mb-1 fw-bold">
-                            Mike Johnson
-                          </h5>
-                        </div>
-                      </div>
-                      <div className="mb-3">
-                        <p className="card-text mb-3">
-                          <i
-                            className="fas fa-stethoscope me-2"
-                            style={{ color: "#f9591a" }}
-                          />
-                          <strong>Primary Condition:</strong> Diabetes
-                        </p>
-                        <p className="card-text mb-2">
-                          <i
-                            className="fas fa-map-marker-alt me-2"
-                            style={{ color: "#f9591a" }}
-                          />
-                          <strong>Contact:</strong>
-                          <small className="text-muted">+91 98765 43210</small>
-                        </p>
-                      </div>
-                      <div className="d-flex justify-content-between align-items-center">
-                        <span className="healthcare-status-pending">
-                          <i className="fas fa-clock me-1" />
-                          Pending
-                        </span>
-                        <button className="btn btn-sm healthcare-btn-primary">
-                          View Profile
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-                {/* Task 4 - Pending */}
-                <div className="col-md-6 col-lg-4 p-3">
-                  <div className="card healthcare-task-card h-100">
-                    <div className="card-body">
-                      <div className="healthcare-patient-header mb-3">
-                        <div className="d-flex justify-content-between align-items-start">
-                          <h5 className="card-title mb-1 fw-bold">
-                            Sarah Wilson
-                          </h5>
-                        </div>
-                      </div>
-                      <div className="mb-3">
-                        <p className="card-text mb-3">
-                          <i
-                            className="fas fa-stethoscope me-2"
-                            style={{ color: "#f9591a" }}
-                          />
-                          <strong>Primary Condition:</strong> Hypertension
-                        </p>
-                        <p className="card-text mb-2">
-                          <i
-                            className="fas fa-map-marker-alt me-2"
-                            style={{ color: "#f9591a" }}
-                          />
-                          <strong>Contact:</strong>
-                          <small className="text-muted">+91 98765 43210</small>
-                        </p>
-                      </div>
-                      <div className="d-flex justify-content-between align-items-center">
-                        <span className="healthcare-status-pending">
-                          <i className="fas fa-clock me-1" />
-                          Pending
-                        </span>
-                        <button className="btn btn-sm healthcare-btn-primary">
-                          View Profile
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-                {/* Task 5 - Pending */}
-                <div className="col-md-6 col-lg-4 p-3">
-                  <div className="card healthcare-task-card h-100">
-                    <div className="card-body">
-                      <div className="healthcare-patient-header mb-3">
-                        <div className="d-flex justify-content-between align-items-start">
-                          <h5 className="card-title mb-1 fw-bold">
-                            Robert Brown
-                          </h5>
-                        </div>
-                      </div>
-                      <div className="mb-3">
-                        <p className="card-text mb-3">
-                          <i
-                            className="fas fa-stethoscope me-2"
-                            style={{ color: "#f9591a" }}
-                          />
-                          <strong>Primary Condition:</strong> Asthma
-                        </p>
-                        <p className="card-text mb-2">
-                          <i
-                            className="fas fa-map-marker-alt me-2"
-                            style={{ color: "#f9591a" }}
-                          />
-                          <strong>Contact:</strong>
-                          <small className="text-muted">+91 98765 43210</small>
-                        </p>
-                      </div>
-                      <div className="d-flex justify-content-between align-items-center">
-                        <span className="healthcare-status-pending">
-                          <i className="fas fa-clock me-1" />
-                          Pending
-                        </span>
-                        <button className="btn btn-sm healthcare-btn-primary">
-                          View Profile
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
+              )}
             </div>
           </div>
         </div>
-      </main>
+      </div>
     </>
   );
 };
 
 export default Clients;
-
-<span className="med-status-badge med-status-active mb-2">Active</span>;

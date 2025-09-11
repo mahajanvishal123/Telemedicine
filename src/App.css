@@ -5,7 +5,7 @@ html {
 
 .sidebar-container {
   position: fixed;
-  top: 57px;
+  top: 75px;
   left: 0;
   height: 100vh;
   background-color: #fff;
@@ -47,9 +47,6 @@ html {
   }
 }
 
-
-
-
 .table td,
 .table th {
   white-space: nowrap;
@@ -60,4 +57,62 @@ html {
   /* lamba text ho to ... dikhaye */
   max-width: 200px;
   /* optional: jitni width chaiye utni set karo */
+}
+
+
+
+
+.dashboard-heading {
+  font-size: 30px;
+  /* font size */
+  font-weight: 700;
+  /* bold text */
+  color: #2a2d32;
+  /* dark gray text */
+  margin-bottom: 25px;
+  margin-top: 12px;
+  text-transform: capitalize;
+  /* "Dashboard" first letter capital */
+  letter-spacing: 0.5px;
+  /* slight spacing */
+}
+
+
+.feature-row:hover {
+  transform: translateX(4px);
+  box-shadow: 0 10px 22px rgba(15, 40, 70, 0.1);
+}
+
+.feature-card {
+  background: #fff;
+  border-radius: 16px;
+  border: 1px solid #eef2f6;
+  box-shadow: 0 8px 22px rgba(15, 40, 70, 0.06);
+  transition: transform .25s ease, box-shadow .25s ease;
+}
+
+.feature-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 16px 32px rgba(15, 40, 70, 0.10);
+}
+
+.icon-badge {
+  width: 56px;
+  height: 56px;
+  border-radius: 14px;
+  /* rounded square like the screenshot */
+  background: linear-gradient(180deg, #ff7a28 0%, #922902 100%);
+  box-shadow: 0 10px 18px rgba(255, 106, 3, 0.25);
+}
+
+.pill-cta {
+  background: #ffe8d9;
+  color: #ff6c03;
+  border: none;
+  border-radius: 9999px;
+  font-weight: 600;
+}
+
+html {
+  scroll-behavior: smooth;
 }

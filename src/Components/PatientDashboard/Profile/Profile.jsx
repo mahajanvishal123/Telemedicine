@@ -1,15 +1,49 @@
-import React from 'react';
+import React, { useState, useRef } from 'react';
 import 'bootstrap/dist/css/bootstrap.min.css';
-
 import './Profile.css';
 
 const Profile = () => {
+  const [profileImage, setProfileImage] = useState(null);
+  const [previewUrl, setPreviewUrl] = useState(null);
+  const fileInputRef = useRef(null);
+
+  const handleImageClick = () => {
+    fileInputRef.current.click();
+  };
+
+  const handleFileChange = (event) => {
+    const file = event.target.files[0];
+    if (file) {
+      setProfileImage(file);
+      
+      // Create a preview URL for the image
+      const reader = new FileReader();
+      reader.onload = () => {
+        setPreviewUrl(reader.result);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const handleRemoveImage = () => {
+    setProfileImage(null);
+    setPreviewUrl(null);
+    fileInputRef.current.value = '';
+  };
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    // Here you would typically handle form submission including the image
+    console.log("Form submitted with image:", profileImage);
+    alert('Profile updated successfully!');
+  };
+
   return (
-    <div className="container py-4">
+    <div className="mt-3">
       <div className="card shadow-sm">
         {/* Red Header Section */}
         <div className="card-header  text-dark py-3">
-          <h4 className="mb-1 fw-bold">Personal Information</h4>
+          <h4 className="mb-1 dashboard-heading">Personal Information</h4>
           <p className="mb-0">Keep your profile up to date for better healthcare experience.</p>
         </div>
         
@@ -17,15 +51,46 @@ const Profile = () => {
           {/* Profile Photo Section */}
           <div className="text-center mb-4">
             <div className="profile-photo-container position-relative d-inline-block">
-              <div className="profile-photo  rounded-circle d-flex align-items-center justify-content-center">
-                <i className="bi bi-camera-fill camera-icon text-white"></i>
+              <div 
+                className="profile-photo rounded-circle d-flex align-items-center justify-content-center"
+                onClick={handleImageClick}
+                style={{
+                  backgroundImage: previewUrl ? `url(${previewUrl})` : 'none',
+                  backgroundSize: 'cover',
+                  backgroundPosition: 'center',
+                  cursor: 'pointer'
+                }}
+              >
+                {!previewUrl && (
+                  <i className="bi bi-camera-fill camera-icon text-white fs-1"></i>
+                )}
               </div>
+              <input 
+                type="file" 
+                ref={fileInputRef}
+                onChange={handleFileChange}
+                accept="image/*"
+                className="d-none"
+              />
+              {previewUrl && (
+                <button 
+                  type="button" 
+                  className="btn btn-sm btn-danger position-absolute rounded-circle p-0"
+                  style={{ bottom: '5px', right: '5px', width: '28px', height: '28px' }}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleRemoveImage();
+                  }}
+                >
+                  <i className="bi bi-x"></i>
+                </button>
+              )}
             </div>
             <p className="text-muted mt-2 mb-0">Click the camera icon to upload a new photo</p>
           </div>
           
           {/* Form Section */}
-          <form>
+          <form onSubmit={handleSubmit}>
             <div className="row mb-3">
               <div className="col-md-6 mb-3">
                 <label className="form-label fw-bold">Full Name *</label>
@@ -33,6 +98,7 @@ const Profile = () => {
                   type="text" 
                   className="form-control" 
                   defaultValue="John Smith" 
+                  required
                 />
               </div>
               <div className="col-md-6 mb-3">
@@ -41,6 +107,7 @@ const Profile = () => {
                   type="email" 
                   className="form-control" 
                   defaultValue="john.smith@example.com" 
+                  required
                 />
               </div>
               <div className="col-md-6 mb-3">
@@ -49,6 +116,7 @@ const Profile = () => {
                   type="tel" 
                   className="form-control" 
                   defaultValue="(555) 123-4567" 
+                  required
                 />
               </div>
               <div className="col-md-6 mb-3">
@@ -57,6 +125,7 @@ const Profile = () => {
                   type="date" 
                   className="form-control" 
                   defaultValue="1990-05-15" 
+                  required
                 />
               </div>
             </div>

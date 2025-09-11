@@ -1,6 +1,17 @@
 import React, { useState } from "react";
-import { Container, Row, Col, Card, Button, Badge, Form, Nav } from "react-bootstrap";
-import { FaUserMd, FaStar, FaSearch } from "react-icons/fa";
+import {
+  Container,
+  Row,
+  Col,
+  Card,
+  Button,
+  Badge,
+  Form,
+  Nav,
+  Modal,
+  InputGroup
+} from "react-bootstrap";
+import { FaUserMd, FaStar, FaSearch, FaCalendarAlt, FaClock } from "react-icons/fa";
 import "./MyDoctors.css";
 
 const doctors = [
@@ -55,6 +66,28 @@ const specialties = [
 export default function MyDoctors() {
   const [activeTab, setActiveTab] = useState("All");
   const [search, setSearch] = useState("");
+  const [showModal, setShowModal] = useState(false);
+  const [selectedDoctor, setSelectedDoctor] = useState(null);
+  const [selectedDate, setSelectedDate] = useState("");
+  const [selectedTime, setSelectedTime] = useState("");
+
+  const handleCloseModal = () => {
+    setShowModal(false);
+    setSelectedDoctor(null);
+    setSelectedDate("");
+    setSelectedTime("");
+  };
+
+  const handleShowModal = (doctor) => {
+    setSelectedDoctor(doctor);
+    setShowModal(true);
+  };
+
+  const handleBookAppointment = () => {
+    // Here you would typically send the appointment data to your backend
+    alert(`Appointment booked with ${selectedDoctor.name} on ${selectedDate} at ${selectedTime}`);
+    handleCloseModal();
+  };
 
   const filteredDoctors = doctors.filter((doc) => {
     const matchesSpecialty = activeTab === "All" || doc.specialty === activeTab;
@@ -64,25 +97,27 @@ export default function MyDoctors() {
     return matchesSpecialty && matchesSearch;
   });
 
+  // Generate time slots for the modal
+  const timeSlots = [];
+  for (let hour = 9; hour <= 17; hour++) {
+    for (let minute = 0; minute < 60; minute += 30) {
+      const timeString = `${hour % 12 === 0 ? 12 : hour % 12}:${minute === 0 ? '00' : minute} ${hour >= 12 ? 'PM' : 'AM'}`;
+      timeSlots.push(timeString);
+    }
+  }
+
   return (
-    <Container fluid className="mydoctors-bg py-4">
-      <Container>
+    <div fluid className="">
+      <div>
         {/* Header */}
         <Row className="align-items-center mb-4">
           <Col xs={12} md={8}>
             <div className="d-flex align-items-center">
-              <div className="mydoctors-icon">
-                <FaUserMd size={32} color="#fff" />
-              </div>
-              <div className="ms-3">
-                <h3 className="mb-0 fw-bold">My Doctors</h3>
+              <div className="">
+                <h3 className="dashboard-heading">My Doctors</h3>
                 <span className="text-muted">Your trusted healthcare team</span>
               </div>
             </div>
-          </Col>
-          <Col xs={12} md={4} className="text-md-end mt-3 mt-md-0">
-            <span className="text-muted">Total Doctors</span>
-            <Badge style={{ background: "#FF6A00" }} className="ms-2 fs-5">{filteredDoctors.length}</Badge>
           </Col>
         </Row>
 
@@ -105,22 +140,24 @@ export default function MyDoctors() {
         </Row>
 
         {/* Search Bar */}
-        <Row className="mb-4">
-          <Col xs={12} md={8}>
-            <Form className="d-flex mydoctors-search">
-              <Form.Control
-                type="search"
-                placeholder="Search doctors by name or specialty..."
-                className="me-2"
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-              />
-              <Button variant="outline-secondary" style={{ borderColor: "#FF6A00", color: "#FF6A00" }}>
-                <FaSearch />
-              </Button>
-            </Form>
-          </Col>
-        </Row>
+        <div className="mb-4">
+          <div className="position-relative" style={{ maxWidth: "500px" }}>
+            <Form.Control
+              type="search"
+              placeholder="Search doctors by name or specialty..."
+              className="pe-5"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+            />
+            <div
+              className="position-absolute top-50 end-0 translate-middle-y p-2"
+              style={{ cursor: "pointer" }}
+              onClick={() => {/* Add search functionality if needed */ }}
+            >
+              <FaSearch size={16} color="#6c757d" />
+            </div>
+          </div>
+        </div>
 
         {/* Doctor Cards */}
         <Row>
@@ -177,6 +214,7 @@ export default function MyDoctors() {
                     <Button
                       style={{ background: "#FF6A00", border: "none" }}
                       className="w-100 mb-2 mt-auto"
+                      onClick={() => handleShowModal(doc)}
                     >
                       Book Again
                     </Button>
@@ -190,7 +228,79 @@ export default function MyDoctors() {
             ))
           )}
         </Row>
-      </Container>
-    </Container>
+
+        {/* Booking Modal */}
+        <Modal show={showModal} onHide={handleCloseModal} centered>
+          <Modal.Header closeButton>
+            <Modal.Title>Book Appointment</Modal.Title>
+          </Modal.Header>
+          <Modal.Body>
+            {selectedDoctor && (
+              <>
+                <div className="d-flex align-items-center mb-3">
+                  <div className="mydoctors-avatar me-3">
+                    <FaUserMd size={24} />
+                  </div>
+                  <div>
+                    <h5 className="mb-0">{selectedDoctor.name}</h5>
+                    <p className="mb-0 text-muted">{selectedDoctor.specialty}</p>
+                  </div>
+                </div>
+
+                <Form>
+                  <Form.Group className="mb-3">
+                    <Form.Label>
+                      <FaCalendarAlt className="me-2" />
+                      Select Date
+                    </Form.Label>
+                    <Form.Control
+                      type="date"
+                      value={selectedDate}
+                      onChange={(e) => setSelectedDate(e.target.value)}
+                      min={new Date().toISOString().split('T')[0]}
+                    />
+                  </Form.Group>
+
+                  <Form.Group className="mb-3">
+                    <Form.Label>
+                      <FaClock className="me-2" />
+                      Select Time
+                    </Form.Label>
+                    <Form.Select
+                      value={selectedTime}
+                      onChange={(e) => setSelectedTime(e.target.value)}
+                    >
+                      <option value="">Select a time</option>
+                      {timeSlots.map((time, index) => (
+                        <option key={index} value={time}>{time}</option>
+                      ))}
+                    </Form.Select>
+                  </Form.Group>
+
+                  <div className="d-flex justify-content-between align-items-center mt-4">
+                    <div>
+                      <span className="text-muted">Consultation Fee:</span>
+                      <span className="fw-bold ms-2" style={{ color: "#FF6A00" }}>{selectedDoctor.price}</span>
+                    </div>
+                  </div>
+                </Form>
+              </>
+            )}
+          </Modal.Body>
+          <Modal.Footer>
+            <Button variant="secondary" onClick={handleCloseModal}>
+              Cancel
+            </Button>
+            <Button
+              style={{ background: "#FF6A00", border: "none" }}
+              onClick={handleBookAppointment}
+              disabled={!selectedDate || !selectedTime}
+            >
+              Confirm Booking
+            </Button>
+          </Modal.Footer>
+        </Modal>
+      </div>
+    </div>
   );
 }
