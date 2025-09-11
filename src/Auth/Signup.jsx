@@ -22,6 +22,10 @@ const Signup = () => {
   const [closingTime, setClosingTime] = useState("18:00"); // Default 6 PM
   const [documents, setDocuments] = useState(null);
 
+  // Profile Image & Gender (for both roles)
+  const [profileImage, setProfileImage] = useState(null);
+  const [gender, setGender] = useState("");
+
   const navigate = useNavigate();
 
   const handleSignup = async (e) => {
@@ -53,6 +57,8 @@ const Signup = () => {
         firstName,
         lastName,
         email,
+        gender,
+        profileImage: profileImage ? profileImage.name : null,
         ...(role === "doctor" && {
           specialty,
           licenseNo,
@@ -66,6 +72,7 @@ const Signup = () => {
 
       localStorage.setItem("isAuthenticated", "true");
       localStorage.setItem("user", JSON.stringify(userData));
+      localStorage.setItem("role", role);
 
       if (role === "doctor") {
         navigate("/doctor/dashboard");
@@ -231,6 +238,76 @@ const Signup = () => {
 
             {passwordMismatch && (
               <p className="text-danger small mb-3">Passwords do not match</p>
+            )}
+
+            {/* 👇👇 PROFILE IMAGE & GENDER — SHOW ONLY AFTER ROLE IS SELECTED 👇👇 */}
+            {role && (
+              <>
+                <hr className="my-4" />
+                <h6 className="fw-bold text-start mb-3">Profile</h6>
+
+                {/* Profile Picture */}
+                <div className="mb-3 text-start">
+                  <label className="form-label">Profile Picture</label>
+                  <input
+                    type="file"
+                    className="form-control"
+                    accept="image/*"
+                    onChange={(e) => setProfileImage(e.target.files[0])}
+                  />
+                  {profileImage && (
+                    <small className="text-muted d-block mt-1">
+                      Selected: {profileImage.name}
+                    </small>
+                  )}
+                </div>
+
+                {/* Gender */}
+                <div className="mb-3 text-start">
+                  <label className="form-label">Gender</label>
+                  <div className="d-flex gap-3">
+                    <div className="form-check">
+                      <input
+                        className="form-check-input"
+                        type="radio"
+                        name="gender"
+                        id="male"
+                        value="Male"
+                        checked={gender === "Male"}
+                        onChange={(e) => setGender(e.target.value)}
+                        required
+                      />
+                      <label className="form-check-label" htmlFor="male">Male</label>
+                    </div>
+                    <div className="form-check">
+                      <input
+                        className="form-check-input"
+                        type="radio"
+                        name="gender"
+                        id="female"
+                        value="Female"
+                        checked={gender === "Female"}
+                        onChange={(e) => setGender(e.target.value)}
+                        required
+                      />
+                      <label className="form-check-label" htmlFor="female">Female</label>
+                    </div>
+                    <div className="form-check">
+                      <input
+                        className="form-check-input"
+                        type="radio"
+                        name="gender"
+                        id="other"
+                        value="Other"
+                        checked={gender === "Other"}
+                        onChange={(e) => setGender(e.target.value)}
+                        required
+                      />
+                      <label className="form-check-label" htmlFor="other">Other</label>
+                    </div>
+                  </div>
+                </div>
+              </>
             )}
 
             {/* ===== DOCTOR-SPECIFIC FIELDS ===== */}
