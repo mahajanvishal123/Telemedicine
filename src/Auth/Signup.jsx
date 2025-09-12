@@ -11,11 +11,13 @@ const Signup = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [passwordMismatch, setPasswordMismatch] = useState(false);
   const [timeError, setTimeError] = useState(""); // For time validation
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
   // Doctor-specific fields
   const [specialty, setSpecialty] = useState("");
   const [licenseNo, setLicenseNo] = useState("");
   const [experience, setExperience] = useState("");
+  const [consultationFee, setConsultationFee] = useState(""); // 👈 NEW: Consultation Fee
   const [availableDays, setAvailableDays] = useState("Monday-Saturday");
   const [openingTime, setOpeningTime] = useState("10:00");
   const [closingTime, setClosingTime] = useState("18:00");
@@ -84,6 +86,7 @@ const Signup = () => {
           specialty,
           licenseNo,
           experience,
+          consultationFee, // 👈 Included here
           availableDays,
           openingTime,
           closingTime,
@@ -128,7 +131,7 @@ const Signup = () => {
         <div className="p-5 text-center">
           <div className="d-flex align-items-center mb-4">
             <img
-              src="https://i.ibb.co/xKF1WPkH/image.png"
+              src="https://i.ibb.co/xKF1WPkH/image.png" 
               alt="Logo"
               style={{
                 width: "50px",
@@ -137,8 +140,11 @@ const Signup = () => {
                 borderRadius: "8px",
                 objectFit: "cover",
                 marginRight: "16px",
+                transition: "transform 0.2s ease, opacity 0.2s ease",
               }}
               onClick={() => navigate("/")}
+              onMouseEnter={(e) => (e.currentTarget.style.opacity = "0.8")}
+              onMouseLeave={(e) => (e.currentTarget.style.opacity = "1")}
             />
             <div>
               <h2
@@ -147,11 +153,18 @@ const Signup = () => {
                   background: "linear-gradient(90deg, #FF6A00, #FF2D00)",
                   WebkitBackgroundClip: "text",
                   WebkitTextFillColor: "transparent",
+                  backgroundClip: "text",
+                  color: "transparent",
+                  fontSize: "1.75rem",
+                  lineHeight: 1.2,
+                  margin: 0,
                 }}
               >
                 Create an Account
               </h2>
-              <p className="text-muted mb-0">Fill in your details to register</p>
+              <p className="text-muted mb-0" style={{ fontSize: "0.95rem", fontWeight: "400", color: "#6c757d", marginTop: "4px" }}>
+                Fill in your details to register
+              </p>
             </div>
           </div>
 
@@ -227,23 +240,33 @@ const Signup = () => {
             <div className="mb-3 position-relative">
               <i
                 className="bi bi-lock position-absolute top-50 start-0 translate-middle-y ms-3"
-                style={{ color: "#FF6A00" }}
+                style={{ color: "#FF6A00", fontSize: "1.2rem" }}
               ></i>
               <input
                 type={showPassword ? "text" : "password"}
                 className="form-control ps-5 pe-5"
                 placeholder="Password"
                 value={password}
-                onChange={(e) => setPassword(e.target.value)}
+                onChange={(e) => {
+                  setPassword(e.target.value);
+                  setPasswordMismatch(false); // ✅ Clear error on typing
+                }}
                 required
                 minLength="3"
+                style={{ paddingRight: "48px" }} // Prevents text overlap
               />
               <i
-                className={`bi ${showPassword ? "bi-eye-slash" : "bi-eye"
-                  } position-absolute top-50 end-0 translate-middle-y me-3 cursor-pointer`}
-                style={{ color: "#6b7280" }}
+                className={`bi ${showPassword ? "bi-eye-slash" : "bi-eye"} 
+                  position-absolute top-50 end-0 translate-middle-y me-3 cursor-pointer`}
+                style={{
+                  color: "#6b7280",
+                  fontSize: "1.2rem",
+                  transition: "color 0.2s ease",
+                }}
                 role="button"
                 onClick={() => setShowPassword(!showPassword)}
+                onMouseEnter={(e) => (e.currentTarget.style.color = "#FF6A00")}
+                onMouseLeave={(e) => (e.currentTarget.style.color = "#6b7280")}
               ></i>
             </div>
 
@@ -251,16 +274,33 @@ const Signup = () => {
             <div className="mb-3 position-relative">
               <i
                 className="bi bi-shield-lock position-absolute top-50 start-0 translate-middle-y ms-3"
-                style={{ color: "#FF6A00" }}
+                style={{ color: "#FF6A00", fontSize: "1.2rem" }}
               ></i>
               <input
-                type={showPassword ? "text" : "password"}
-                className="form-control ps-5"
+                type={showConfirmPassword ? "text" : "password"}
+                className="form-control ps-5 pe-5"
                 placeholder="Confirm Password"
                 value={confirmPassword}
-                onChange={(e) => setConfirmPassword(e.target.value)}
+                onChange={(e) => {
+                  setConfirmPassword(e.target.value);
+                  setPasswordMismatch(false); // ✅ Clear error on typing
+                }}
                 required
+                style={{ paddingRight: "48px" }}
               />
+              <i
+                className={`bi ${showConfirmPassword ? "bi-eye-slash" : "bi-eye"} 
+                  position-absolute top-50 end-0 translate-middle-y me-3 cursor-pointer`}
+                style={{
+                  color: "#6b7280",
+                  fontSize: "1.2rem",
+                  transition: "color 0.2s ease",
+                }}
+                role="button"
+                onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                onMouseEnter={(e) => (e.currentTarget.style.color = "#FF6A00")}
+                onMouseLeave={(e) => (e.currentTarget.style.color = "#6b7280")}
+              ></i>
             </div>
 
             {passwordMismatch && (
@@ -271,23 +311,7 @@ const Signup = () => {
             {role && (
               <>
                 <hr className="my-4" />
-                <h6 className="fw-bold text-start mb-3">Profile</h6>
 
-                {/* Profile Picture */}
-                <div className="mb-3 text-start">
-                  <label className="form-label">Profile Picture</label>
-                  <input
-                    type="file"
-                    className="form-control"
-                    accept="image/*"
-                    onChange={(e) => setProfileImage(e.target.files[0])}
-                  />
-                  {profileImage && (
-                    <small className="text-muted d-block mt-1">
-                      Selected: {profileImage.name}
-                    </small>
-                  )}
-                </div>
 
                 {/* Gender */}
                 <div className="mb-3 text-start">
@@ -343,18 +367,6 @@ const Signup = () => {
                 <hr className="my-4" />
                 <h6 className="fw-bold text-start mb-3">Patient Details</h6>
 
-                {/* Date of Birth */}
-                <div className="mb-3 text-start">
-                  <label className="form-label">Date of Birth</label>
-                  <input
-                    type="date"
-                    className="form-control"
-                    value={dob}
-                    onChange={handleDobChange} // 👈 Auto-calculates age
-                    required
-                  />
-                </div>
-
                 {/* Age (auto-filled or editable) */}
                 <div className="mb-3 text-start">
                   <label className="form-label">Age</label>
@@ -364,7 +376,6 @@ const Signup = () => {
                     placeholder="Auto-calculated or enter manually"
                     value={age}
                     onChange={(e) => setAge(e.target.value)}
-                    required
                     min="0"
                   />
                 </div>
@@ -442,6 +453,23 @@ const Signup = () => {
                     placeholder="Years of Experience"
                     value={experience}
                     onChange={(e) => setExperience(e.target.value)}
+                    required
+                    min="0"
+                  />
+                </div>
+
+                {/* 👇 Consultation Fee (NEW FIELD) */}
+                <div className="mb-3 position-relative">
+                <i
+  className="bi bi-currency-dollar position-absolute top-50 start-0 translate-middle-y ms-3"
+  style={{ color: "#FF6A00" }}
+></i>
+                  <input
+                    type="number"
+                    className="form-control ps-5"
+                    placeholder="Consultation Fee (e.g., $50)"
+                    value={consultationFee}
+                    onChange={(e) => setConsultationFee(e.target.value)}
                     required
                     min="0"
                   />

@@ -14,7 +14,9 @@ import {
   faCalendarCheck,
   faBars,
   faTimes,
-  faRightFromBracket, // 👈 Logout ke liye icon
+  faRightFromBracket, 
+  faCaretRight ,
+  faDedent ,// 👈 Logout ke liye icon
 } from "@fortawesome/free-solid-svg-icons";
 import "./Sidebar.css";
 
@@ -74,6 +76,7 @@ const Sidebar = ({ collapsed, setCollapsed }) => {
     { label: "Book Appointment", path: "/patient/book-appointment", icon: faCalendarAlt },
     { label: "My Appointments", path: "/patient/my-appointments", icon: faClipboardList },
     { label: "My Doctors", path: "/patient/my-doctors", icon: faUserMd },
+    { label: "My Caregiver", path: "/patient/my-caregiver", icon: faCaretRight },
     { label: "Profile", path: "/patient/profile", icon: faUser },
   ];
 
@@ -81,6 +84,8 @@ const Sidebar = ({ collapsed, setCollapsed }) => {
     { label: "Dashboard", path: "/doctor/dashboard", icon: faTachometerAlt },
     { label: "My Calendar", path: "/doctor/calendar", icon: faCalendarAlt },
     { label: "My Appointments", path: "/doctor/appointments", icon: faClipboardList },
+    { label: "Assign Caregiver", path: "/doctor/assign-caregiver", icon: faDedent },
+
     { label: "My Profile", path: "/doctor/profile", icon: faUser },
   ];
 
@@ -93,6 +98,10 @@ const Sidebar = ({ collapsed, setCollapsed }) => {
   const adminMenuItems = [
     { label: "Dashboard", path: "/admin/dashboard", icon: faTachometerAlt },
     { label: "User Management", path: "/admin/user-management", icon: faUserShield },
+    // { label: "Patients", path: "/admin/patients", icon: faUser },
+    // { label: "Providers", path: "/admin/providers", icon: faUserMd },
+  
+   { label: "Add Caregiver", path: "/admin/caregiver", icon: faUsers},
     { label: "Verification", path: "/admin/verification", icon: faCheckCircle },
     { label: "Appointments", path: "/admin/appointments", icon: faCalendarCheck },
   ];
