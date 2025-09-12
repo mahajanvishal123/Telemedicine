@@ -46,6 +46,7 @@ const AssignCaregiver = () => {
       id: 201,
       name: "Amy Rodriguez",
       email: "amy@example.com",
+      password: "password123", // Added password field
       joinDate: "2023-09-25",
       status: "Active",
       certification: "CNA",
@@ -63,6 +64,7 @@ const AssignCaregiver = () => {
       id: 202,
       name: "Michael Johnson",
       email: "michael@example.com",
+      password: "securePass456", // Added password field
       joinDate: "2023-08-15",
       status: "Active",
       certification: "RN",
@@ -79,6 +81,7 @@ const AssignCaregiver = () => {
       id: 203,
       name: "Sarah Williams",
       email: "sarah@example.com",
+      password: "sarah789", // Added password field
       joinDate: "2023-10-10",
       status: "Inactive",
       certification: "LPN",
@@ -130,6 +133,7 @@ const AssignCaregiver = () => {
   const [newCaregiver, setNewCaregiver] = useState({
     name: "",
     email: "",
+    password: "", // Added password field
     mobile: "",
     address: "",
     certification: "",
@@ -321,8 +325,8 @@ const AssignCaregiver = () => {
   // Handle adding new caregiver and assignment
   const handleAddCaregiverAndAssign = () => {
     // Validate caregiver fields
-    if (!newCaregiver.name || !newCaregiver.email || !newCaregiver.mobile) {
-      alert("Please fill all required caregiver fields (Name, Email, Mobile)");
+    if (!newCaregiver.name || !newCaregiver.email || !newCaregiver.mobile || !newCaregiver.password) {
+      alert("Please fill all required caregiver fields (Name, Email, Mobile, Password)");
       return;
     }
     
@@ -381,6 +385,7 @@ const AssignCaregiver = () => {
     setNewCaregiver({
       name: "",
       email: "",
+      password: "", // Reset password field
       mobile: "",
       address: "",
       certification: "",
@@ -404,8 +409,8 @@ const AssignCaregiver = () => {
   
   // Handle update caregiver
   const handleUpdateCaregiver = () => {
-    if (!editingCaregiver.name || !editingCaregiver.email || !editingCaregiver.mobile) {
-      alert("Please fill all required fields (Name, Email, Mobile)");
+    if (!editingCaregiver.name || !editingCaregiver.email || !editingCaregiver.mobile || !editingCaregiver.password) {
+      alert("Please fill all required fields (Name, Email, Mobile, Password)");
       return;
     }
     
@@ -1003,6 +1008,18 @@ const AssignCaregiver = () => {
                 </div>
                 <div className="row">
                   <div className="col-md-6">
+                    <label className="form-label">Password*</label>
+                    <input
+                      type="password"
+                      className="form-control mb-2"
+                      name="password"
+                      value={newCaregiver.password}
+                      onChange={handleNewCaregiverChange}
+                      placeholder="Password"
+                      required
+                    />
+                  </div>
+                  <div className="col-md-6">
                     <label className="form-label">Mobile Number*</label>
                     <input
                       type="text"
@@ -1014,6 +1031,8 @@ const AssignCaregiver = () => {
                       required
                     />
                   </div>
+                </div>
+                <div className="row">
                   <div className="col-md-6">
                     <label className="form-label">Address</label>
                     <input
@@ -1025,8 +1044,6 @@ const AssignCaregiver = () => {
                       placeholder="Address"
                     />
                   </div>
-                </div>
-                <div className="row">
                   <div className="col-md-6">
                     <label className="form-label">Certification</label>
                     <input
@@ -1038,6 +1055,8 @@ const AssignCaregiver = () => {
                       placeholder="Certification"
                     />
                   </div>
+                </div>
+                <div className="row">
                   <div className="col-md-6">
                     <label className="form-label">Years of Experience</label>
                     <input
@@ -1049,8 +1068,6 @@ const AssignCaregiver = () => {
                       placeholder="Years of Experience"
                     />
                   </div>
-                </div>
-                <div className="row">
                   <div className="col-md-6">
                     <label className="form-label">Skills</label>
                     <input
@@ -1062,6 +1079,8 @@ const AssignCaregiver = () => {
                       placeholder="Skills (comma separated)"
                     />
                   </div>
+                </div>
+                <div className="row">
                   <div className="col-md-6">
                     <label className="form-label">Join Date</label>
                     <input
@@ -1072,9 +1091,6 @@ const AssignCaregiver = () => {
                       onChange={handleNewCaregiverChange}
                     />
                   </div>
-                </div>
-                
-                <div className="row">
                   <div className="col-md-6">
                     <label className="form-label">Profile Picture</label>
                     <div className="mb-2">
@@ -1101,8 +1117,10 @@ const AssignCaregiver = () => {
                       </div>
                     )}
                   </div>
-                  
-                  <div className="col-md-6">
+                </div>
+                
+                <div className="row">
+                  <div className="col-12">
                     <label className="form-label">Documents</label>
                     <div className="mb-2">
                       <input
@@ -1236,6 +1254,18 @@ const AssignCaregiver = () => {
                 </div>
                 <div className="row">
                   <div className="col-md-6">
+                    <label className="form-label">Password*</label>
+                    <input
+                      type="password"
+                      className="form-control mb-2"
+                      name="password"
+                      value={editingCaregiver.password}
+                      onChange={handleCaregiverChange}
+                      placeholder="Password"
+                      required
+                    />
+                  </div>
+                  <div className="col-md-6">
                     <label className="form-label">Mobile Number*</label>
                     <input
                       type="text"
@@ -1246,6 +1276,8 @@ const AssignCaregiver = () => {
                       required
                     />
                   </div>
+                </div>
+                <div className="row">
                   <div className="col-md-6">
                     <label className="form-label">Address</label>
                     <input
@@ -1256,8 +1288,6 @@ const AssignCaregiver = () => {
                       onChange={handleCaregiverChange}
                     />
                   </div>
-                </div>
-                <div className="row">
                   <div className="col-md-6">
                     <label className="form-label">Certification</label>
                     <input
@@ -1268,6 +1298,8 @@ const AssignCaregiver = () => {
                       onChange={handleCaregiverChange}
                     />
                   </div>
+                </div>
+                <div className="row">
                   <div className="col-md-6">
                     <label className="form-label">Years of Experience</label>
                     <input
@@ -1278,8 +1310,6 @@ const AssignCaregiver = () => {
                       onChange={handleCaregiverChange}
                     />
                   </div>
-                </div>
-                <div className="row">
                   <div className="col-md-6">
                     <label className="form-label">Skills</label>
                     <input
@@ -1291,6 +1321,8 @@ const AssignCaregiver = () => {
                       placeholder="Skills (comma separated)"
                     />
                   </div>
+                </div>
+                <div className="row">
                   <div className="col-md-6">
                     <label className="form-label">Status</label>
                     <select
@@ -1302,6 +1334,16 @@ const AssignCaregiver = () => {
                       <option value="Active">Active</option>
                       <option value="Inactive">Inactive</option>
                     </select>
+                  </div>
+                  <div className="col-md-6">
+                    <label className="form-label">Join Date</label>
+                    <input
+                      type="date"
+                      className="form-control mb-2"
+                      name="joinDate"
+                      value={editingCaregiver.joinDate}
+                      onChange={handleCaregiverChange}
+                    />
                   </div>
                 </div>
                 
