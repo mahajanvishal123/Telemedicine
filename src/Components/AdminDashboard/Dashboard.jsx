@@ -1,19 +1,62 @@
-import React from 'react';
+
+import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
+import Base_Url from "../../Baseurl/Baseurl"
+import axios from 'axios';
+
 const Dashboard = () => {
-  // Sample data for demonstration
-  const dashboardData = {
-    totalUsers: 1245,
-    totalAppointments: 378,
-    totalEarnings: 18650,
-    recentSignups: [
-      { id: 1, name: 'Sarah Johnson', date: '2023-10-15', time: '14:30' },
-      { id: 2, name: 'Michael Chen', date: '2023-10-15', time: '13:15' },
-      { id: 3, name: 'Emma Wilson', date: '2023-10-14', time: '16:45' },
-      { id: 4, name: 'James Rodriguez', date: '2023-10-14', time: '11:20' },
-      { id: 5, name: 'Lisa Taylor', date: '2023-10-13', time: '09:50' },
-    ]
+  const [dashboardData, setDashboardData] = useState({
+    totalDoctors: 0,
+    totalPatients: 0,
+    totalCaregivers: 0,
+    totalUsers: 0,
+    recentSignups: []
+  });
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+useEffect(() => {
+  const fetchDashboardData = async () => {
+    try {
+      
+      const response = await axios.get(`${Base_Url}/dashboard`);
+
+      if (response.data.success) {
+        setDashboardData(response.data.data); 
+      } else {
+        throw new Error('API returned unsuccessful response');
+      }
+    } catch (err) {
+      console.error("Error fetching dashboard:", err);
+      
+      setError(
+        err.response?.data?.message || 
+        err.response?.status === 404 ? 'API endpoint not found. Check backend route.' :
+        err.message || 'Unknown error occurred'
+      );
+    } finally {
+      setLoading(false);
+    }
   };
+
+  fetchDashboardData();
+}, []);
+  // Format date and time from ISO string
+  const formatDateTime = (isoString) => {
+    const date = new Date(isoString);
+    return {
+      date: date.toLocaleDateString('en-CA'), // YYYY-MM-DD format
+      time: date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) // HH:MM format
+    };
+  };
+
+  if (loading) {
+    return <div className="text-center py-5">Loading dashboard data...</div>;
+  }
+
+  if (error) {
+    return <div className="alert alert-danger">Error: {error}</div>;
+  }
 
   return (
     <div className="">
@@ -21,82 +64,82 @@ const Dashboard = () => {
       <div className="d-flex justify-content-between align-items-center">
         <h1 className="dashboard-heading">Dashboard</h1>
       </div>
-
+      
       {/* Stats Cards Row */}
       <div className="row">
-        {/* Total Users Card */}
+        {/* Total Doctors Card */}
         <div className="col-xl-3 col-md-6 mb-4">
           <div className="card border-left-primary shadow h-100 py-2">
             <div className="card-body">
               <div className="row no-gutters align-items-center">
                 <div className="col mr-2">
                   <div className="text-xs font-weight-bold text-primary text-uppercase mb-1">
-                    Total Users</div>
-                  <div className="h5 mb-0 font-weight-bold text-gray-800">{dashboardData.totalUsers.toLocaleString()}</div>
+                    Total Doctors</div>
+                  <div className="h5 mb-0 font-weight-bold text-gray-800">{dashboardData.totalDoctors}</div>
                 </div>
                 <div className="col-auto">
-                  <i className="fas fa-users fa-2x text-primary"></i>
+                  <i className="fas fa-user-md fa-2x text-primary"></i>
                 </div>
               </div>
             </div>
           </div>
         </div>
-
-        {/* Total Appointments Card */}
+        
+        {/* Total Patients Card */}
         <div className="col-xl-3 col-md-6 mb-4">
           <div className="card border-left-success shadow h-100 py-2">
             <div className="card-body">
               <div className="row no-gutters align-items-center">
                 <div className="col mr-2">
                   <div className="text-xs font-weight-bold text-success text-uppercase mb-1">
-                    Total Appointments</div>
-                  <div className="h5 mb-0 font-weight-bold text-gray-800">{dashboardData.totalAppointments.toLocaleString()}</div>
+                    Total Patients</div>
+                  <div className="h5 mb-0 font-weight-bold text-gray-800">{dashboardData.totalPatients}</div>
                 </div>
                 <div className="col-auto">
-                  <i className="fas fa-calendar-check fa-2x text-success"></i>
+                  <i className="fas fa-user-injured fa-2x text-success"></i>
                 </div>
               </div>
             </div>
           </div>
         </div>
-
-        {/* Total Earnings Card */}
+        
+        {/* Total Caregivers Card */}
         <div className="col-xl-3 col-md-6 mb-4">
           <div className="card border-left-info shadow h-100 py-2">
             <div className="card-body">
               <div className="row no-gutters align-items-center">
                 <div className="col mr-2">
                   <div className="text-xs font-weight-bold text-info text-uppercase mb-1">
-                    Total Earnings</div>
-                  <div className="h5 mb-0 font-weight-bold text-gray-800">${dashboardData.totalEarnings.toLocaleString()}</div>
+                    Total Caregivers</div>
+                  <div className="h5 mb-0 font-weight-bold text-gray-800">{dashboardData.totalCaregivers}</div>
                 </div>
                 <div className="col-auto">
-                  <i className="fas fa-dollar-sign fa-2x text-info"></i>
+                  <i className="fas fa-hands-helping fa-2x text-info"></i>
                 </div>
               </div>
             </div>
           </div>
         </div>
-
-        {/* Recent Sign-ups Card */}
+        
+        {/* Total Users Card */}
         <div className="col-xl-3 col-md-6 mb-4">
           <div className="card border-left-warning shadow h-100 py-2">
             <div className="card-body">
               <div className="row no-gutters align-items-center">
                 <div className="col mr-2">
                   <div className="text-xs font-weight-bold text-warning text-uppercase mb-1">
-                    Recent Sign-ups (Today)</div>
-                  <div className="h5 mb-0 font-weight-bold text-gray-800">{dashboardData.recentSignups.length}</div>
+                    Total Users</div>
+                  <div className="h5 mb-0 font-weight-bold text-gray-800">{dashboardData.totalUsers}</div>
                 </div>
                 <div className="col-auto">
-                  <i className="fas fa-user-plus fa-2x text-warning"></i>
+                  <i className="fas fa-users fa-2x text-warning"></i>
                 </div>
               </div>
             </div>
           </div>
         </div>
       </div>
-
+      
       {/* Recent Sign-ups Table */}
       <div className="row">
         <div className="col-12">
@@ -104,9 +147,9 @@ const Dashboard = () => {
             <div className="card-header py-3 d-flex justify-content-between align-items-center">
               <h6 className="m-0 font-weight-bold">Recent Sign-ups</h6>
               <Link to="/admin/user-management">
-              <button className="btn btn-sm" style={{ backgroundColor: '#f95918', color: 'white' }}>
-                View All
-              </button>
+                <button className="btn btn-sm" style={{ backgroundColor: '#f95918', color: 'white' }}>
+                  View All
+                </button>
               </Link>
             </div>
             <div className="card-body">
@@ -115,18 +158,23 @@ const Dashboard = () => {
                   <thead>
                     <tr>
                       <th>Name</th>
+                      <th>Role</th>
                       <th>Date</th>
                       <th>Time</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {dashboardData.recentSignups.map(user => (
-                      <tr key={user.id}>
-                        <td>{user.name}</td>
-                        <td>{user.date}</td>
-                        <td>{user.time}</td>
-                      </tr>
-                    ))}
+                    {dashboardData.recentSignups.map(user => {
+                      const { date, time } = formatDateTime(user.createdAt);
+                      return (
+                        <tr key={user.id}>
+                          <td>{user.name}</td>
+                          <td>{user.role}</td>
+                          <td>{date}</td>
+                          <td>{time}</td>
+                        </tr>
+                      );
+                    })}
                   </tbody>
                 </table>
               </div>
@@ -134,7 +182,7 @@ const Dashboard = () => {
           </div>
         </div>
       </div>
-
+      
       {/* Custom CSS for styling */}
       <style>
         {`
