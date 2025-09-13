@@ -1,5 +1,7 @@
 import React, { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
+import API_URL from "../Baseurl/Baseurl";
+import axios from "axios";
 
 const Signup = () => {
   const [showPassword, setShowPassword] = useState(false);
@@ -11,11 +13,14 @@ const Signup = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [passwordMismatch, setPasswordMismatch] = useState(false);
   const [timeError, setTimeError] = useState(""); // For time validation
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [errorMessage, setErrorMessage] = useState(""); // 👈 NEW: For API errors
 
   // Doctor-specific fields
   const [specialty, setSpecialty] = useState("");
   const [licenseNo, setLicenseNo] = useState("");
   const [experience, setExperience] = useState("");
+  const [consultationFee, setConsultationFee] = useState(""); // 👈 NEW: Consultation Fee
   const [availableDays, setAvailableDays] = useState("Monday-Saturday");
   const [openingTime, setOpeningTime] = useState("10:00");
   const [closingTime, setClosingTime] = useState("18:00");
@@ -53,12 +58,13 @@ const Signup = () => {
   const handleSignup = async (e) => {
     e.preventDefault();
 
+    // Password match validation
     if (password !== confirmPassword) {
       setPasswordMismatch(true);
       return;
     }
 
-    // Validate time if doctor
+    // Doctor time validation
     if (role === "doctor") {
       if (closingTime <= openingTime) {
         setTimeError("Closing time must be after opening time");
@@ -70,43 +76,87 @@ const Signup = () => {
 
     setIsLoading(true);
     setPasswordMismatch(false);
+    setErrorMessage("");
 
     try {
-      await new Promise((resolve) => setTimeout(resolve, 1000));
+      const formData = new FormData();
 
-      const userData = {
-        role,
-        fullName, // 👈 Single field now
-        email,
-        gender,
-        profileImage: profileImage ? profileImage.name : null,
-        ...(role === "doctor" && {
-          specialty,
-          licenseNo,
-          experience,
-          availableDays,
-          openingTime,
-          closingTime,
-          documents: documents ? documents.name : null,
-        }),
-        ...(role === "patient" && {
-          dob,
-          age,
-          bloodGroup,
-        }),
-      };
+      // Common fields for both roles
+    
+      formData.append("name", fullName);
+      formData.append("email", email);
+      formData.append("password",password);
+      formData.append("gender", gender);
 
+      // Profile image upload
+      if (profileImage) {
+        formData.append("profileImage", profileImage);
+      }
+
+      // Doctor-specific fields
+      if (role === "doctor") {
+        formData.append("specialty", specialty);
+        formData.append("licenseNo", licenseNo);
+        formData.append("experience", experience);
+        formData.append("consultationFee", consultationFee);
+        formData.append("availableDays", availableDays);
+        formData.append("openingTime", openingTime);
+        formData.append("closingTime", closingTime);
+
+        if (documents) {
+          formData.append("documents", documents);
+        }
+      }
+
+      // Patient-specific fields
+      if (role === "patient") {
+        formData.append("dob", dob);
+        formData.append("age", age);
+        formData.append("bloodGroup", bloodGroup);
+      }
+
+      // ✅ FINAL ENDPOINTS BASED ON ROLE
+      const url = `${API_URL}/${role}`;
+      console.log("signup url", url);
+
+      const response = await axios.post(url, formData, {
+        headers: {
+          "Content-Type": "multipart/form-data",
+        },
+      });
+
+      // ✅ Success: Save user data
+      const userData = response.data.user || response.data;
       localStorage.setItem("isAuthenticated", "true");
       localStorage.setItem("user", JSON.stringify(userData));
       localStorage.setItem("role", role);
 
+      // Redirect
       if (role === "doctor") {
-        navigate("/doctor/dashboard");
+        navigate("/login");
       } else {
-        navigate("/user/dashboard");
+        navigate("/login");
       }
     } catch (error) {
       console.error("Signup failed:", error);
+
+      // Log full response for debugging
+      if (error.response) {
+        console.log("Server response data:", error.response.data);
+        console.log("Server response status:", error.response.status);
+        console.log("Server response headers:", error.response.headers);
+      } else if (error.request) {
+        console.log("No response received:", error.request);
+      } else {
+        console.log("Error:", error.message);
+      }
+
+      setErrorMessage(
+        error.response?.data?.message ||
+        error.response?.data?.errors?.[0]?.msg ||
+        error.response?.data ||
+        "Signup failed. Please check your details and try again."
+      );
     } finally {
       setIsLoading(false);
     }
@@ -137,8 +187,11 @@ const Signup = () => {
                 borderRadius: "8px",
                 objectFit: "cover",
                 marginRight: "16px",
+                transition: "transform 0.2s ease, opacity 0.2s ease",
               }}
               onClick={() => navigate("/")}
+              onMouseEnter={(e) => (e.currentTarget.style.opacity = "0.8")}
+              onMouseLeave={(e) => (e.currentTarget.style.opacity = "1")}
             />
             <div>
               <h2
@@ -147,11 +200,18 @@ const Signup = () => {
                   background: "linear-gradient(90deg, #FF6A00, #FF2D00)",
                   WebkitBackgroundClip: "text",
                   WebkitTextFillColor: "transparent",
+                  backgroundClip: "text",
+                  color: "transparent",
+                  fontSize: "1.75rem",
+                  lineHeight: 1.2,
+                  margin: 0,
                 }}
               >
                 Create an Account
               </h2>
-              <p className="text-muted mb-0">Fill in your details to register</p>
+              <p className="text-muted mb-0" style={{ fontSize: "0.95rem", fontWeight: "400", color: "#6c757d", marginTop: "4px" }}>
+                Fill in your details to register
+              </p>
             </div>
           </div>
 
@@ -191,7 +251,7 @@ const Signup = () => {
               </div>
             </div>
 
-            {/* 👇 Full Name (Replaces First + Last Name) */}
+            {/* Full Name */}
             <div className="mb-3 position-relative">
               <i
                 className="bi bi-person position-absolute top-50 start-0 translate-middle-y ms-3"
@@ -227,23 +287,33 @@ const Signup = () => {
             <div className="mb-3 position-relative">
               <i
                 className="bi bi-lock position-absolute top-50 start-0 translate-middle-y ms-3"
-                style={{ color: "#FF6A00" }}
+                style={{ color: "#FF6A00", fontSize: "1.2rem" }}
               ></i>
               <input
                 type={showPassword ? "text" : "password"}
                 className="form-control ps-5 pe-5"
                 placeholder="Password"
                 value={password}
-                onChange={(e) => setPassword(e.target.value)}
+                onChange={(e) => {
+                  setPassword(e.target.value);
+                  setPasswordMismatch(false);
+                }}
                 required
                 minLength="3"
+                style={{ paddingRight: "48px" }}
               />
               <i
-                className={`bi ${showPassword ? "bi-eye-slash" : "bi-eye"
-                  } position-absolute top-50 end-0 translate-middle-y me-3 cursor-pointer`}
-                style={{ color: "#6b7280" }}
+                className={`bi ${showPassword ? "bi-eye-slash" : "bi-eye"} 
+                  position-absolute top-50 end-0 translate-middle-y me-3 cursor-pointer`}
+                style={{
+                  color: "#6b7280",
+                  fontSize: "1.2rem",
+                  transition: "color 0.2s ease",
+                }}
                 role="button"
                 onClick={() => setShowPassword(!showPassword)}
+                onMouseEnter={(e) => (e.currentTarget.style.color = "#FF6A00")}
+                onMouseLeave={(e) => (e.currentTarget.style.color = "#6b7280")}
               ></i>
             </div>
 
@@ -251,45 +321,43 @@ const Signup = () => {
             <div className="mb-3 position-relative">
               <i
                 className="bi bi-shield-lock position-absolute top-50 start-0 translate-middle-y ms-3"
-                style={{ color: "#FF6A00" }}
+                style={{ color: "#FF6A00", fontSize: "1.2rem" }}
               ></i>
               <input
-                type={showPassword ? "text" : "password"}
-                className="form-control ps-5"
+                type={showConfirmPassword ? "text" : "password"}
+                className="form-control ps-5 pe-5"
                 placeholder="Confirm Password"
                 value={confirmPassword}
-                onChange={(e) => setConfirmPassword(e.target.value)}
+                onChange={(e) => {
+                  setConfirmPassword(e.target.value);
+                  setPasswordMismatch(false);
+                }}
                 required
+                style={{ paddingRight: "48px" }}
               />
+              <i
+                className={`bi ${showConfirmPassword ? "bi-eye-slash" : "bi-eye"} 
+                  position-absolute top-50 end-0 translate-middle-y me-3 cursor-pointer`}
+                style={{
+                  color: "#6b7280",
+                  fontSize: "1.2rem",
+                  transition: "color 0.2s ease",
+                }}
+                role="button"
+                onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                onMouseEnter={(e) => (e.currentTarget.style.color = "#FF6A00")}
+                onMouseLeave={(e) => (e.currentTarget.style.color = "#6b7280")}
+              ></i>
             </div>
 
             {passwordMismatch && (
               <p className="text-danger small mb-3">Passwords do not match</p>
             )}
 
-            {/* Profile & Gender */}
+            {/* Gender */}
             {role && (
               <>
                 <hr className="my-4" />
-                <h6 className="fw-bold text-start mb-3">Profile</h6>
-
-                {/* Profile Picture */}
-                <div className="mb-3 text-start">
-                  <label className="form-label">Profile Picture</label>
-                  <input
-                    type="file"
-                    className="form-control"
-                    accept="image/*"
-                    onChange={(e) => setProfileImage(e.target.files[0])}
-                  />
-                  {profileImage && (
-                    <small className="text-muted d-block mt-1">
-                      Selected: {profileImage.name}
-                    </small>
-                  )}
-                </div>
-
-                {/* Gender */}
                 <div className="mb-3 text-start">
                   <label className="form-label">Gender</label>
                   <div className="d-flex gap-3">
@@ -337,25 +405,11 @@ const Signup = () => {
               </>
             )}
 
-            {/* ===== PATIENT-SPECIFIC FIELDS ===== */}
+            {/* Patient Fields */}
             {role === "patient" && (
               <>
                 <hr className="my-4" />
                 <h6 className="fw-bold text-start mb-3">Patient Details</h6>
-
-                {/* Date of Birth */}
-                <div className="mb-3 text-start">
-                  <label className="form-label">Date of Birth</label>
-                  <input
-                    type="date"
-                    className="form-control"
-                    value={dob}
-                    onChange={handleDobChange} // 👈 Auto-calculates age
-                    required
-                  />
-                </div>
-
-                {/* Age (auto-filled or editable) */}
                 <div className="mb-3 text-start">
                   <label className="form-label">Age</label>
                   <input
@@ -364,12 +418,9 @@ const Signup = () => {
                     placeholder="Auto-calculated or enter manually"
                     value={age}
                     onChange={(e) => setAge(e.target.value)}
-                    required
                     min="0"
                   />
                 </div>
-
-                {/* Blood Group */}
                 <div className="mb-3 text-start">
                   <label className="form-label">Blood Group</label>
                   <select
@@ -392,13 +443,11 @@ const Signup = () => {
               </>
             )}
 
-            {/* ===== DOCTOR-SPECIFIC FIELDS ===== */}
+            {/* Doctor Fields */}
             {role === "doctor" && (
               <>
                 <hr className="my-4" />
                 <h6 className="fw-bold text-start mb-3">Doctor Details</h6>
-
-                {/* Specialty */}
                 <div className="mb-3 position-relative">
                   <i
                     className="bi bi-heart-pulse position-absolute top-50 start-0 translate-middle-y ms-3"
@@ -413,8 +462,6 @@ const Signup = () => {
                     required
                   />
                 </div>
-
-                {/* License No. */}
                 <div className="mb-3 position-relative">
                   <i
                     className="bi bi-file-earmark-medical position-absolute top-50 start-0 translate-middle-y ms-3"
@@ -429,8 +476,6 @@ const Signup = () => {
                     required
                   />
                 </div>
-
-                {/* Experience */}
                 <div className="mb-3 position-relative">
                   <i
                     className="bi bi-mortarboard position-absolute top-50 start-0 translate-middle-y ms-3"
@@ -446,8 +491,21 @@ const Signup = () => {
                     min="0"
                   />
                 </div>
-
-                {/* Available Days */}
+                <div className="mb-3 position-relative">
+                  <i
+                    className="bi bi-currency-dollar position-absolute top-50 start-0 translate-middle-y ms-3"
+                    style={{ color: "#FF6A00" }}
+                  ></i>
+                  <input
+                    type="number"
+                    className="form-control ps-5"
+                    placeholder="Consultation Fee (e.g., $50)"
+                    value={consultationFee}
+                    onChange={(e) => setConsultationFee(e.target.value)}
+                    required
+                    min="0"
+                  />
+                </div>
                 <div className="mb-3 text-start">
                   <label className="form-label">Available Days</label>
                   <select
@@ -461,8 +519,6 @@ const Signup = () => {
                     <option value="Saturday-Sunday">Weekends Only</option>
                   </select>
                 </div>
-
-                {/* Opening Time */}
                 <div className="mb-3 text-start">
                   <label className="form-label">Opening Time</label>
                   <input
@@ -473,8 +529,6 @@ const Signup = () => {
                     required
                   />
                 </div>
-
-                {/* Closing Time */}
                 <div className="mb-3 text-start">
                   <label className="form-label">Closing Time</label>
                   <input
@@ -485,12 +539,9 @@ const Signup = () => {
                     required
                   />
                 </div>
-
                 {timeError && (
                   <p className="text-danger small mb-3">{timeError}</p>
                 )}
-
-                {/* Documents Upload */}
                 <div className="mb-3 text-start">
                   <label className="form-label">Upload Documents (License, Certificates)</label>
                   <input

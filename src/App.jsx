@@ -152,7 +152,7 @@ function App() {
                   path="/patient/my-doctors"
                   element={<MyDoctors />}
                 />
-              <Route path="/patient/my-caregiver" element={<MyCaregiver />} />
+                 <Route path="/patient/my-caregiver" element={<MyCaregiver/>} />
 
                 <Route path="/patient/profile" element={<Profile />} />
 
