@@ -43,6 +43,7 @@ import TermsConditions from "./Webiste/Pages/TermsConditions";
 import DoctorViewProfile from "./Components/CaregiverDashboard/DoctorViewProfile";
 import MyCaregiver from "./Components/PatientDashboard/MyCaregiver.jsx/MyCaregiver";
 import PatientManagement from "./Components/AdminDashboard/PatientManagement";
+import DoctorManagement from "./Components/AdminDashboard/DoctorManagement";
 
 function App() {
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
@@ -133,6 +134,11 @@ function App() {
                   path="/admin/caregiver"
                   element={<Caregiver />}
                 />
+   <Route
+                  path="/admin/doctor"
+                  element={<DoctorManagement/>}
+                />
+
                 <Route path="/caregiver/clients/profile" element={<DoctorViewProfile />} />
 
 
