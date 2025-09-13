@@ -28,29 +28,25 @@ const Sidebar = ({ collapsed, setCollapsed }) => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const role = localStorage.getItem("role"); // Get user role from localStorage
 
-
   const handleNavigate = (path) => {
-  navigate(path);
+    navigate(path);
 
-  // 👇 Mobile view में menu item click पर sidebar close कर दो
-  if (isMobile) {
-    setMobileMenuOpen(false);
-    setCollapsed(true); // ensure sidebar collapses in mobile
-  }
-};
+    // Mobile view में menu item click पर sidebar close कर दो
+    if (isMobile) {
+      setMobileMenuOpen(false);
+      setCollapsed(true); // ensure sidebar collapses in mobile
+    }
+  };
 
-const toggleMobileMenu = () => {
-  setMobileMenuOpen(!mobileMenuOpen);
+  const toggleMobileMenu = () => {
+    setMobileMenuOpen(!mobileMenuOpen);
 
-  // जब open करो → collapsed false कर दो ताकि menu दिखाई दे
-  if (!mobileMenuOpen) {
-    setCollapsed(false);
-  } else {
-    setCollapsed(true);
-  }
-};
-
-
+    if (!mobileMenuOpen) {
+      setCollapsed(false);
+    } else {
+      setCollapsed(true);
+    }
+  };
 
   useEffect(() => {
     const handleResize = () => {
@@ -68,23 +64,21 @@ const toggleMobileMenu = () => {
     return () => window.removeEventListener("resize", handleResize);
   }, [setCollapsed]);
 
-  // Menus for each dashboard
+  // Menus for each role
   const patientMenuItems = [
     { label: "Dashboard", path: "/patient/dashboard", icon: faTachometerAlt },
     { label: "Book Appointment", path: "/patient/book-appointment", icon: faCalendarAlt },
     { label: "My Appointments", path: "/patient/my-appointments", icon: faClipboardList },
     { label: "My Doctors", path: "/patient/my-doctors", icon: faUserMd },
-      { label: "My Caregiver", path: "/patient/my-caregiver", icon: faRightLeft },
-    
+    { label: "My Caregiver", path: "/patient/my-caregiver", icon: faRightLeft },
     { label: "Profile", path: "/patient/profile", icon: faUser },
   ];
 
-  const providerMenuItems = [
+  const doctorMenuItems = [
     { label: "Dashboard", path: "/doctor/dashboard", icon: faTachometerAlt },
     { label: "My Calendar", path: "/doctor/calendar", icon: faCalendarAlt },
     { label: "My Appointments", path: "/doctor/appointments", icon: faClipboardList },
     { label: "Assign Caregiver", path: "/doctor/assign-caregiver", icon: faDedent },
-
     { label: "My Profile", path: "/doctor/profile", icon: faUser },
   ];
 
@@ -107,16 +101,15 @@ const toggleMobileMenu = () => {
 
   // Decide menu based on role
   const getMenuItems = () => {
-    switch (role) {
-      case "Admin":
+    switch (role?.toLowerCase()) {
+      case "admin":
         return adminMenuItems;
-      case "Patient":
+      case "patient":
         return patientMenuItems;
-      case "Doctor":
-        return providerMenuItems;
-      case "Caregiver":
+      case "doctor":
+        return doctorMenuItems;
+      case "caregiver":
         return caregiverMenuItems;
-
       default:
         return [];
     }

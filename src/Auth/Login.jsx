@@ -8,13 +8,10 @@ const Login = () => {
   const [formData, setFormData] = useState({
     email: "",
     password: "",
-    role: "Admin", // Default role
   });
 
   const [loading, setLoading] = useState(false);
-
   const [user, setUser] = useState(null);
-  const role = localStorage.getItem("role");
 
   // Handle input changes
   const handleChange = (e) => {
@@ -37,11 +34,29 @@ try {
         },
         body: JSON.stringify(formData),
       });
+
       const data = await response.json();
+      console.log("Login API Response:", data); // 👈 Debugging ke liye
+
       if (response.ok) {
-        // Save role in localStorage
-        localStorage.setItem("role", formData.role);
-        setUser({ email: formData.email });
+        // ✅ Step 1: Response ka structure check karo
+        // Agar API returns { status, data: { accessToken, user } }
+        let token = data.accessToken || data.token || data?.data?.accessToken || data?.data?.token;
+        let userData = data.user || data?.data?.user;
+
+        if (!userData || !userData.role) {
+          alert("Role missing in API response!");
+          return;
+        }
+
+        // ✅ Step 2: Save token & role
+        if (token) {
+          localStorage.setItem("accessToken", token);
+        }
+        localStorage.setItem("role", userData.role);
+
+        // ✅ Step 3: Set user
+        setUser(userData);
       } else {
         alert(data.message || "Login failed");
       }
@@ -54,6 +69,7 @@ try {
 
   // Redirect based on role
   useEffect(() => {
+    const role = localStorage.getItem("role");
     if (user && role) {
       switch (role.toLowerCase()) {
         case "patient":
@@ -72,7 +88,7 @@ try {
           navigate("/");
       }
     }
-  }, [user, role, navigate]);
+  }, [user, navigate]);
 
   return (
     <div
@@ -108,10 +124,7 @@ try {
             style={{ backgroundColor: "#FFFFFF" }}
           >
             <div className="w-100">
-              <h2
-                className="fw-bold mb-3 text-center"
-                style={{ color: "#FF6B2C" }}
-              >
+              <h2 className="fw-bold mb-3 text-center" style={{ color: "#FF6B2C" }}>
                 Welcome Back!
               </h2>
               <p className="text-muted text-center mb-4">
@@ -153,7 +166,7 @@ try {
                     onChange={handleChange}
                     className="form-control"
                     style={{ borderRadius: "0.75rem", borderColor: "#FF6B2C" }}
-                    // required
+                    required
                   />
                 </div>
 
@@ -169,7 +182,7 @@ try {
                     onChange={handleChange}
                     className="form-control"
                     style={{ borderRadius: "0.75rem", borderColor: "#FF6B2C" }}
-                    // required
+                    required
                   />
                   <span
                     className="position-absolute top-50 end-0 translate-middle-y me-3 mt-3"
