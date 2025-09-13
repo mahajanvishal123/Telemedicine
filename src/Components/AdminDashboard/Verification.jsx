@@ -1,95 +1,140 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import axios from 'axios';
+import Base_Url from "../../Baseurl/Baseurl"
 
 const Verification = () => {
-  // Sample data for doctors awaiting approval
- const [doctors, setDoctors] = useState([
-    {
-      id: 1,
-      profile: 'https://cdn.pixabay.com/photo/2015/10/05/22/37/blank-profile-picture-973460_960_720.png',
-      name: 'Dr. Sarah Wilson',
-      gender:'Female',
-      email: 'sarah@example.com',
-      specialty: 'Cardiology',
-      license: 'MD12345',
-      signupDate: '2023-10-15',
-      // UPDATED FIELDS
-      availableDays: 'Mon-Sat',
-      openingClosingTime: '9:00 AM - 5:00 PM',
-      experience: '8 years',
-      consultationFee: '$100',
-      documents: ['medical_license.pdf', 'id_proof.pdf']
-    },
-    {
-      id: 2,
-      profile: 'https://cdn.pixabay.com/photo/2015/10/05/22/37/blank-profile-picture-973460_960_720.png',
-      name: 'Dr. James Miller',
-      gender:'Male',
-      email: 'james@example.com',
-      specialty: 'Pediatrics',
-      license: 'MD67890',
-      signupDate: '2023-10-18',
-      // UPDATED FIELDS
-      availableDays: 'Mon-Fri',
-      openingClosingTime: '10:00 AM - 6:00 PM',
-      experience: '5 years',
-      consultationFee: '$30',
-      documents: ['medical_certificate.pdf', 'resume.pdf']
-    },
-    {
-      id: 3,
-      profile: 'https://cdn.pixabay.com/photo/2015/10/05/22/37/blank-profile-picture-973460_960_720.png',
-      name: 'Dr. Lisa Taylor',
-      gender:'Female',
-      email: 'lisa@example.com',
-      specialty: 'Dermatology',
-      license: 'MD54321',
-      signupDate: '2023-10-20',
-      // UPDATED FIELDS
-      availableDays: 'Tue-Sun',
-      openingClosingTime: '8:00 AM - 4:00 PM',
-      experience: '10 years',
-      consultationFee: '$100',
-      documents: ['license_copy.pdf', 'degree_certificate.pdf']
-    },
-    {
-      id: 4,
-      profile: 'https://cdn.pixabay.com/photo/2015/10/05/22/37/blank-profile-picture-973460_960_720.png',
-      name: 'Dr. David Clark',
-      gender:'Male',
-      email: 'david@example.com',
-      specialty: 'Orthopedics',
-      license: 'MD09876',
-      signupDate: '2023-10-22',
-      // UPDATED FIELDS
-      availableDays: 'Mon-Sat',
-      openingClosingTime: '11:00 AM - 7:00 PM',
-      experience: '7 years',
-      consultationFee: '$70',
-      documents: ['certification.pdf', 'id_card.pdf']
+  const [doctors, setDoctors] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+
+  // Function to format opening/closing time (e.g., "10" + "6" → "10:00 AM - 6:00 PM")
+  const formatOpeningHours = (open, close) => {
+    const openHour = parseInt(open);
+    const closeHour = parseInt(close);
+    const ampmOpen = openHour >= 12 ? (openHour === 12 ? "12" : openHour - 12) : openHour;
+    const ampmClose = closeHour >= 12 ? (closeHour === 12 ? "12" : closeHour - 12) : closeHour;
+    const periodOpen = openHour >= 12 ? "PM" : "AM";
+    const periodClose = closeHour >= 12 ? "PM" : "AM";
+    return `${ampmOpen}:00 ${periodOpen} - ${ampmClose}:00 ${periodClose}`;
+  };
+
+ 
+  const getFileNameFromUrl = (url) => {
+    if (!url) return 'No document';
+    return url.split('/').pop().split('?')[0]; // Remove query params if any
+  };
+
+  const transformDoctorData = (apiDoctor) => ({
+    id: apiDoctor._id,
+    profile: apiDoctor.profile || 'https://cdn.pixabay.com/photo/2015/10/05/22/37/blank-profile-picture-973460_960_720.png',
+    name: apiDoctor.name || 'Unknown',
+    gender: apiDoctor.gender || 'Not specified',
+    email: apiDoctor.email || 'N/A',
+    specialty: apiDoctor.specialty || 'N/A',
+    license: apiDoctor.licenseNo || 'N/A',
+    signupDate: new Date(apiDoctor.createdAt).toLocaleDateString('en-CA'), // Format: YYYY-MM-DD
+    availableDays: apiDoctor.availableDay?.replace(/\s+/g, '-') || 'N/A', // "Mon - Fri" → "Mon-Fri"
+    openingClosingTime: apiDoctor.openingTime && apiDoctor.closingTime
+      ? formatOpeningHours(apiDoctor.openingTime, apiDoctor.closingTime)
+      : 'N/A',
+    experience: apiDoctor.experience || 'N/A',
+    consultationFee: apiDoctor.fee ? `$${apiDoctor.fee}` : '$0',
+    documents: apiDoctor.documents ? [getFileNameFromUrl(apiDoctor.documents)] : ['No document uploaded'],
+  });
+
+  // Fetch doctors from API on component mount
+  useEffect(() => {
+    const fetchDoctors = async () => {
+      try {
+        setLoading(true);
+        const response = await axios.get(`${Base_Url}/doctor`, {
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem('token')}`, // Optional: if auth required
+          },
+        });
+        const pendingDoctors = response.data.filter(doc => !doc.isVerify); // Only pending verifications
+        const transformed = pendingDoctors.map(transformDoctorData);
+        setDoctors(transformed);
+        setError(null);
+      } catch (err) {
+        console.error('Error fetching doctors:', err);
+        setError('Failed to load doctor verification data. Please try again later.');
+        setDoctors([]);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchDoctors();
+  }, []);
+
+  // Handle approval of a doctor
+  const handleApprove = async (doctorId) => {
+    try {
+      await axios.put(`${API_BASE_URL}/doctors/${doctorId}/approve`, {}, {
+        headers: {
+          Authorization: `Bearer ${localStorage.getItem('token')}`,
+        },
+      });
+      setDoctors(doctors.filter(doctor => doctor.id !== doctorId));
+    } catch (err) {
+      console.error('Approval failed:', err);
+      alert('Failed to approve doctor. Please try again.');
     }
-  ]);
-
-  // Function to handle approval of a doctor
-  const handleApprove = (doctorId) => {
-    setDoctors(doctors.filter(doctor => doctor.id !== doctorId));
-    // In a real application, you would also update the backend
   };
 
-  // Function to handle rejection of a doctor
-  const handleReject = (doctorId) => {
-    setDoctors(doctors.filter(doctor => doctor.id !== doctorId));
-    // In a real application, you would also update the backend
+  // Handle rejection of a doctor
+  const handleReject = async (doctorId) => {
+    try {
+      await axios.put(`${API_BASE_URL}/doctors/${doctorId}/reject`, {}, {
+        headers: {
+          Authorization: `Bearer ${localStorage.getItem('token')}`,
+        },
+      });
+      setDoctors(doctors.filter(doctor => doctor.id !== doctorId));
+    } catch (err) {
+      console.error('Rejection failed:', err);
+      alert('Failed to reject doctor. Please try again.');
+    }
   };
 
-  // Function to view documents (would typically open a modal or new tab)
+  // View documents (opens in new tab)
   const viewDocuments = (documents) => {
-    alert(`Documents available: ${documents.join(', ')}\n\nIn a real application, this would open a document viewer.`);
+    if (!documents || documents.length === 0) {
+      alert('No document available.');
+      return;
+    }
+    const fileUrl = documents[0]; // In real app, this should be the full URL
+    // If you have the actual file URL stored in API, use it here instead of filename
+    // For now, we assume filename is just for display; actual link might be in API doc field
+    alert(`Document: ${documents[0]}\n\nIn a real app, this would open: ${fileUrl}`);
+    // Uncomment below if you want to open actual URL (if stored in API):
+    // window.open(fileUrl, '_blank');
   };
+
+  if (loading) {
+    return (
+      <div className="d-flex justify-content-center align-items-center py-5">
+        <div className="spinner-border text-primary" role="status">
+          <span className="visually-hidden">Loading...</span>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="alert alert-danger m-4 text-center">
+        {error}
+      </div>
+    );
+  }
 
   return (
     <div className="">
       {/* Page Header */}
-      <div className="d-flex justify-content-between align-items-center">
+      <div className="d-flex justify-content-between align-items-center mb-4">
         <h3 className="dashboard-heading">Verification</h3>
       </div>
 
@@ -138,7 +183,6 @@ const Verification = () => {
                         <th>Specialty</th>
                         <th>License No.</th>
                         <th>Signup Date</th>
-                        {/* NEW COLUMNS ADDED IN HEADER */}
                         <th>Available Days</th>
                         <th>Opening-Closing Time</th>
                         <th>Experience</th>
@@ -157,20 +201,16 @@ const Verification = () => {
                           <td>
                             <strong>{doctor.name}</strong>
                           </td>
-                          <td>
-                            {doctor.gender}
-                          </td>
+                          <td>{doctor.gender}</td>
                           <td>{doctor.email}</td>
                           <td>
                             <span className="badge bg-secondary">{doctor.specialty}</span>
                           </td>
                           <td>{doctor.license}</td>
                           <td>{doctor.signupDate}</td>
-                          {/* NEW COLUMNS ADDED IN BODY */}
                           <td>{doctor.availableDays}</td>
                           <td>{doctor.openingClosingTime}</td>
                           <td>{doctor.experience}</td>
-                          
                           <td>{doctor.consultationFee}</td>
                           <td>
                             <button
@@ -207,66 +247,62 @@ const Verification = () => {
         </div>
       </div>
 
-
       {/* Statistics Section */}
-     <div className="row mt-4">
-  <div className="col-12 col-sm-6 col-md-4 mb-3">
-    <div
-      style={{
-        backgroundColor: "#e3f2fd", // light blue
-        color: "#0d47a1",
-        textAlign: "center",
-        borderRadius: "12px",
-        boxShadow: "0 2px 6px rgba(0,0,0,0.1)",
-        padding: "20px",
-        height: "100%", // equal height cards
-      }}
-    >
-      <h5 style={{ fontWeight: "600" }}>Total Verified</h5>
-      <h2 style={{ fontWeight: "700" }}>42</h2>
-      <p>Doctors</p>
-    </div>
-  </div>
+      <div className="row mt-4">
+        <div className="col-12 col-sm-6 col-md-4 mb-3">
+          <div
+            style={{
+              backgroundColor: "#e3f2fd",
+              color: "#0d47a1",
+              textAlign: "center",
+              borderRadius: "12px",
+              boxShadow: "0 2px 6px rgba(0,0,0,0.1)",
+              padding: "20px",
+              height: "100%",
+            }}
+          >
+            <h5 style={{ fontWeight: "600" }}>Total Verified</h5>
+            <h2 style={{ fontWeight: "700" }}>42</h2>
+            <p>Doctors</p>
+          </div>
+        </div>
 
-  <div className="col-12 col-sm-6 col-md-4 mb-3">
-    <div
-      style={{
-        backgroundColor: "#fff8e1", // light yellow
-        color: "#f57f17",
-        textAlign: "center",
-        borderRadius: "12px",
-        boxShadow: "0 2px 6px rgba(0,0,0,0.1)",
-        padding: "20px",
-        height: "100%",
-      }}
-    >
-      <h5 style={{ fontWeight: "600" }}>Pending Verification</h5>
-      <h2 style={{ fontWeight: "700" }}>{doctors.length}</h2>
-      <p>Doctors</p>
-    </div>
-  </div>
+        <div className="col-12 col-sm-6 col-md-4 mb-3">
+          <div
+            style={{
+              backgroundColor: "#fff8e1",
+              color: "#f57f17",
+              textAlign: "center",
+              borderRadius: "12px",
+              boxShadow: "0 2px 6px rgba(0,0,0,0.1)",
+              padding: "20px",
+              height: "100%",
+            }}
+          >
+            <h5 style={{ fontWeight: "600" }}>Pending Verification</h5>
+            <h2 style={{ fontWeight: "700" }}>{doctors.length}</h2>
+            <p>Doctors</p>
+          </div>
+        </div>
 
-  <div className="col-12 col-sm-6 col-md-4 mb-3">
-    <div
-      style={{
-        backgroundColor: "#ffebee", // light red/pink
-        color: "#b71c1c",
-        textAlign: "center",
-        borderRadius: "12px",
-        boxShadow: "0 2px 6px rgba(0,0,0,0.1)",
-        padding: "20px",
-        height: "100%",
-      }}
-    >
-      <h5 style={{ fontWeight: "600" }}>Rejected</h5>
-      <h2 style={{ fontWeight: "700" }}>8</h2>
-      <p>Applications</p>
-    </div>
-  </div>
-</div>
-
-
-
+        <div className="col-12 col-sm-6 col-md-4 mb-3">
+          <div
+            style={{
+              backgroundColor: "#ffebee",
+              color: "#b71c1c",
+              textAlign: "center",
+              borderRadius: "12px",
+              boxShadow: "0 2px 6px rgba(0,0,0,0.1)",
+              padding: "20px",
+              height: "100%",
+            }}
+          >
+            <h5 style={{ fontWeight: "600" }}>Rejected</h5>
+            <h2 style={{ fontWeight: "700" }}>8</h2>
+            <p>Applications</p>
+          </div>
+        </div>
+      </div>
     </div>
   );
 };
