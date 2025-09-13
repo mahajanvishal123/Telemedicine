@@ -16,6 +16,7 @@ import {
   faTimes,
   faRightFromBracket, 
   faCaretRight ,
+  faRightLeft,
   faDedent ,// 👈 Logout ke liye icon
 } from "@fortawesome/free-solid-svg-icons";
 import "./Sidebar.css";
@@ -25,40 +26,37 @@ const Sidebar = ({ collapsed, setCollapsed }) => {
   const location = useLocation();
   const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const role = localStorage.getItem("role");
+  const role = localStorage.getItem("role"); // Get user role from localStorage
 
-  // 👇 Logout function
-  const handleLogout = () => {
-    localStorage.clear(); // ya phir sirf relevant items clear karein
-    navigate("/login", { replace: true });
-
-    if (isMobile) {
-      setMobileMenuOpen(false);
-      setCollapsed(true);
-    }
-  };
 
   const handleNavigate = (path) => {
-    navigate(path);
-    if (isMobile) {
-      setMobileMenuOpen(false);
-      setCollapsed(true);
-    }
-  };
+  navigate(path);
 
-  const toggleMobileMenu = () => {
-    setMobileMenuOpen(!mobileMenuOpen);
-    if (!mobileMenuOpen) {
-      setCollapsed(false);
-    } else {
-      setCollapsed(true);
-    }
-  };
+  // 👇 Mobile view में menu item click पर sidebar close कर दो
+  if (isMobile) {
+    setMobileMenuOpen(false);
+    setCollapsed(true); // ensure sidebar collapses in mobile
+  }
+};
+
+const toggleMobileMenu = () => {
+  setMobileMenuOpen(!mobileMenuOpen);
+
+  // जब open करो → collapsed false कर दो ताकि menu दिखाई दे
+  if (!mobileMenuOpen) {
+    setCollapsed(false);
+  } else {
+    setCollapsed(true);
+  }
+};
+
+
 
   useEffect(() => {
     const handleResize = () => {
       const mobile = window.innerWidth <= 768;
       setIsMobile(mobile);
+
       if (mobile) {
         setCollapsed(true);
       } else {
@@ -76,7 +74,8 @@ const Sidebar = ({ collapsed, setCollapsed }) => {
     { label: "Book Appointment", path: "/patient/book-appointment", icon: faCalendarAlt },
     { label: "My Appointments", path: "/patient/my-appointments", icon: faClipboardList },
     { label: "My Doctors", path: "/patient/my-doctors", icon: faUserMd },
-    { label: "My Caregiver", path: "/patient/my-caregiver", icon: faCaretRight },
+      { label: "My Caregiver", path: "/patient/my-caregiver", icon: faRightLeft },
+    
     { label: "Profile", path: "/patient/profile", icon: faUser },
   ];
 
@@ -106,6 +105,7 @@ const Sidebar = ({ collapsed, setCollapsed }) => {
     { label: "Appointments", path: "/admin/appointments", icon: faCalendarCheck },
   ];
 
+  // Decide menu based on role
   const getMenuItems = () => {
     switch (role) {
       case "Admin":
@@ -116,6 +116,7 @@ const Sidebar = ({ collapsed, setCollapsed }) => {
         return providerMenuItems;
       case "Caregiver":
         return caregiverMenuItems;
+
       default:
         return [];
     }
@@ -123,23 +124,18 @@ const Sidebar = ({ collapsed, setCollapsed }) => {
 
   const menus = getMenuItems();
 
-  // 👇 Logout menu item — sabhi roles ke liye common
-  const logoutMenuItem = {
-    label: "Logout",
-    icon: faRightFromBracket,
-    action: handleLogout, // 👈 path ki jagah action, kyunki navigate nahi, function call karna hai
-  };
-
   const isActive = (path) => location.pathname === path;
 
   return (
     <>
+      {/* Mobile menu toggle */}
       {isMobile && (
         <button className="mobile-menu-toggle" onClick={toggleMobileMenu}>
           <FontAwesomeIcon icon={mobileMenuOpen ? faTimes : faBars} />
         </button>
       )}
 
+      {/* Overlay for mobile */}
       {isMobile && mobileMenuOpen && (
         <div
           className="sidebar-overlay"
@@ -162,22 +158,12 @@ const Sidebar = ({ collapsed, setCollapsed }) => {
               >
                 <div className="menu-link">
                   <FontAwesomeIcon icon={menu.icon} className="menu-icon" />
-                  {!collapsed && <span className="menu-text">{menu.label}</span>}
+                  {!collapsed && (
+                    <span className="menu-text">{menu.label}</span>
+                  )}
                 </div>
               </li>
             ))}
-
-            {/* 👇 Logout Menu Item — Har role ke liye last mein */}
-            <li
-              className="menu-item logout-item"
-              onClick={logoutMenuItem.action} // 👈 handleLogout call hoga
-              data-tooltip={collapsed ? logoutMenuItem.label : ""}
-            >
-              <div className="menu-link">
-                <FontAwesomeIcon icon={logoutMenuItem.icon} className="menu-icon" />
-                {!collapsed && <span className="menu-text">{logoutMenuItem.label}</span>}
-              </div>
-            </li>
           </ul>
         </div>
       </div>

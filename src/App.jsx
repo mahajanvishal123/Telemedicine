@@ -16,7 +16,7 @@ import Appointments from "./Components/AdminDashboard/Appointments";
 import PatientDashboard from "./Components/PatientDashboard/Dashboard/PatientDashboard";
 import Profile from "./Components/PatientDashboard/Profile/Profile";
 import MyDoctors from "./Components/PatientDashboard/MyDoctors/MyDoctors";
-// import MyCaregiver from "./Components/PatientDashboard/MyCaregiver/MyCaregiver";
+
 import MyAppointments from "./Components/PatientDashboard/MyAppointments/MyAppointments";
 import BookAppointment from "./Components/PatientDashboard/BookAppointment/BookAppointment";
 import ProviderDashboard from "./Components/ProviderDoctor/ProviderDashboard";

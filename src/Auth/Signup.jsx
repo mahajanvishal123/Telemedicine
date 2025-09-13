@@ -1,5 +1,7 @@
 import React, { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
+import API_URL from "../Baseurl/Baseurl";
+import axios from "axios";
 
 const Signup = () => {
   const [showPassword, setShowPassword] = useState(false);
@@ -12,6 +14,7 @@ const Signup = () => {
   const [passwordMismatch, setPasswordMismatch] = useState(false);
   const [timeError, setTimeError] = useState(""); // For time validation
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [errorMessage, setErrorMessage] = useState(""); // 👈 NEW: For API errors
 
   // Doctor-specific fields
   const [specialty, setSpecialty] = useState("");
@@ -55,12 +58,13 @@ const Signup = () => {
   const handleSignup = async (e) => {
     e.preventDefault();
 
+    // Password match validation
     if (password !== confirmPassword) {
       setPasswordMismatch(true);
       return;
     }
 
-    // Validate time if doctor
+    // Doctor time validation
     if (role === "doctor") {
       if (closingTime <= openingTime) {
         setTimeError("Closing time must be after opening time");
@@ -72,44 +76,87 @@ const Signup = () => {
 
     setIsLoading(true);
     setPasswordMismatch(false);
+    setErrorMessage("");
 
     try {
-      await new Promise((resolve) => setTimeout(resolve, 1000));
+      const formData = new FormData();
 
-      const userData = {
-        role,
-        fullName, // 👈 Single field now
-        email,
-        gender,
-        profileImage: profileImage ? profileImage.name : null,
-        ...(role === "doctor" && {
-          specialty,
-          licenseNo,
-          experience,
-          consultationFee, // 👈 Included here
-          availableDays,
-          openingTime,
-          closingTime,
-          documents: documents ? documents.name : null,
-        }),
-        ...(role === "patient" && {
-          dob,
-          age,
-          bloodGroup,
-        }),
-      };
+      // Common fields for both roles
+    
+      formData.append("name", fullName);
+      formData.append("email", email);
+      formData.append("password",password);
+      formData.append("gender", gender);
 
+      // Profile image upload
+      if (profileImage) {
+        formData.append("profileImage", profileImage);
+      }
+
+      // Doctor-specific fields
+      if (role === "doctor") {
+        formData.append("specialty", specialty);
+        formData.append("licenseNo", licenseNo);
+        formData.append("experience", experience);
+        formData.append("consultationFee", consultationFee);
+        formData.append("availableDays", availableDays);
+        formData.append("openingTime", openingTime);
+        formData.append("closingTime", closingTime);
+
+        if (documents) {
+          formData.append("documents", documents);
+        }
+      }
+
+      // Patient-specific fields
+      if (role === "patient") {
+        formData.append("dob", dob);
+        formData.append("age", age);
+        formData.append("bloodGroup", bloodGroup);
+      }
+
+      // ✅ FINAL ENDPOINTS BASED ON ROLE
+      const url = `${API_URL}/${role}`;
+      console.log("signup url", url);
+
+      const response = await axios.post(url, formData, {
+        headers: {
+          "Content-Type": "multipart/form-data",
+        },
+      });
+
+      // ✅ Success: Save user data
+      const userData = response.data.user || response.data;
       localStorage.setItem("isAuthenticated", "true");
       localStorage.setItem("user", JSON.stringify(userData));
       localStorage.setItem("role", role);
 
+      // Redirect
       if (role === "doctor") {
-        navigate("/doctor/dashboard");
+        navigate("/login");
       } else {
-        navigate("/user/dashboard");
+        navigate("/login");
       }
     } catch (error) {
       console.error("Signup failed:", error);
+
+      // Log full response for debugging
+      if (error.response) {
+        console.log("Server response data:", error.response.data);
+        console.log("Server response status:", error.response.status);
+        console.log("Server response headers:", error.response.headers);
+      } else if (error.request) {
+        console.log("No response received:", error.request);
+      } else {
+        console.log("Error:", error.message);
+      }
+
+      setErrorMessage(
+        error.response?.data?.message ||
+        error.response?.data?.errors?.[0]?.msg ||
+        error.response?.data ||
+        "Signup failed. Please check your details and try again."
+      );
     } finally {
       setIsLoading(false);
     }
@@ -131,7 +178,7 @@ const Signup = () => {
         <div className="p-5 text-center">
           <div className="d-flex align-items-center mb-4">
             <img
-              src="https://i.ibb.co/xKF1WPkH/image.png" 
+              src="https://i.ibb.co/xKF1WPkH/image.png"
               alt="Logo"
               style={{
                 width: "50px",
@@ -204,7 +251,7 @@ const Signup = () => {
               </div>
             </div>
 
-            {/* 👇 Full Name (Replaces First + Last Name) */}
+            {/* Full Name */}
             <div className="mb-3 position-relative">
               <i
                 className="bi bi-person position-absolute top-50 start-0 translate-middle-y ms-3"
@@ -249,11 +296,11 @@ const Signup = () => {
                 value={password}
                 onChange={(e) => {
                   setPassword(e.target.value);
-                  setPasswordMismatch(false); // ✅ Clear error on typing
+                  setPasswordMismatch(false);
                 }}
                 required
                 minLength="3"
-                style={{ paddingRight: "48px" }} // Prevents text overlap
+                style={{ paddingRight: "48px" }}
               />
               <i
                 className={`bi ${showPassword ? "bi-eye-slash" : "bi-eye"} 
@@ -283,7 +330,7 @@ const Signup = () => {
                 value={confirmPassword}
                 onChange={(e) => {
                   setConfirmPassword(e.target.value);
-                  setPasswordMismatch(false); // ✅ Clear error on typing
+                  setPasswordMismatch(false);
                 }}
                 required
                 style={{ paddingRight: "48px" }}
@@ -307,13 +354,10 @@ const Signup = () => {
               <p className="text-danger small mb-3">Passwords do not match</p>
             )}
 
-            {/* Profile & Gender */}
+            {/* Gender */}
             {role && (
               <>
                 <hr className="my-4" />
-
-
-                {/* Gender */}
                 <div className="mb-3 text-start">
                   <label className="form-label">Gender</label>
                   <div className="d-flex gap-3">
@@ -361,13 +405,11 @@ const Signup = () => {
               </>
             )}
 
-            {/* ===== PATIENT-SPECIFIC FIELDS ===== */}
+            {/* Patient Fields */}
             {role === "patient" && (
               <>
                 <hr className="my-4" />
                 <h6 className="fw-bold text-start mb-3">Patient Details</h6>
-
-                {/* Age (auto-filled or editable) */}
                 <div className="mb-3 text-start">
                   <label className="form-label">Age</label>
                   <input
@@ -379,8 +421,6 @@ const Signup = () => {
                     min="0"
                   />
                 </div>
-
-                {/* Blood Group */}
                 <div className="mb-3 text-start">
                   <label className="form-label">Blood Group</label>
                   <select
@@ -403,13 +443,11 @@ const Signup = () => {
               </>
             )}
 
-            {/* ===== DOCTOR-SPECIFIC FIELDS ===== */}
+            {/* Doctor Fields */}
             {role === "doctor" && (
               <>
                 <hr className="my-4" />
                 <h6 className="fw-bold text-start mb-3">Doctor Details</h6>
-
-                {/* Specialty */}
                 <div className="mb-3 position-relative">
                   <i
                     className="bi bi-heart-pulse position-absolute top-50 start-0 translate-middle-y ms-3"
@@ -424,8 +462,6 @@ const Signup = () => {
                     required
                   />
                 </div>
-
-                {/* License No. */}
                 <div className="mb-3 position-relative">
                   <i
                     className="bi bi-file-earmark-medical position-absolute top-50 start-0 translate-middle-y ms-3"
@@ -440,8 +476,6 @@ const Signup = () => {
                     required
                   />
                 </div>
-
-                {/* Experience */}
                 <div className="mb-3 position-relative">
                   <i
                     className="bi bi-mortarboard position-absolute top-50 start-0 translate-middle-y ms-3"
@@ -457,13 +491,11 @@ const Signup = () => {
                     min="0"
                   />
                 </div>
-
-                {/* 👇 Consultation Fee (NEW FIELD) */}
                 <div className="mb-3 position-relative">
-                <i
-  className="bi bi-currency-dollar position-absolute top-50 start-0 translate-middle-y ms-3"
-  style={{ color: "#FF6A00" }}
-></i>
+                  <i
+                    className="bi bi-currency-dollar position-absolute top-50 start-0 translate-middle-y ms-3"
+                    style={{ color: "#FF6A00" }}
+                  ></i>
                   <input
                     type="number"
                     className="form-control ps-5"
@@ -474,8 +506,6 @@ const Signup = () => {
                     min="0"
                   />
                 </div>
-
-                {/* Available Days */}
                 <div className="mb-3 text-start">
                   <label className="form-label">Available Days</label>
                   <select
@@ -489,8 +519,6 @@ const Signup = () => {
                     <option value="Saturday-Sunday">Weekends Only</option>
                   </select>
                 </div>
-
-                {/* Opening Time */}
                 <div className="mb-3 text-start">
                   <label className="form-label">Opening Time</label>
                   <input
@@ -501,8 +529,6 @@ const Signup = () => {
                     required
                   />
                 </div>
-
-                {/* Closing Time */}
                 <div className="mb-3 text-start">
                   <label className="form-label">Closing Time</label>
                   <input
@@ -513,12 +539,9 @@ const Signup = () => {
                     required
                   />
                 </div>
-
                 {timeError && (
                   <p className="text-danger small mb-3">{timeError}</p>
                 )}
-
-                {/* Documents Upload */}
                 <div className="mb-3 text-start">
                   <label className="form-label">Upload Documents (License, Certificates)</label>
                   <input
