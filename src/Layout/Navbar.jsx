@@ -1,28 +1,25 @@
 import React, { useState, useRef, useEffect } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
-  faBell,
-  faSearch,
   faUserCircle,
   faBars,
   faTimes,
   faCamera,
 } from "@fortawesome/free-solid-svg-icons";
-import { Link,useNavigate} from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import "./Navbar.css";
 
-// Profile Modal Component (Editable)
+// ==================== Profile Modal ====================
 const ProfileModal = ({ isOpen, onClose }) => {
   const [profileData, setProfileData] = useState({
     fullName: "Admin User",
     email: "admin@example.com",
     phone: "+91 98765 43210",
-    password: "", // for change password field
-    avatar: null, // for future avatar upload
+    password: "",
+    avatar: null,
   });
 
   const [isEditing, setIsEditing] = useState(false);
-
   const fileInputRef = useRef(null);
 
   if (!isOpen) return null;
@@ -42,7 +39,7 @@ const ProfileModal = ({ isOpen, onClose }) => {
       reader.onloadend = () => {
         setProfileData((prev) => ({
           ...prev,
-          avatar: reader.result, // base64 string
+          avatar: reader.result,
         }));
       };
       reader.readAsDataURL(file);
@@ -55,10 +52,8 @@ const ProfileModal = ({ isOpen, onClose }) => {
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    // Simulate save
     alert("Profile updated successfully!");
     setIsEditing(false);
-    // In real app: API call to update profile
     console.log("Updated Profile:", profileData);
   };
 
@@ -86,16 +81,22 @@ const ProfileModal = ({ isOpen, onClose }) => {
           zIndex: 1100,
         }}
       >
-        {/* Modal Header */}
+        {/* Header */}
         <div className="d-flex justify-content-between align-items-center mb-4">
           <h5 className="mb-0">Edit Profile</h5>
           <div className="d-flex gap-2">
             {!isEditing ? (
-              <button className="btn btn-sm btn-orange" onClick={handleEditToggle}>
+              <button
+                className="btn btn-sm btn-orange"
+                onClick={handleEditToggle}
+              >
                 Edit
               </button>
             ) : (
-              <button className="btn btn-sm btn-success" onClick={handleSubmit}>
+              <button
+                className="btn btn-sm btn-success"
+                onClick={handleSubmit}
+              >
                 Save
               </button>
             )}
@@ -109,7 +110,7 @@ const ProfileModal = ({ isOpen, onClose }) => {
         </div>
 
         <form onSubmit={handleSubmit}>
-          {/* Avatar Section */}
+          {/* Avatar */}
           <div className="text-center mb-4 position-relative">
             <div
               onClick={isEditing ? handleAvatarClick : null}
@@ -160,15 +161,12 @@ const ProfileModal = ({ isOpen, onClose }) => {
 
           <hr />
 
-          {/* Form Fields */}
+          {/* Fields */}
           <div className="mb-3">
-            <label htmlFor="fullName" className="form-label fw-bold">
-              Full Name
-            </label>
+            <label className="form-label fw-bold">Full Name</label>
             <input
               type="text"
               className="form-control"
-              id="fullName"
               name="fullName"
               value={profileData.fullName}
               onChange={handleInputChange}
@@ -178,13 +176,10 @@ const ProfileModal = ({ isOpen, onClose }) => {
           </div>
 
           <div className="mb-3">
-            <label htmlFor="email" className="form-label fw-bold">
-              Email Address
-            </label>
+            <label className="form-label fw-bold">Email Address</label>
             <input
               type="email"
               className="form-control"
-              id="email"
               name="email"
               value={profileData.email}
               onChange={handleInputChange}
@@ -194,13 +189,10 @@ const ProfileModal = ({ isOpen, onClose }) => {
           </div>
 
           <div className="mb-3">
-            <label htmlFor="phone" className="form-label fw-bold">
-              Phone Number
-            </label>
+            <label className="form-label fw-bold">Phone Number</label>
             <input
               type="tel"
               className="form-control"
-              id="phone"
               name="phone"
               value={profileData.phone}
               onChange={handleInputChange}
@@ -209,13 +201,12 @@ const ProfileModal = ({ isOpen, onClose }) => {
           </div>
 
           <div className="mb-3">
-            <label htmlFor="password" className="form-label fw-bold">
+            <label className="form-label fw-bold">
               Change Password (leave blank to keep current)
             </label>
             <input
               type="password"
               className="form-control"
-              id="password"
               name="password"
               value={profileData.password}
               onChange={handleInputChange}
@@ -224,7 +215,7 @@ const ProfileModal = ({ isOpen, onClose }) => {
             />
           </div>
 
-          {/* Action Buttons (Mobile Responsive) */}
+          {/* Action Buttons */}
           <div className="d-flex gap-2 justify-content-end mt-4 flex-wrap">
             <button
               type="button"
@@ -245,35 +236,27 @@ const ProfileModal = ({ isOpen, onClose }) => {
   );
 };
 
+// ==================== Navbar ====================
 const Navbar = ({ toggleSidebar }) => {
   const [dropdownOpen, setDropdownOpen] = useState(false);
-  const [notifOpen, setNotifOpen] = useState(false);
   const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
 
   const dropdownRef = useRef();
-  const notifRef = useRef();
   const navigate = useNavigate();
+
+  // 👉 Role & Name from localStorage
+  const role = localStorage.getItem("role") || "Guest";
+  const name = localStorage.getItem("name") || role;
+
   useEffect(() => {
     const handleClickOutside = (event) => {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
         setDropdownOpen(false);
       }
-      if (notifRef.current && !notifRef.current.contains(event.target)) {
-        setNotifOpen(false);
-      }
     };
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
-
-  const openProfileModal = () => {
-    setDropdownOpen(false);
-    setIsProfileModalOpen(true);
-  };
-
-  const closeProfileModal = () => {
-    setIsProfileModalOpen(false);
-  };
 
   return (
     <>
@@ -301,7 +284,7 @@ const Navbar = ({ toggleSidebar }) => {
               <FontAwesomeIcon icon={faUserCircle} size="lg" />
               <div className="d-none d-sm-block">
                 <small className="text-white mb-0">Welcome</small>
-                <div className="fw-bold">Admin</div>
+                <div className="fw-bold">{role}</div>
               </div>
             </div>
 
@@ -312,14 +295,13 @@ const Navbar = ({ toggleSidebar }) => {
                   position: "absolute",
                   right: 0,
                   minWidth: "180px",
-                  maxWidth: "calc(100vw - 30px)",
                   zIndex: 1000,
                 }}
               >
                 <li>
                   <button
                     className="dropdown-item"
-                    onClick={openProfileModal}
+                    onClick={() => setIsProfileModalOpen(true)}
                     type="button"
                   >
                     Profile
@@ -329,7 +311,11 @@ const Navbar = ({ toggleSidebar }) => {
                   <hr className="dropdown-divider" />
                 </li>
                 <li>
-                  <Link className="dropdown-item" to="/login">
+                  <Link
+                    className="dropdown-item"
+                    to="/login"
+                    onClick={() => localStorage.clear()}
+                  >
                     Logout
                   </Link>
                 </li>
@@ -339,7 +325,10 @@ const Navbar = ({ toggleSidebar }) => {
         </div>
       </nav>
 
-      <ProfileModal isOpen={isProfileModalOpen} onClose={closeProfileModal} />
+      <ProfileModal
+        isOpen={isProfileModalOpen}
+        onClose={() => setIsProfileModalOpen(false)}
+      />
 
       <style jsx>{`
         .modal-overlay {
