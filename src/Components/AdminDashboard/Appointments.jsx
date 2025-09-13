@@ -35,8 +35,7 @@ const Appointments = () => {
           id: app._id,
           patientName: app.patientId?.name || 'Unknown',
           patientEmail: app.patientId?.email || '',
-          patientPhone: '', // Not available — could be fetched from /patients later
-          patientAge: '',  // Not available — could be fetched from /patients later
+        
           doctorName: app.doctorId?.name || 'Not Assigned',
           doctorSpecialty: app.doctorId?.specialty || '',
           date: new Date(app.appointmentDate).toLocaleDateString(),
@@ -474,8 +473,7 @@ const Appointments = () => {
                     <h6 className="text-muted">Patient Information</h6>
                     <p><strong>Name:</strong> {selectedAppointment.patientName}</p>
                     <p><strong>Email:</strong> {selectedAppointment.patientEmail}</p>
-                    <p><strong>Phone:</strong> {selectedAppointment.patientPhone || 'N/A'}</p>
-                    <p><strong>Age:</strong> {selectedAppointment.patientAge || 'N/A'}</p>
+                   
                   </div>
                   <div className="col-md-6">
                     <h6 className="text-muted">Doctor Information</h6>
