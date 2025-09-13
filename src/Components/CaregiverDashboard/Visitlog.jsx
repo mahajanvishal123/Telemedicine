@@ -5,7 +5,7 @@ const Visitlog = () => {
     <>
       <div className="visit-container">
         <div className="visit-header">
-          <h1 className="visit-title h3">Visit Log</h1>
+          <h1 className="dashboard-heading">Visit Log</h1>
           <p className="visit-subtitle">
             Record patient visit details and measurements
           </p>

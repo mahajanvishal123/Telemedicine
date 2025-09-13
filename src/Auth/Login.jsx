@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate, Link } from "react-router-dom";
+import API_URL from "../Baseurl/Baseurl";
 
 const Login = () => {
   const navigate = useNavigate();
@@ -9,6 +10,8 @@ const Login = () => {
     password: "",
     role: "Admin", // Default role
   });
+
+  const [loading, setLoading] = useState(false);
 
   const [user, setUser] = useState(null);
   const role = localStorage.getItem("role");
@@ -23,14 +26,30 @@ const Login = () => {
   };
 
   // Handle login submit
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-
-    // Save role in localStorage
-    localStorage.setItem("role", formData.role);
-
-    // Fake login (replace with API later)
-    setUser({ email: formData.email });
+    setLoading(true);
+try {
+      const response = await fetch(`${API_URL}/auth/login`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(formData),
+      });
+      const data = await response.json();
+      if (response.ok) {
+        // Save role in localStorage
+        localStorage.setItem("role", formData.role);
+        setUser({ email: formData.email });
+      } else {
+        alert(data.message || "Login failed");
+      }
+    } catch (error) {
+      console.error("Error during login:", error);
+    } finally {
+      setLoading(false);
+    }
   };
 
   // Redirect based on role
@@ -101,7 +120,7 @@ const Login = () => {
 
               <form onSubmit={handleSubmit}>
                 {/* Role Select */}
-                <div className="mb-3">
+                {/* <div className="mb-3">
                   <label className="form-label fw-semibold" style={{ color: "#1B263B" }}>
                     Select Role
                   </label>
@@ -120,7 +139,7 @@ const Login = () => {
                     <option value="Doctor">Provider / Doctor</option>
                     <option value="Caregiver">Caregiver</option>
                   </select>
-                </div>
+                </div> */}
 
                 {/* Email */}
                 <div className="mb-3">
@@ -191,8 +210,9 @@ const Login = () => {
                     color: "#fff",
                     borderRadius: "0.75rem",
                   }}
+                  disabled={loading}
                 >
-                  Login
+                  {loading ? "Logging in..." : "Login"}
                 </button>
               </form>
 

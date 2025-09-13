@@ -130,9 +130,9 @@ const UserManagement = () => {
       [userType]: prevUsers[userType].map((user) =>
         user.id === userId
           ? {
-              ...user,
-              status: user.status === "Active" ? "Inactive" : "Active",
-            }
+            ...user,
+            status: user.status === "Active" ? "Inactive" : "Active",
+          }
           : user
       ),
     }));
@@ -154,8 +154,8 @@ const UserManagement = () => {
   return (
     <div className="">
       {/* Page Header */}
-      <div className="d-flex justify-content-between align-items-center mb-4">
-        <h3 className="fw-bold">User Management</h3>
+      {/* <div className="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center gap-3 mb-4">
+        <h3 className="dashboard-heading">User Management</h3>
         <button
           className="btn text-white"
           style={{ backgroundColor: "#F95918" }}
@@ -163,18 +163,18 @@ const UserManagement = () => {
         >
           + Add User
         </button>
-      </div>
+      </div> */}
+
 
       {/* Small Button Tabs */}
-      <div className="mb-3">
+      <div className="mb-3 mt-5">
         <div className="d-flex flex-wrap gap-2">
           {["patients", "providers", "caregivers"].map((tab) => (
             <button
               key={tab}
               onClick={() => setActiveTab(tab)}
-              className={`btn btn-sm fw-semibold ${
-                activeTab === tab ? "text-white" : "btn-outline-secondary"
-              }`}
+              className={`btn btn-sm fw-semibold ${activeTab === tab ? "text-white" : "btn-outline-secondary"
+                }`}
               style={{
                 backgroundColor: activeTab === tab ? "#F95918" : "",
                 borderColor: activeTab === tab ? "#F95918" : "#dee2e6",
@@ -228,11 +228,10 @@ const UserManagement = () => {
                               <i className="fas fa-edit me-1"></i>
                             </button>
                             <button
-                              className={`btn btn-sm ${
-                                user.status === "Active"
-                                  ? "btn-outline-danger"
-                                  : "btn-outline-success"
-                              }`}
+                              className={`btn btn-sm ${user.status === "Active"
+                                ? "btn-outline-danger"
+                                : "btn-outline-success"
+                                }`}
                               onClick={() => toggleStatus(user.id, user.type)}
                             >
                               {user.status === "Active" ? (

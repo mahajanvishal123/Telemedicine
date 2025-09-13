@@ -1,11 +1,10 @@
 import React, { useState } from "react";
-import { Link } from "react-router-dom";
 import { useNavigate } from "react-router-dom";
 
 const Clients = () => {
   const navigate = useNavigate();
   const [searchQuery, setSearchQuery] = useState("");
-  
+
   // Patient data array - you can move this to a separate file or fetch from API
   const patientsData = [
     {
@@ -68,7 +67,7 @@ const Clients = () => {
   // Patient Card Component
   const PatientCard = ({ patient }) => {
     return (
-      <div className="col-md-6 col-lg-4 p-3">
+      <div className="col-12 col-sm-6 col-lg-4 p-3">
         <div className="card healthcare-task-card h-100">
           <div className="card-body">
             <div className="healthcare-patient-header mb-3">
@@ -76,6 +75,7 @@ const Clients = () => {
                 <h5 className="card-title mb-1 fw-bold">{patient.name}</h5>
               </div>
             </div>
+
             <div className="mb-3">
               <p className="card-text mb-3">
                 <i
@@ -94,13 +94,14 @@ const Clients = () => {
                 <small className="text-muted"> {patient.contact}</small>
               </p>
             </div>
-            <div className="d-flex justify-content-between align-items-center">
+
+            <div className="d-flex justify-content-between align-items-center flex-wrap gap-2">
               <span className={patient.statusClass}>
                 <i className={patient.statusIcon + " me-1"} />
                 {patient.status.charAt(0).toUpperCase() + patient.status.slice(1)}
               </span>
-              <button 
-                className="btn btn-sm healthcare-btn-primary" 
+              <button
+                className="btn btn-sm text-white healthcare-btn-primary"
                 onClick={() => navigate(`/caregiver/clients/profile`)}
               >
                 View Profile
@@ -109,23 +110,27 @@ const Clients = () => {
           </div>
         </div>
       </div>
+
     );
   };
 
   return (
     <>
       {/* Main Content */}
-      <main className="col-md-9 col-lg-12 med-main-content">
-        <div className="d-flex justify-content-between align-items-center mb-4">
-          <h3 className="fw-bold">My Clients</h3>
+      <div className="col-md-9 col-lg-12 med-main-content">
+        <div className="d-flex flex-column flex-md-row justify-content-between mb-4">
+          <h3 className="dashboard-heading mb-3 mb-md-0">
+            My Clients
+          </h3>
           <button
-            className="btn med-btn-primary healthcare-btn-primary"
+            className="btn med-btn-primary text-white healthcare-btn-primary"
             data-bs-toggle="modal"
             data-bs-target="#newPatientModal"
           >
             <i className="fas fa-plus me-1"></i> New Patient
           </button>
         </div>
+
 
         {/* New Patient Modal */}
         <div
@@ -343,12 +348,12 @@ const Clients = () => {
               <div className="modal-footer med-modal-footer">
                 <button
                   type="button"
-                  className="btn btn-outline-dark"
+                  className="btn btn-secondary"
                   data-bs-dismiss="modal"
                 >
                   Cancel
                 </button>
-                <button type="button" className="btn med-btn-primary">
+                <button type="button" className="btn" style={{ backgroundColor: "#f9591a", color: "white" }}>
                   Add Patient
                 </button>
               </div>
@@ -376,7 +381,7 @@ const Clients = () => {
                 }}
               />
             </div>
-            <div className="card-body p-0">
+            <div className="">
               {filteredPatients.length === 0 ? (
                 <div className="text-center py-5">
                   <i className="fas fa-search fa-3x mb-3 text-muted"></i>
@@ -392,7 +397,7 @@ const Clients = () => {
             </div>
           </div>
         </div>
-      </main>
+      </div>
     </>
   );
 };

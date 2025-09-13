@@ -20,7 +20,7 @@ const DoctorViewProfile = () => {
         <div className="col-md-8 col-lg-6">
           <div className="card shadow-sm">
             <div className="card-header healthcare-btn-primary text-white text-center py-2">
-              <h4 className="mb-0">My Profile</h4>
+              <h4 className="dashboard-heading">My Profile</h4>
               <small>Manage your professional information and availability</small>
             </div>
             

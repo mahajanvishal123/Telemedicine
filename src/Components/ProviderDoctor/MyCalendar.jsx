@@ -1,453 +1,148 @@
-import React, { useState } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import React, { useState } from "react";
+import FullCalendar from "@fullcalendar/react";
+import dayGridPlugin from "@fullcalendar/daygrid";
+import timeGridPlugin from "@fullcalendar/timegrid";
+import interactionPlugin from "@fullcalendar/interaction";
+import listPlugin from "@fullcalendar/list";
+import "bootstrap/dist/css/bootstrap.min.css";
+import "./Calender.css";
 
-const MyCalendar = () => {
-  const [currentDate, setCurrentDate] = useState(new Date());
-  const [showAvailabilityModal, setShowAvailabilityModal] = useState(false);
-  const [availability, setAvailability] = useState({
-    monday: { start: '09:00', end: '17:00', available: true },
-    tuesday: { start: '09:00', end: '17:00', available: true },
-    wednesday: { start: '09:00', end: '17:00', available: true },
-    thursday: { start: '09:00', end: '17:00', available: true },
-    friday: { start: '09:00', end: '16:00', available: true },
-    saturday: { start: '10:00', end: '14:00', available: false },
-    sunday: { start: '10:00', end: '14:00', available: true }
-  });
+const Calendar = () => {
+  const [events, setEvents] = useState([
+    { id: "1", title: "Team Meeting", start: new Date() },
+    { id: "2", title: "Doctor Appointment", start: "2025-09-05T10:30:00" },
+    { id: "3", title: "Conference", start: "2025-09-08", end: "2025-09-10" },
+  ]);
 
-  // Sample appointments data
-  const appointments = [
-    { id: 1, date: new Date(new Date().getFullYear(), new Date().getMonth(), 15, 9, 0), patient: 'Sarah Johnson', type: 'Follow-up' },
-    { id: 2, date: new Date(new Date().getFullYear(), new Date().getMonth(), 15, 14, 30), patient: 'Michael Chen', type: 'Consultation' },
-    { id: 3, date: new Date(new Date().getFullYear(), new Date().getMonth(), 16, 10, 15), patient: 'Emma Rodriguez', type: 'Check-up' },
-    { id: 4, date: new Date(new Date().getFullYear(), new Date().getMonth(), 17, 8, 30), patient: 'David Wilson', type: 'Therapy' },
-    { id: 5, date: new Date(new Date().getFullYear(), new Date().getMonth(), 17, 11, 0), patient: 'James Miller', type: 'Consultation' },
-    { id: 6, date: new Date(new Date().getFullYear(), new Date().getMonth(), 17, 15, 45), patient: 'Robert Brown', type: 'Follow-up' },
-    { id: 7, date: new Date(new Date().getFullYear(), new Date().getMonth(), 18, 9, 30), patient: 'Mary Williams', type: 'Check-up' },
-    { id: 8, date: new Date(new Date().getFullYear(), new Date().getMonth(), 18, 13, 0), patient: 'Patricia Jones', type: 'Consultation' },
-    { id: 9, date: new Date(new Date().getFullYear(), new Date().getMonth(), 19, 10, 0), patient: 'Jennifer Garcia', type: 'Therapy' },
-    { id: 10, date: new Date(new Date().getFullYear(), new Date().getMonth(), 20, 11, 30), patient: 'Linda Martinez', type: 'Check-up' },
-    { id: 11, date: new Date(new Date().getFullYear(), new Date().getMonth(), 20, 16, 15), patient: 'Elizabeth Davis', type: 'Follow-up' },
-  ];
+  const [showModal, setShowModal] = useState(false);
+  const [selectedDate, setSelectedDate] = useState("");
+  const [selectedTime, setSelectedTime] = useState("");
+  const [title, setTitle] = useState("");
+  const [description, setDescription] = useState("");
 
-  // Get appointments for a specific date
-  const getAppointmentsForDate = (date) => {
-    return appointments.filter(app => 
-      app.date.getDate() === date.getDate() && 
-      app.date.getMonth() === date.getMonth() && 
-      app.date.getFullYear() === date.getFullYear()
-    );
+  const handleDateClick = (arg) => {
+    setSelectedDate(arg.dateStr);
+    setSelectedTime(arg.date.toTimeString().split(' ')[0].substring(0, 5));
+    setShowModal(true);
   };
 
-  // Generate days for the current week based on currentDate
-  const generateWeekDays = () => {
-    const startDate = new Date(currentDate);
-    const dayOfWeek = startDate.getDay(); // 0 = Sunday
-    startDate.setDate(startDate.getDate() - dayOfWeek); // Start from Sunday of this week
-    
-    const days = [];
-    
-    for (let i = 0; i < 7; i++) {
-      const date = new Date(startDate);
-      date.setDate(startDate.getDate() + i);
-      days.push(date);
+  const handleModalClose = () => {
+    setShowModal(false);
+    setTitle("");
+    setDescription("");
+  };
+
+  const handleSaveMeeting = () => {
+    if (!title.trim()) {
+      alert("Please enter a title for the meeting");
+      return;
     }
-    
-    return days;
+
+    const newEvent = {
+      id: Date.now().toString(),
+      title: title,
+      start: selectedDate + (selectedTime ? "T" + selectedTime : ""),
+      description: description,
+    };
+
+    setEvents([...events, newEvent]);
+    handleModalClose();
   };
 
-  const weekDays = generateWeekDays();
-  const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
-  const monthNames = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
-
-  const navigateWeek = (direction) => {
-    const newDate = new Date(currentDate);
-    if (direction === 'prev') {
-      newDate.setDate(newDate.getDate() - 7);
-    } else {
-      newDate.setDate(newDate.getDate() + 7);
-    }
-    setCurrentDate(newDate);
-  };
-
-  const handleAvailabilityChange = (day, field, value) => {
-    setAvailability(prev => ({
-      ...prev,
-      [day]: {
-        ...prev[day],
-        [field]: value
-      }
-    }));
-  };
-
-  const toggleDayAvailability = (day) => {
-    setAvailability(prev => ({
-      ...prev,
-      [day]: {
-        ...prev[day],
-        available: !prev[day].available
-      }
-    }));
-  };
-
-  const saveAvailability = () => {
-    // In a real app, you would save this to your backend
-    console.log('Saving availability:', availability);
-    setShowAvailabilityModal(false);
-    alert('Availability saved successfully!');
-  };
-
-  // Animation variants
-  const containerVariants = {
-    hidden: { opacity: 0 },
-    visible: {
-      opacity: 1,
-      transition: {
-        delayChildren: 0.3,
-        staggerChildren: 0.1
-      }
-    }
-  };
-
-  const itemVariants = {
-    hidden: { y: 20, opacity: 0 },
-    visible: {
-      y: 0,
-      opacity: 1
-    }
-  };
-
-  const dayVariants = {
-    hidden: { scale: 0.9, opacity: 0 },
-    visible: {
-      scale: 1,
-      opacity: 1,
-      transition: {
-        type: "spring",
-        stiffness: 300
-      }
-    },
-    hover: {
-      scale: 1.02,
-      boxShadow: "0 5px 15px rgba(0,0,0,0.08)",
-      transition: {
-        type: "spring",
-        stiffness: 400
-      }
-    }
-  };
-
-  const modalVariants = {
-    hidden: { 
-      opacity: 0,
-      scale: 0.8
-    },
-    visible: {
-      opacity: 1,
-      scale: 1,
-      transition: {
-        type: "spring",
-        damping: 20,
-        stiffness: 300
-      }
-    },
-    exit: {
-      opacity: 0,
-      scale: 0.8,
-      transition: {
-        duration: 0.2
-      }
-    }
-  };
-
-  const overlayVariants = {
-    hidden: { opacity: 0 },
-    visible: { opacity: 1 }
-  };
-
-  // Check if a date is today
-  const isToday = (date) => {
-    const today = new Date();
-    return date.getDate() === today.getDate() && 
-           date.getMonth() === today.getMonth() && 
-           date.getFullYear() === today.getFullYear();
-  };
+  const renderEventContent = (eventInfo) => (
+    <div className="event-content">
+      <b>{eventInfo.timeText}</b> <i>{eventInfo.event.title}</i>
+    </div>
+  );
 
   return (
-    <div style={{ backgroundColor: '#f8f9fa', minHeight: '100vh', fontFamily: "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif", color: '#2c3e50' }}>
-      {/* Header */}
-      <header style={{ backgroundColor: 'white', borderBottom: '2px solid #e9ecef', padding: '1rem 0' }}>
-        <div className="container-fluid">
-          <div className="row align-items-center">
-            <div className="col">
-              <span style={{ color: '#2c3e50', fontWeight: '700', fontSize: '1.5rem' }}>
-                Medi<span style={{ color: '#f9591a' }}>Calendar</span>
-              </span>
-            </div>
-            <div className="col-auto">
-              <div className="d-flex align-items-center">
-                <div className="me-3">
-                  <span className="text-secondary">Dr. Jane Smith</span>
-                </div>
-                <div>
-                  <button className="btn rounded-circle border" style={{ width: '40px', height: '40px' }}>
-                    <i className="fas fa-user"></i>
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </header>
-
-      <div style={{ maxWidth: '1400px', margin: '2rem auto', padding: '0 15px' }}>
-        {/* Calendar Controls */}
-        <div style={{ backgroundColor: 'white', borderRadius: '12px', boxShadow: '0 5px 15px rgba(0,0,0,0.05)', marginBottom: '1.5rem', border: 'none', padding: '1.5rem' }}>
-          <div className="d-flex justify-content-between align-items-center flex-wrap">
-            <h1 style={{ color: '#2c3e50', fontWeight: '700', marginBottom: '0' }}>My Calendar</h1>
-            <div className="d-flex gap-2 mt-2 mt-md-0">
-              <motion.button 
-                className="btn"
-                style={{ backgroundColor: 'transparent', color: '#f9591a', border: '1px solid #f9591a', padding: '0.5rem 1.25rem', borderRadius: '6px', fontWeight: '600' }}
-                whileHover={{ backgroundColor: '#ffefe8' }}
-                whileTap={{ scale: 0.95 }}
-                onClick={() => navigateWeek('prev')}
-              >
-                <i className="fas fa-chevron-left me-1"></i> Previous
-              </motion.button>
-              <motion.button 
-                className="btn"
-                style={{ backgroundColor: 'transparent', color: '#f9591a', border: '1px solid #f9591a', padding: '0.5rem 1.25rem', borderRadius: '6px', fontWeight: '600' }}
-                whileHover={{ backgroundColor: '#ffefe8' }}
-                whileTap={{ scale: 0.95 }}
-                onClick={() => setCurrentDate(new Date())}
-              >
-                Today
-              </motion.button>
-              <motion.button 
-                className="btn"
-                style={{ backgroundColor: 'transparent', color: '#f9591a', border: '1px solid #f9591a', padding: '0.5rem 1.25rem', borderRadius: '6px', fontWeight: '600' }}
-                whileHover={{ backgroundColor: '#ffefe8' }}
-                whileTap={{ scale: 0.95 }}
-                onClick={() => navigateWeek('next')}
-              >
-                Next <i className="fas fa-chevron-right ms-1"></i>
-              </motion.button>
-              <motion.button 
-                className="btn ms-2"
-                style={{ backgroundColor: '#f9591a', color: 'white', border: 'none', padding: '0.6rem 1.5rem', borderRadius: '6px', fontWeight: '600' }}
-                whileHover={{ backgroundColor: '#e04a12', scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-                onClick={() => setShowAvailabilityModal(true)}
-              >
-                <i className="fas fa-plus me-1"></i> Add Availability
-              </motion.button>
-            </div>
-          </div>
-          
-          <div className="row mt-3">
-            <div className="col-md-8">
-              <h3 className="mb-0">{monthNames[currentDate.getMonth()]} {currentDate.getFullYear()}</h3>
-              <p className="text-muted mb-0">View and manage your appointments</p>
-            </div>
-            <div className="col-md-4 text-md-end mt-2 mt-md-0">
-              <div className="btn-group">
-                <button className="btn btn-outline-secondary active">Week</button>
-                <button className="btn btn-outline-secondary">Month</button>
-                <button className="btn btn-outline-secondary">Day</button>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Calendar View */}
-        <div style={{ backgroundColor: 'white', borderRadius: '12px', boxShadow: '0 5px 15px rgba(0,0,0,0.05)', marginBottom: '1.5rem', border: 'none', overflow: 'hidden' }}>
-          <div style={{ background: 'linear-gradient(135deg, #f9591a 0%, #e04a12 100%)', color: 'white', padding: '1.25rem 1.5rem' }}>
-            <h2 className="mb-0"><i className="fas fa-calendar-alt me-2"></i>Calendar View</h2>
-          </div>
-          <div style={{ padding: '1.5rem' }}>
-            {/* Week Header */}
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: '8px', marginBottom: '12px', textAlign: 'center' }}>
-              {dayNames.map(day => (
-                <div key={day} style={{ padding: '0.75rem', backgroundColor: '#ffefe8', borderRadius: '6px', fontWeight: '600', color: '#2c3e50' }}>
-                  {day}
-                </div>
-              ))}
-            </div>
-            
-            {/* Week Grid */}
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: '8px' }}>
-              {weekDays.map((date, index) => {
-                const dayAppointments = getAppointmentsForDate(date);
-                return (
-                  <motion.div 
-                    key={index}
-                    style={{ 
-                      minHeight: '120px', 
-                      border: '1px solid #e9ecef',
-                      borderRadius: '8px',
-                      padding: '0.75rem',
-                      backgroundColor: 'white',
-                      ...(isToday(date) && {
-                        backgroundColor: '#ffefe8',
-                        border: '2px solid #f9591a'
-                      })
-                    }}
-                    variants={dayVariants}
-                    whileHover="hover"
-                  >
-                    <div style={{ 
-                      fontWeight: '700', 
-                      marginBottom: '0.75rem', 
-                      color: isToday(date) ? '#f9591a' : '#2c3e50'
-                    }}>
-                      {date.getDate()}
-                    </div>
-                    
-                    {/* Appointment Indicators */}
-                    <div>
-                      {dayAppointments.slice(0, 3).map(app => (
-                        <motion.div 
-                          key={app.id}
-                          style={{ 
-                            backgroundColor: '#e8f4ff',
-                            borderLeft: '3px solid #2c7be5',
-                            padding: '0.5rem',
-                            borderRadius: '4px',
-                            marginBottom: '0.5rem',
-                            fontSize: '0.85rem'
-                          }}
-                          whileHover={{ backgroundColor: '#d4e7ff' }}
-                        >
-                          <div style={{ fontWeight: '600', color: '#2c7be5', marginBottom: '0.15rem' }}>
-                            {app.date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                          </div>
-                          <div style={{ color: '#2c3e50', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                            {app.patient}
-                          </div>
-                        </motion.div>
-                      ))}
-                      {dayAppointments.length > 3 && (
-                        <div className="text-center mt-1">
-                          <span className="badge bg-light text-dark">
-                            +{dayAppointments.length - 3} more
-                          </span>
-                        </div>
-                      )}
-                      {dayAppointments.length === 0 && (
-                        <div className="text-center text-muted mt-3">
-                          <i className="fas fa-umbrella-beach fa-2x mb-2"></i>
-                          <p>No appointments</p>
-                        </div>
-                      )}
-                    </div>
-                  </motion.div>
-                );
-              })}
-            </div>
-          </div>
-        </div>
+    <div>
+      <h2 className="mb-4 dashboard-heading">My Calendar</h2>
+      
+      <div className="calendar-wrapper">
+        <FullCalendar
+          plugins={[dayGridPlugin, timeGridPlugin, interactionPlugin, listPlugin]}
+          initialView="dayGridMonth"
+          headerToolbar={{
+            left: "prev,next today",
+            center: "title",
+            right: "dayGridMonth,timeGridWeek,timeGridDay,listWeek",
+          }}
+          events={events}
+          eventContent={renderEventContent}
+          height="auto"
+          dateClick={handleDateClick}
+          selectable={true}
+          weekends={true}
+          editable={true}
+        />
       </div>
 
-      {/* Availability Modal */}
-      <AnimatePresence>
-        {showAvailabilityModal && (
-          <motion.div 
-            className="modal-backdrop show d-block"
-            style={{ backgroundColor: 'rgba(0,0,0,0.5)', position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, zIndex: 1040 }}
-            variants={overlayVariants}
-            initial="hidden"
-            animate="visible"
-            exit="hidden"
-            onClick={() => setShowAvailabilityModal(false)}
-          >
-            <motion.div 
-              className="modal-dialog modal-lg modal-dialog-centered"
-              variants={modalVariants}
-              initial="hidden"
-              animate="visible"
-              exit="exit"
-              onClick={(e) => e.stopPropagation()}
-              style={{ maxWidth: 'none', margin: '1.75rem auto' }}
-            >
-              <div className="modal-content" style={{ borderRadius: '12px', border: 'none', boxShadow: '0 5px 25px rgba(0,0,0,0.15)' }}>
-                <div className="modal-header" style={{ backgroundColor: '#ffefe8', borderBottom: '2px solid #f9591a', padding: '1.5rem', borderRadius: '12px 12px 0 0' }}>
-                  <h5 className="modal-title" style={{ color: '#2c3e50', fontWeight: '700', fontSize: '1.5rem' }}>
-                    <i className="fas fa-clock me-2"></i>Set Weekly Availability
-                  </h5>
-                  <button type="button" className="btn-close" onClick={() => setShowAvailabilityModal(false)} aria-label="Close"></button>
+      {/* Booking Modal */}
+      {showModal && (
+        <div className="modal show d-block" tabIndex="-1">
+          <div className="modal-dialog">
+            <div className="modal-content">
+              <div className="modal-header">
+                <h5 className="modal-title">Book a Meeting</h5>
+                <button type="button" className="btn-close" onClick={handleModalClose}></button>
+              </div>
+              <div className="modal-body">
+                <div className="mb-3">
+                  <label className="form-label">Date</label>
+                  <input 
+                    type="text" 
+                    className="form-control" 
+                    value={selectedDate} 
+                    readOnly 
+                  />
                 </div>
-                <div className="modal-body" style={{ padding: '2rem' }}>
-                  <p className="text-muted mb-4">Set your regular working hours for the week. Patients will be able to book appointments during these available time slots.</p>
-                  
-                  {Object.entries(availability).map(([day, config]) => (
-                    <div key={day} style={{ display: 'flex', alignItems: 'center', marginBottom: '1rem', padding: '1rem', border: '1px solid #e9ecef', borderRadius: '8px', backgroundColor: '#f8f9fa' }}>
-                      <div style={{ minWidth: '120px', fontWeight: '600', color: '#2c3e50', textTransform: 'capitalize' }}>
-                        {day}
-                      </div>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                        <input
-                          type="time"
-                          className="form-control"
-                          value={config.start}
-                          onChange={(e) => handleAvailabilityChange(day, 'start', e.target.value)}
-                          disabled={!config.available}
-                          style={{ padding: '0.5rem', border: '1px solid #e9ecef', borderRadius: '4px', width: '100px' }}
-                        />
-                        <span style={{ margin: '0 0.5rem', fontWeight: '600' }}>to</span>
-                        <input
-                          type="time"
-                          className="form-control"
-                          value={config.end}
-                          onChange={(e) => handleAvailabilityChange(day, 'end', e.target.value)}
-                          disabled={!config.available}
-                          style={{ padding: '0.5rem', border: '1px solid #e9ecef', borderRadius: '4px', width: '100px' }}
-                        />
-                      </div>
-                      <div className="form-check form-switch ms-3">
-                        <input
-                          className="form-check-input"
-                          type="checkbox"
-                          role="switch"
-                          checked={config.available}
-                          onChange={() => toggleDayAvailability(day)}
-                          style={{ backgroundColor: config.available ? '#f9591a' : '', borderColor: '#f9591a', width: '48px' }}
-                        />
-                        <label className="form-check-label ms-2" style={{ fontWeight: '600' }}>
-                          Available
-                        </label>
-                      </div>
-                    </div>
-                  ))}
+                <div className="mb-3">
+                  <label className="form-label">Time</label>
+                  <input 
+                    type="time" 
+                    className="form-control" 
+                    value={selectedTime}
+                    onChange={(e) => setSelectedTime(e.target.value)}
+                  />
                 </div>
-                <div className="modal-footer" style={{ borderTop: '1px solid #e9ecef', padding: '1.5rem', borderRadius: '0 0 12px 12px' }}>
-                  <motion.button 
-                    type="button" 
-                    className="btn"
-                    style={{ backgroundColor: 'transparent', color: '#f9591a', border: '1px solid #f9591a', padding: '0.5rem 1.25rem', borderRadius: '6px', fontWeight: '600' }}
-                    whileHover={{ backgroundColor: '#ffefe8', scale: 1.05 }}
-                    whileTap={{ scale: 0.95 }}
-                    onClick={() => setShowAvailabilityModal(false)}
-                  >
-                    Cancel
-                  </motion.button>
-                  <motion.button 
-                    type="button" 
-                    className="btn"
-                    style={{ backgroundColor: '#f9591a', color: 'white', border: 'none', padding: '0.6rem 1.5rem', borderRadius: '6px', fontWeight: '600' }}
-                    whileHover={{ backgroundColor: '#e04a12', scale: 1.05 }}
-                    whileTap={{ scale: 0.95 }}
-                    onClick={saveAvailability}
-                  >
-                    Save Availability
-                  </motion.button>
+                <div className="mb-3">
+                  <label className="form-label">Meeting Title*</label>
+                  <input 
+                    type="text" 
+                    className="form-control" 
+                    value={title}
+                    onChange={(e) => setTitle(e.target.value)}                                                 
+                    placeholder="Enter meeting title"
+                  /> ``
+                </div>
+                <div className="mb-3">
+                  <label className="form-label">Description</label>
+                  <textarea 
+                    className="form-control" 
+                    value={description}
+                    onChange={(e) => setDescription(e.target.value)}
+                    rows="3"
+                    placeholder="Meeting details (optional)"
+                  />
                 </div>
               </div>
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+              <div className="modal-footer">
+                <button type="button" className="btn btn-secondary" onClick={handleModalClose}>
+                  Cancel
+                </button>
+                <button type="button" className="btn btn-primary" onClick={handleSaveMeeting}>
+                  Book Meeting
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showModal && <div className="modal-backdrop show"></div>}
     </div>
   );
 };
 
-export default MyCalendar;
+export default Calendar;

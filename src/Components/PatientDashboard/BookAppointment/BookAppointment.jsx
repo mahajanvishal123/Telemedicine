@@ -17,6 +17,7 @@ const specialties = [
 ];
 
 const doctors = [
+  // Cardiology
   {
     name: "Dr. Sarah Johnson",
     specialty: "Cardiology",
@@ -41,6 +42,249 @@ const doctors = [
     languages: "English, Mandarin",
     status: "Available Today",
     nextAvailable: "Tomorrow 10:00 AM",
+    video: true,
+  },
+  // Neurology
+  {
+    name: "Dr. Emily Rodriguez",
+    specialty: "Neurology",
+    university: "Mayo Clinic College",
+    rating: 4.9,
+    experience: "18+ years",
+    patients: "3.2k+ patients",
+    price: "$200",
+    languages: "English, Spanish",
+    status: "Available Today",
+    nextAvailable: "Today 3:00 PM",
+    video: true,
+  },
+  {
+    name: "Dr. James Wilson",
+    specialty: "Neurology",
+    university: "Stanford Medical School",
+    rating: 4.7,
+    experience: "14+ years",
+    patients: "2.1k+ patients",
+    price: "$190",
+    languages: "English",
+    status: "Available Tomorrow",
+    nextAvailable: "Tomorrow 9:30 AM",
+    video: true,
+  },
+  // Dermatology
+  {
+    name: "Dr. Lisa Thompson",
+    specialty: "Dermatology",
+    university: "UCLA Medical School",
+    rating: 4.8,
+    experience: "11+ years",
+    patients: "1.9k+ patients",
+    price: "$140",
+    languages: "English, French",
+    status: "Available Today",
+    nextAvailable: "Today 4:15 PM",
+    video: true,
+  },
+  {
+    name: "Dr. David Kim",
+    specialty: "Dermatology",
+    university: "NYU School of Medicine",
+    rating: 4.6,
+    experience: "9+ years",
+    patients: "1.5k+ patients",
+    price: "$130",
+    languages: "English, Korean",
+    status: "Available Today",
+    nextAvailable: "Today 1:45 PM",
+    video: true,
+  },
+  // Orthopedic
+  {
+    name: "Dr. Robert Martinez",
+    specialty: "Orthopedic",
+    university: "University of Pennsylvania",
+    rating: 4.9,
+    experience: "20+ years",
+    patients: "4.1k+ patients",
+    price: "$220",
+    languages: "English, Spanish",
+    status: "Available Today",
+    nextAvailable: "Today 11:00 AM",
+    video: true,
+  },
+  {
+    name: "Dr. Jennifer Lee",
+    specialty: "Orthopedic",
+    university: "Duke University Medical",
+    rating: 4.7,
+    experience: "13+ years",
+    patients: "2.3k+ patients",
+    price: "$195",
+    languages: "English",
+    status: "Available Tomorrow",
+    nextAvailable: "Tomorrow 2:00 PM",
+    video: true,
+  },
+  // Pediatrics
+  {
+    name: "Dr. Amanda Foster",
+    specialty: "Pediatrics",
+    university: "Boston Children's Hospital",
+    rating: 4.9,
+    experience: "16+ years",
+    patients: "3.8k+ patients",
+    price: "$120",
+    languages: "English, Italian",
+    status: "Available Today",
+    nextAvailable: "Today 10:30 AM",
+    video: true,
+  },
+  {
+    name: "Dr. Christopher Brown",
+    specialty: "Pediatrics",
+    university: "Children's Hospital Philadelphia",
+    rating: 4.8,
+    experience: "12+ years",
+    patients: "2.7k+ patients",
+    price: "$110",
+    languages: "English, Spanish",
+    status: "Available Today",
+    nextAvailable: "Today 3:30 PM",
+    video: true,
+  },
+  // Gynecology
+  {
+    name: "Dr. Maria Garcia",
+    specialty: "Gynecology",
+    university: "Baylor College of Medicine",
+    rating: 4.8,
+    experience: "14+ years",
+    patients: "2.8k+ patients",
+    price: "$160",
+    languages: "English, Spanish, Portuguese",
+    status: "Available Today",
+    nextAvailable: "Today 2:00 PM",
+    video: true,
+  },
+  {
+    name: "Dr. Rachel Green",
+    specialty: "Gynecology",
+    university: "Emory University School",
+    rating: 4.7,
+    experience: "10+ years",
+    patients: "1.6k+ patients",
+    price: "$145",
+    languages: "English",
+    status: "Available Tomorrow",
+    nextAvailable: "Tomorrow 11:30 AM",
+    video: true,
+  },
+  // Psychiatry
+  {
+    name: "Dr. Daniel Adams",
+    specialty: "Psychiatry",
+    university: "Yale School of Medicine",
+    rating: 4.9,
+    experience: "17+ years",
+    patients: "2.4k+ patients",
+    price: "$180",
+    languages: "English, German",
+    status: "Available Today",
+    nextAvailable: "Today 5:00 PM",
+    video: true,
+  },
+  {
+    name: "Dr. Sophie Turner",
+    specialty: "Psychiatry",
+    university: "Columbia University Medical",
+    rating: 4.6,
+    experience: "8+ years",
+    patients: "1.2k+ patients",
+    price: "$165",
+    languages: "English, French",
+    status: "Available Today",
+    nextAvailable: "Today 6:30 PM",
+    video: true,
+  },
+  // Ophthalmology
+  {
+    name: "Dr. Kevin Wong",
+    specialty: "Ophthalmology",
+    university: "University of Michigan",
+    rating: 4.8,
+    experience: "15+ years",
+    patients: "2.9k+ patients",
+    price: "$170",
+    languages: "English, Cantonese",
+    status: "Available Today",
+    nextAvailable: "Today 1:00 PM",
+    video: true,
+  },
+  {
+    name: "Dr. Patricia Davis",
+    specialty: "Ophthalmology",
+    university: "Northwestern University",
+    rating: 4.7,
+    experience: "11+ years",
+    patients: "1.8k+ patients",
+    price: "$155",
+    languages: "English",
+    status: "Available Tomorrow",
+    nextAvailable: "Tomorrow 10:45 AM",
+    video: true,
+  },
+  // Dentistry
+  {
+    name: "Dr. Mark Johnson",
+    specialty: "Dentistry",
+    university: "University of Southern California",
+    rating: 4.8,
+    experience: "13+ years",
+    patients: "3.5k+ patients",
+    price: "$125",
+    languages: "English, Spanish",
+    status: "Available Today",
+    nextAvailable: "Today 9:15 AM",
+    video: true,
+  },
+  {
+    name: "Dr. Anna Petrov",
+    specialty: "Dentistry",
+    university: "Tufts University School",
+    rating: 4.9,
+    experience: "19+ years",
+    patients: "4.2k+ patients",
+    price: "$135",
+    languages: "English, Russian",
+    status: "Available Today",
+    nextAvailable: "Today 4:00 PM",
+    video: true,
+  },
+  // General Medicine
+  {
+    name: "Dr. Thomas Clark",
+    specialty: "General Medicine",
+    university: "University of Washington",
+    rating: 4.7,
+    experience: "16+ years",
+    patients: "3.1k+ patients",
+    price: "$100",
+    languages: "English",
+    status: "Available Today",
+    nextAvailable: "Today 12:00 PM",
+    video: true,
+  },
+  {
+    name: "Dr. Helen Martinez",
+    specialty: "General Medicine",
+    university: "University of California SF",
+    rating: 4.8,
+    experience: "12+ years",
+    patients: "2.5k+ patients",
+    price: "$95",
+    languages: "English, Spanish",
+    status: "Available Today",
+    nextAvailable: "Today 2:45 PM",
     video: true,
   },
 ];
@@ -95,13 +339,13 @@ export default function BookAppointment() {
   }
 
   return (
-    <Container className="book-bg py-4">
-      <Container>
+    <div className="">
+      <div>
         <Header step={step} />
         {/* Stepper Row */}
-        <Row className="justify-content-center mb-4">
+        <Row className=" mb-4">
           <Col xs={12}>
-            <div className="book-stepper-row d-flex justify-content-center align-items-center gap-3 flex-wrap">
+            <div className="book-stepper-row d-flex gap-3 flex-wrap mb-3 mt-2">
               {steps.map((s, idx) => (
                 <div key={s.label} className="d-flex align-items-center">
                   <div
@@ -161,7 +405,7 @@ export default function BookAppointment() {
         {step === 1 && (
           <>
             <h4 className="mb-3 mt-4 fw-bold">Available Doctors</h4>
-            <div className="mb-2 text-muted">Cardiology Specialists Ready To Help You</div>
+            <div className="mb-2 text-muted">{selectedSpecialty} Specialists Ready To Help You</div>
             <div className="d-flex gap-2 mb-3">
               <span className="fw-bold">Sort by:</span>
               <Button size="sm" style={{ background: "#FF6A00", border: "none" }}>Rating</Button>
@@ -391,21 +635,18 @@ export default function BookAppointment() {
             {step === steps.length - 1 ? "Finish" : "Next"} <FaChevronRight />
           </Button>
         </div>
-      </Container>
-    </Container>
+      </div>
+    </div>
   );
 }
 
 // Stepper Header
 function Header({ step }) {
   return (
-    <div className="d-flex align-items-center mb-2">
-      <div className="book-header-icon">
-        <FaUserMd size={28} color="#fff" />
-      </div>
-      <div className="ms-3">
-        <h3 className="mb-0 fw-bold">Book Appointment</h3>
-        <div className="text-muted" style={{ fontSize: "1.1em" }}>Schedule your medical consultation</div>
+    <div className="mb-3">
+      <div className="">
+        <h3 className="dashboard-heading">Book Appointment</h3>
+        <div className="text-muted">Schedule your medical consultation</div>
       </div>
     </div>
   );

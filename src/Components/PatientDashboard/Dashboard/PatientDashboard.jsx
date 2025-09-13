@@ -1,12 +1,22 @@
 import React, { useState } from 'react';
-import { Link } from 'react-router-dom';
 
 const PatientDashboard = () => {
   const [showModal, setShowModal] = useState(false);
+  const [rescheduleDate, setRescheduleDate] = useState('');
+  const [rescheduleTime, setRescheduleTime] = useState('');
+
+  const handleReschedule = () => {
+    // Handle the reschedule logic here
+    console.log('Rescheduling to:', rescheduleDate, rescheduleTime);
+    setShowModal(false);
+    // Reset form
+    setRescheduleDate('');
+    setRescheduleTime('');
+  };
 
   return (
     <div>
-      {/* ✅ Welcome Banner */}
+      {/* Welcome Banner */}
       <div className="mb-4">
         <div
           className="card shadow-sm border-0 rounded-3"
@@ -35,7 +45,7 @@ const PatientDashboard = () => {
         </div>
       </div>
 
-      {/* ✅ Quick Stats Row */}
+      {/* Quick Stats Row */}
       <div className="row g-3 mb-4">
         {[
           {
@@ -106,7 +116,7 @@ const PatientDashboard = () => {
         ))}
       </div>
 
-      {/* ✅ Main Content */}
+      {/* Main Content */}
       <div className="">
         {/* Left Column */}
         <div className="">
@@ -186,7 +196,10 @@ const PatientDashboard = () => {
                 >
                   Join Call
                 </button>
-                <button className="btn btn-sm btn-outline-secondary px-4">
+                <button 
+                  className="btn btn-sm btn-outline-secondary px-4" 
+                  onClick={() => setShowModal(true)}
+                >
                   Reschedule
                 </button>
               </div>
@@ -194,7 +207,7 @@ const PatientDashboard = () => {
           </div>
         </div>
 
-        {/* ✅ Recent Doctors Card - With Circular Avatars */}
+        {/* Recent Doctors Card - With Circular Avatars */}
         <div
           className="card border-0 rounded-3 overflow-hidden"
           style={{
@@ -202,7 +215,6 @@ const PatientDashboard = () => {
             boxShadow: '0 4px 12px rgba(0,0,0,0.08)',
           }}
           onMouseEnter={(e) => {
-            // e.currentTarget.style.transform = 'translateY(-4px)';
             e.currentTarget.style.boxShadow = '0 12px 24px rgba(0,0,0,0.15)';
           }}
           onMouseLeave={(e) => {
@@ -246,7 +258,7 @@ const PatientDashboard = () => {
                     }}
                   >
                     <div className="card-body p-3 d-flex align-items-start">
-                      {/* 👤 Circular Avatar */}
+                      {/* Circular Avatar */}
                       <div
                         className="rounded-circle me-3"
                         style={{
@@ -307,6 +319,71 @@ const PatientDashboard = () => {
           </div>
         </div>
       </div>
+
+      {/* Reschedule Appointment Modal */}
+      {showModal && (
+        <div 
+          className="modal fade show d-block" 
+          tabIndex="-1" 
+          style={{ backgroundColor: 'rgba(0,0,0,0.5)' }}
+          onClick={() => setShowModal(false)}
+        >
+          <div className="modal-dialog modal-dialog-centered" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-content">
+              <div className="modal-header">
+                <h5 className="modal-title">Reschedule Appointment</h5>
+                <button 
+                  type="button" 
+                  className="btn-close" 
+                  onClick={() => setShowModal(false)}
+                ></button>
+              </div>
+              <div className="modal-body">
+                <p>Reschedule appointment with <strong>Dr. Sarah Johnson</strong></p>
+                <div className="mb-3">
+                  <label htmlFor="rescheduleDate" className="form-label">New Date</label>
+                  <input
+                    type="date"
+                    className="form-control"
+                    id="rescheduleDate"
+                    value={rescheduleDate}
+                    onChange={(e) => setRescheduleDate(e.target.value)}
+                    min={new Date().toISOString().split('T')[0]}
+                  />
+                </div>
+                <div className="mb-3">
+                  <label htmlFor="rescheduleTime" className="form-label">New Time</label>
+                  <input
+                    type="time"
+                    className="form-control"
+                    id="rescheduleTime"
+                    value={rescheduleTime}
+                    onChange={(e) => setRescheduleTime(e.target.value)}
+                  />
+                </div>
+              </div>
+              <div className="modal-footer">
+                <button 
+                  type="button" 
+                  className="btn btn-secondary" 
+                  onClick={() => setShowModal(false)}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  className="btn"
+                  style={{ backgroundColor: '#F95918', color: 'white' }}
+                  onClick={handleReschedule}
+                  disabled={!rescheduleDate || !rescheduleTime}
+                >
+                  Confirm Reschedule
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

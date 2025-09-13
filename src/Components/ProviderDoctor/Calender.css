@@ -1,0 +1,121 @@
+/* ✅ Day names (Sun, Mon, Tue...) */
+.fc .fc-col-header-cell-cushion {
+  color: #000 !important;   /* black text */
+  text-decoration: none !important; /* remove underline */
+  font-weight: 600;
+  font-size: 0.95rem;
+}
+
+/* ✅ Day numbers (1, 2, 3...) */
+.fc .fc-daygrid-day-number {
+  color: #000 !important;   /* black text */
+  text-decoration: none !important; /* remove underline */
+  font-weight: 500;
+  font-size: 0.9rem;
+}
+
+.calendar-container {
+  padding: 20px;
+  max-width: 1200px;
+  margin: 0 auto;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+.calendar-wrapper {
+  background-color: white;
+  border-radius: 8px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+  padding: 20px;
+  overflow: hidden;
+}
+
+.fc {
+  color: #333;
+}
+
+.fc-toolbar-title {
+  font-weight: 600;
+  color: #2c3e50;
+}
+
+.fc-button {
+  background-color: #f9591a !important;
+  border-color: #f9591a !important;
+  transition: all 0.2s;
+}
+
+.fc-button:hover {
+  background-color: #f9591a !important;
+  border-color: #f9591a !important;
+}
+
+.fc-button-active {
+  background-color: #f9591a !important;
+  border-color: #f9591a !important;
+}
+
+.fc-daygrid-day-number, 
+.fc-col-header-cell-cushion {
+  color: #2c3e50;
+  text-decoration: none;
+}
+
+.fc-day-today {
+  background-color: rgba(78, 115, 223, 0.1) !important;
+}
+
+.event-content {
+  padding: 4px;
+  border-radius: 4px;
+  background-color: rgba(78, 115, 223, 0.1);
+  border-left: 3px solid #f9591a;
+  font-size: 0.85rem;
+}
+
+.fc-event {
+  border: none !important;
+  cursor: pointer;
+}
+
+.fc-daygrid-event:hover {
+  opacity: 0.9;
+}
+
+.modal-content {
+  border-radius: 8px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+}
+
+.modal-header {
+  border-top-left-radius: 8px;
+  border-top-right-radius: 8px;
+}
+
+.btn-primary {
+  background-color: #f9591a;
+  border-color: #f9591a;
+}
+
+.btn-primary:hover {
+  background-color: #f9591a;
+  border-color: #f9591a;
+}
+
+@media (max-width: 768px) {
+  .calendar-container {
+    padding: 10px;
+  }
+  
+  .calendar-wrapper {
+    padding: 10px;
+  }
+  
+  .fc-toolbar {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  
+  .fc-toolbar-chunk {
+    margin-bottom: 10px;
+  }
+}
