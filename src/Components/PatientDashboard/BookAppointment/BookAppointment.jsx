@@ -2,6 +2,9 @@ import React, { useState } from "react";
 import { Container, Row, Col, Card, Button, Badge, Form } from "react-bootstrap";
 import { FaUserMd, FaStar, FaCheckCircle, FaCalendarAlt, FaChevronRight, FaChevronLeft } from "react-icons/fa";
 import "./BookAppointment.css";
+import Base_Url from "../../../Baseurl/Baseurl";
+import axios from "axios";
+
 
 const specialties = [
   { name: "Cardiology", desc: "Heart and cardiovascular care", count: 12 },
@@ -651,3 +654,7 @@ function Header({ step }) {
     </div>
   );
 }
+
+
+
+
