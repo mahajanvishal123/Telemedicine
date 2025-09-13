@@ -10,7 +10,6 @@ import {
 } from "@fortawesome/free-solid-svg-icons";
 import { Link,useNavigate} from "react-router-dom";
 import "./Navbar.css";
-import { Button } from "bootstrap";
 
 // Profile Modal Component (Editable)
 const ProfileModal = ({ isOpen, onClose }) => {
@@ -276,11 +275,6 @@ const Navbar = ({ toggleSidebar }) => {
     setIsProfileModalOpen(false);
   };
 
-  const logout = () => {
-    localStorage.clear();
-    navigate("/login");
-  }
-
   return (
     <>
       <nav className="navbar navbar-expand px-3 py-2 custom-navbar d-flex justify-content-between align-items-center fixed-top">
@@ -294,8 +288,6 @@ const Navbar = ({ toggleSidebar }) => {
             height="45"
             width={60}
             className="navbar-logo"
-            onClick={() => navigate("/")}
-
           />
         </div>
 
@@ -337,9 +329,9 @@ const Navbar = ({ toggleSidebar }) => {
                   <hr className="dropdown-divider" />
                 </li>
                 <li>
-                  <Button className="dropdown-item"  onClick={logout}>
+                  <Link className="dropdown-item" to="/login">
                     Logout
-                  </Button>
+                  </Link>
                 </li>
               </ul>
             )}

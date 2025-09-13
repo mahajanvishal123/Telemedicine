@@ -26,8 +26,8 @@ const Login = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
-try {
-      const response = await fetch(`${API_URL}/login`, {
+    try {
+      const response = await fetch(`${API_URL}/auth/login`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -132,28 +132,6 @@ try {
               </p>
 
               <form onSubmit={handleSubmit}>
-                {/* Role Select */}
-                <div className="mb-3">
-                  <label className="form-label fw-semibold" style={{ color: "#1B263B" }}>
-                    Select Role
-                  </label>
-                  <select
-                    name="role"
-                    value={formData.role}
-                    onChange={handleChange}
-                    className="form-select"
-                    style={{
-                      borderColor: "#FF6B2C",
-                      borderRadius: "0.75rem",
-                    }}
-                  >
-                    <option value="Admin">Admin</option>
-                    <option value="Patient">Patient</option>
-                    <option value="Doctor">Provider / Doctor</option>
-                    <option value="Caregiver">Caregiver</option>
-                  </select>
-                </div>
-
                 {/* Email */}
                 <div className="mb-3">
                   <label className="form-label fw-semibold" style={{ color: "#1B263B" }}>
