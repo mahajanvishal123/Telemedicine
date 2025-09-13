@@ -26,11 +26,7 @@ const Login = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
-<<<<<<< HEAD
-try {
-=======
     try {
->>>>>>> 140250ec3faee1155283c76bee0330b38e437eac
       const response = await fetch(`${API_URL}/auth/login`, {
         method: "POST",
         headers: {
