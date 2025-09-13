@@ -88,8 +88,12 @@ const Sidebar = ({ collapsed, setCollapsed }) => {
 
   const adminMenuItems = [
     { label: "Dashboard", path: "/admin/dashboard", icon: faTachometerAlt },
-    { label: "User Management", path: "/admin/user-management", icon: faUserShield },
-    { label: "Caregiver", path: "/admin/caregiver", icon: faUsers },
+    // { label: "User Management", path: "/admin/user-management", icon: faUserShield },
+    
+    { label: "All Doctor", path: "/admin/doctor", icon: faUsers },
+    { label: " All Caregiver", path: "/admin/caregiver", icon: faUsers },
+
+    { label: "All Patient", path: "/admin/patient", icon: faUsers },
     { label: "Verification", path: "/admin/verification", icon: faCheckCircle },
     { label: "Appointments", path: "/admin/appointments", icon: faCalendarCheck },
   ];
