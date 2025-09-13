@@ -1,6 +1,29 @@
+import axios from "axios";
 import React from "react";
 import { Link } from "react-router-dom";
+import { useParams } from "react-router-dom";
 const ResetPassword = () => {
+    const { token } = useParams();
+
+    const handleSubmit = async (e) => {
+        e.preventDefault();
+        const newPassword = e.target[0].value;
+        const confirmPassword = e.target[1].value;
+
+        if (newPassword !== confirmPassword) {
+            alert("Passwords do not match!");
+            return;
+        }
+
+        try {
+            const response = await axios.post("https://g5kqw2tn-3000.inc1.devtunnels.ms/api/auth/resetpassword", {password: newPassword, token });
+            alert("Password reset successful!");
+        } catch (error) {
+            console.error("Error resetting password:", error);
+            alert("Failed to reset password.");
+        }
+    };
+
   return (
     <div className="container-fluid min-vh-100 d-flex align-items-center justify-content-center p-4" style={{ background: "linear-gradient(135deg, #ffffffff, #f7e4dcff)" }}>
       <div
@@ -8,16 +31,6 @@ const ResetPassword = () => {
         style={{ maxWidth: "500px", borderRadius: "2rem" }}
       >
         <div className="p-5 text-center">
-          {/* Logo (Optional - Uncomment if you have one) */}
-          {/* <div className="d-flex justify-content-center align-items-center mb-4">
-            <img
-              src="https://i.postimg.cc/mZHz3k1Q/Whats-App-Image-2025-07-23-at-12-38-03-add5b5dd-removebg-preview-1.png"
-              alt="logo"
-              className="navbar-logo m-2"
-              style={{ height: "51px" }}
-            />
-          </div> */}
-
           <h2
             className="h5 fw-bold"
             style={{
@@ -43,7 +56,7 @@ const ResetPassword = () => {
           </div>
 
           {/* Form */}
-          <form>
+          <form onSubmit={handleSubmit}>
             {/* New Password */}
             <div className="mb-3 position-relative">
               <i
