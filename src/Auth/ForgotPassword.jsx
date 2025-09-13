@@ -1,3 +1,4 @@
+import axios from "axios";
 import React, { useState } from "react";
 import { Link } from "react-router-dom";
 
@@ -6,15 +7,39 @@ const ForgotPassword = () => {
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    setIsLoading(true);
+const handleSubmit = async (e) => {
+  e.preventDefault();
+  setIsLoading(true);
 
-    // Simulate sending reset link
-    await new Promise((resolve) => setTimeout(resolve, 1000));
-    setIsSubmitted(true);
+  try {
+    const response = await axios.post(
+      "https://g5kqw2tn-3000.inc1.devtunnels.ms/api/auth/forgotpassword", // ✅ Fixed: Removed trailing spaces
+      { email }
+    );
+
+    // Success: 200 or 201
+    if (response.status === 200 || response.status === 201) {
+      setIsSubmitted(true);
+      window.alert("Password reset link has been sent to your email.");
+    }
+
+  } catch (error) {
+    // Handle specific error from backend
+    if (error.response?.status === 404 && error.response.data?.message === "Account not found") {
+      window.alert("Account not found. Please check your email and try again.");
+    } else if (error.response?.data?.message) {
+      // Generic error message from API
+      window.alert(`Error: ${error.response.data.message}`);
+    } else {
+      // Network error / unknown error
+      window.alert("Something went wrong. Please check your internet connection and try again.");
+    }
+  } finally {
     setIsLoading(false);
-  };
+  }
+
+  console.log("Loading state:", isLoading); // 👈 This will still show old value due to async nature — ignore this line in production
+};
 
   return (
     <div className="container-fluid min-vh-100 d-flex align-items-center justify-content-center p-4" style={{ background: "linear-gradient(135deg, #ffffffff, #f7e4dcff)",}}>

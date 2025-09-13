@@ -5,6 +5,7 @@ import { useState, useEffect } from "react";
 import Navbar from "./Layout/Navbar";
 import Login from "./Auth/Login";
 import Signup from "./Auth/Signup";
+import ResetPassword from "./Auth/resetpassword";
 import ForgotPassword from "./Auth/ForgotPassword";
 import Sidebar from "./Layout/Sidebar";
 import Dashboard from "./Components/CaregiverDashboard/Dashboard";
@@ -62,6 +63,7 @@ function App() {
     location.pathname === "/login" ||
     location.pathname === "/signup" ||
     location.pathname === "/forgot-password" ||
+    location.pathname.startsWith("/reset-password/") ||
     location.pathname === "/" ||
     location.pathname === "/aboutus" ||
     location.pathname === "/forprovider" ||
@@ -95,6 +97,7 @@ function App() {
           <Route path="/login" element={<Login />} />
           <Route path="/signup" element={<Signup />} />
           <Route path="/forgot-password" element={<ForgotPassword />} />
+          <Route path="/reset-password/:token" element={<ResetPassword />} />
         </Routes>
       ) : (
         <>
