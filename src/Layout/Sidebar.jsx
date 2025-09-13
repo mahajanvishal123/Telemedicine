@@ -14,10 +14,8 @@ import {
   faCalendarCheck,
   faBars,
   faTimes,
-  faRightFromBracket, 
-  faCaretRight ,
+  faDedent,
   faRightLeft,
-  faDedent ,// 👈 Logout ke liye icon
 } from "@fortawesome/free-solid-svg-icons";
 import "./Sidebar.css";
 
@@ -91,10 +89,7 @@ const Sidebar = ({ collapsed, setCollapsed }) => {
   const adminMenuItems = [
     { label: "Dashboard", path: "/admin/dashboard", icon: faTachometerAlt },
     { label: "User Management", path: "/admin/user-management", icon: faUserShield },
-    // { label: "Patients", path: "/admin/patients", icon: faUser },
-    // { label: "Providers", path: "/admin/providers", icon: faUserMd },
-  
-   { label: "Add Caregiver", path: "/admin/caregiver", icon: faUsers},
+    { label: "Caregiver", path: "/admin/caregiver", icon: faUsers },
     { label: "Verification", path: "/admin/verification", icon: faCheckCircle },
     { label: "Appointments", path: "/admin/appointments", icon: faCalendarCheck },
   ];
