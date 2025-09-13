@@ -85,10 +85,11 @@ const Clients = () => {
                 <strong>Primary Condition:</strong> {patient.condition}
               </p>
               <p className="card-text mb-2">
-                <i
+                <i class="bi bi-telephone me-2" style={{ color: "#f9591a" }}></i>
+                {/* <i
                   className="fas fa-map-marker-alt me-2"
                   style={{ color: "#f9591a" }}
-                />
+                /> */}
                 <strong>Contact:</strong>
                 <small className="text-muted"> {patient.contact}</small>
               </p>
