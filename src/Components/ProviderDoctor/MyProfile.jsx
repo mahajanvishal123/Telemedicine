@@ -1,100 +1,164 @@
 import React, { useState, useEffect, useRef } from 'react';
+import axios from 'axios';
+import API_URL from '../../Baseurl/Baseurl';
 
 const MyProfile = () => {
+  const BASE_URL = API_URL;
+  const DOCTOR_ID = '68c2befc249f86eca552142d'; // <-- given id
+
   const [isAvailable, setIsAvailable] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState(false);
-  
-  // Get profile image from localStorage if available, otherwise use default
+
+  // preview ke liye (persist karta hai), lekin API submit me real File jayegi
   const [profileImage, setProfileImage] = useState(
     localStorage.getItem('profileImage') || 'https://via.placeholder.com/150'
   );
-  
+  // actual file for API
+  const [profileFile, setProfileFile] = useState(null);
+  const [documentFiles, setDocumentFiles] = useState([]); // multiple docs
+
   const fileInputRef = useRef(null);
-  
+  const documentInputRef = useRef(null);
+
   const [profileData, setProfileData] = useState({
-    fullName: 'Dr. Sarah Johnson',
-    email: 'sarah.johnson@example.com',
-    phone: '+1 (555) 123-4567',
-    specialty: 'Cardiology',
+    fullName: 'Dr. Sarah Johnson',         // -> API: name
+    email: 'sarah.johnson@example.com',     // -> API: email
+    phone: '+1 (555) 123-4567',             // (API me use nahi ho raha)
+    specialty: 'Cardiology',                // -> API: specialty
     bio: 'Board-certified cardiologist with over 10 years of experience. Specializing in preventive cardiology and heart disease management.',
-    consultationFee: 150
+    consultationFee: 150,
+
+    // ---- NEW fields (API required) ----
+    licenseNo: '21365498745',
+    experience: '5 Years ',                 // string form me jaata hai
+    availableDay: 'Mon - Fri',
+    openingTime: '10',
+    closingTime: '6',
+    gender: 'Male',                         // Male | Female | Other
+    password: 'doctor@123',                 // API expects in PUT payload too
   });
 
   const specialties = [
-    'Cardiology',
-    'Dermatology',
-    'Neurology',
-    'Pediatrics',
-    'Orthopedics',
-    'Psychiatry',
-    'Oncology',
-    'Endocrinology'
+    'Cardiology','Dermatology','Neurology','Pediatrics',
+    'Orthopedics','Psychiatry','Oncology','Endocrinology'
   ];
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
-    setProfileData({
-      ...profileData,
-      [name]: value
-    });
+    setProfileData((p) => ({ ...p, [name]: value }));
   };
 
+  // Profile image choose karna — preview + file state
   const handleImageUpload = (e) => {
-    const file = e.target.files[0];
+    const file = e.target.files?.[0];
     if (file) {
+      setProfileFile(file); // API ke liye file
       const reader = new FileReader();
       reader.onload = (event) => {
         const imageDataUrl = event.target.result;
         setProfileImage(imageDataUrl);
-        // Save to localStorage for persistence
-        localStorage.setItem('profileImage', imageDataUrl);
+        localStorage.setItem('profileImage', imageDataUrl); // preview persistence
       };
       reader.readAsDataURL(file);
     }
   };
 
-  const handleSubmit = (e) => {
-    e.preventDefault();
-    setIsSaving(true);
-    
-    // Save profile data to localStorage
-    localStorage.setItem('profileData', JSON.stringify(profileData));
-    localStorage.setItem('isAvailable', isAvailable.toString());
-    
-    // Simulate API call
-    setTimeout(() => {
-      setIsSaving(false);
-      setSaveSuccess(true);
-      
-      // Reset success message after 3 seconds
-      setTimeout(() => {
-        setSaveSuccess(false);
-      }, 3000);
-    }, 1500);
+  // Documents choose karna (multiple)
+  const handleDocumentsUpload = (e) => {
+    const files = Array.from(e.target.files || []);
+    setDocumentFiles(files);
   };
 
-  // Load saved data on component mount
+  const removeDocuments = () => {
+    setDocumentFiles([]);
+    if (documentInputRef.current) {
+      documentInputRef.current.value = '';
+    }
+  };
+
+  // Submit -> PUT multipart/form-data
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setIsSaving(true);
+
+    try {
+      // local persistence (optional)
+      localStorage.setItem('profileData', JSON.stringify(profileData));
+      localStorage.setItem('isAvailable', isAvailable.toString());
+
+      // Build multipart form-data exactly as API expects
+      const fd = new FormData();
+      fd.append('name', (profileData.fullName || '').trim());
+      fd.append('email', (profileData.email || '').trim());
+      fd.append('specialty', profileData.specialty || '');
+      fd.append('licenseNo', profileData.licenseNo || '');
+      fd.append('experience', profileData.experience || '');
+      fd.append('availableDay', profileData.availableDay || '');
+      fd.append('openingTime', profileData.openingTime || '');
+      fd.append('closingTime', profileData.closingTime || '');
+      fd.append('gender', profileData.gender || '');
+      fd.append('password', profileData.password || '');
+
+      if (profileFile) {
+        fd.append('profile', profileFile); // file
+      }
+
+      if (documentFiles.length) {
+        documentFiles.forEach((file) => {
+          // most node backends accept repeated key "documents"
+          fd.append('documents', file);
+        });
+      }
+
+      // Agar auth chahiye to yahan token header add karein
+      const res = await axios.put(
+        `${BASE_URL}/doctor/${DOCTOR_ID}`,
+        fd,
+        {
+          headers: {
+            'Content-Type': 'multipart/form-data',
+            // Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+
+      // Success UI
+      setSaveSuccess(true);
+      setTimeout(() => setSaveSuccess(false), 3000);
+
+      // Optionally, response se profile URL aa raha ho to preview update kardein
+      const updated = res?.data?.appointment || res?.data?.data || res?.data;
+      const profileUrl = updated?.profile;
+      if (profileUrl) {
+        setProfileImage(profileUrl);
+        localStorage.setItem('profileImage', profileUrl);
+      }
+    } catch (err) {
+      console.error(err);
+      alert(
+        err?.response?.data?.message ||
+        err?.message ||
+        'Failed to update profile'
+      );
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  // Load saved data on mount
   useEffect(() => {
     const savedProfileData = localStorage.getItem('profileData');
     const savedAvailability = localStorage.getItem('isAvailable');
-    
-    if (savedProfileData) {
-      setProfileData(JSON.parse(savedProfileData));
-    }
-    
-    if (savedAvailability) {
-      setIsAvailable(savedAvailability === 'true');
-    }
+    if (savedProfileData) setProfileData(JSON.parse(savedProfileData));
+    if (savedAvailability) setIsAvailable(savedAvailability === 'true');
   }, []);
 
-  // Animation effect for section entrance
+  // Entrance animations
   useEffect(() => {
     const elements = document.querySelectorAll('.profile-section');
     elements.forEach((el, index) => {
-      setTimeout(() => {
-        el.classList.add('animate-in');
-      }, 100 * index);
+      setTimeout(() => el.classList.add('animate-in'), 100 * index);
     });
   }, []);
 
@@ -107,12 +171,12 @@ const MyProfile = () => {
             <h1 className="dashboard-heading mb-2">My Profile</h1>
             <p className="text-muted mb-0">Manage your professional information and availability</p>
           </div>
-          
+
           <div className="card shadow-sm border-0 overflow-hidden">
             <div className="card-header py-3">
               <h2 className="h5 mb-0">Professional Profile</h2>
             </div>
-            
+
             <div className="card-body p-3 p-md-4">
               <form onSubmit={handleSubmit}>
                 <div className="row">
@@ -132,7 +196,7 @@ const MyProfile = () => {
                         />
                       </div>
                     </div>
-                    
+
                     <div className="profile-section">
                       <div className="mb-3">
                         <label htmlFor="email" className="form-label fw-semibold">Email Address</label>
@@ -147,7 +211,7 @@ const MyProfile = () => {
                         />
                       </div>
                     </div>
-                    
+
                     <div className="profile-section">
                       <div className="mb-3">
                         <label htmlFor="phone" className="form-label fw-semibold">Phone Number</label>
@@ -162,39 +226,140 @@ const MyProfile = () => {
                         />
                       </div>
                     </div>
-                    
+
                     <div className="profile-section">
-                      <div className="mb-3">
-                        <label htmlFor="specialty" className="form-label fw-semibold">Specialty</label>
-                        <select
-                          className="form-select"
-                          id="specialty"
-                          name="specialty"
-                          value={profileData.specialty}
-                          onChange={handleInputChange}
-                        >
-                          {specialties.map((spec, index) => (
-                            <option key={index} value={spec}>{spec}</option>
-                          ))}
-                        </select>
+                      <div className="row">
+                        <div className="col-md-6 mb-3">
+                          <label htmlFor="specialty" className="form-label fw-semibold">Specialty</label>
+                          <select
+                            className="form-select"
+                            id="specialty"
+                            name="specialty"
+                            value={profileData.specialty}
+                            onChange={handleInputChange}
+                          >
+                            {specialties.map((spec, index) => (
+                              <option key={index} value={spec}>{spec}</option>
+                            ))}
+                          </select>
+                        </div>
+                        <div className="col-md-6 mb-3">
+                          <label htmlFor="licenseNo" className="form-label fw-semibold">License No.</label>
+                          <input
+                            type="text"
+                            className="form-control"
+                            id="licenseNo"
+                            name="licenseNo"
+                            value={profileData.licenseNo}
+                            onChange={handleInputChange}
+                            placeholder="123456789"
+                          />
+                        </div>
                       </div>
                     </div>
-                    
+
                     <div className="profile-section">
-                      <div className="mb-3">
-                        <label htmlFor="consultationFee" className="form-label fw-semibold">Consultation Fee ($)</label>
-                        <input
-                          type="number"
-                          className="form-control"
-                          id="consultationFee"
-                          name="consultationFee"
-                          value={profileData.consultationFee}
-                          onChange={handleInputChange}
-                          placeholder="Set your consultation fee"
-                        />
+                      <div className="row">
+                        <div className="col-md-6 mb-3">
+                          <label htmlFor="experience" className="form-label fw-semibold">Experience</label>
+                          <input
+                            type="text"
+                            className="form-control"
+                            id="experience"
+                            name="experience"
+                            value={profileData.experience}
+                            onChange={handleInputChange}
+                            placeholder="e.g. 5 Years "
+                          />
+                        </div>
+                        <div className="col-md-6 mb-3">
+                          <label htmlFor="gender" className="form-label fw-semibold">Gender</label>
+                          <select
+                            className="form-select"
+                            id="gender"
+                            name="gender"
+                            value={profileData.gender}
+                            onChange={handleInputChange}
+                          >
+                            <option value="">-- Select --</option>
+                            <option value="Male">Male</option>
+                            <option value="Female">Female</option>
+                            <option value="Other">Other</option>
+                          </select>
+                        </div>
                       </div>
                     </div>
-                    
+
+                    <div className="profile-section">
+                      <div className="row">
+                        <div className="col-md-4 mb-3">
+                          <label htmlFor="availableDay" className="form-label fw-semibold">Available Days</label>
+                          <input
+                            type="text"
+                            className="form-control"
+                            id="availableDay"
+                            name="availableDay"
+                            value={profileData.availableDay}
+                            onChange={handleInputChange}
+                            placeholder="Mon - Fri"
+                          />
+                        </div>
+                        <div className="col-md-4 mb-3">
+                          <label htmlFor="openingTime" className="form-label fw-semibold">Opening Time</label>
+                          <input
+                            type="text"
+                            className="form-control"
+                            id="openingTime"
+                            name="openingTime"
+                            value={profileData.openingTime}
+                            onChange={handleInputChange}
+                            placeholder="10"
+                          />
+                        </div>
+                        <div className="col-md-4 mb-3">
+                          <label htmlFor="closingTime" className="form-label fw-semibold">Closing Time</label>
+                          <input
+                            type="text"
+                            className="form-control"
+                            id="closingTime"
+                            name="closingTime"
+                            value={profileData.closingTime}
+                            onChange={handleInputChange}
+                            placeholder="6"
+                          />
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="profile-section">
+                      <div className="row">
+                        <div className="col-md-6 mb-3">
+                          <label htmlFor="consultationFee" className="form-label fw-semibold">Consultation Fee ($)</label>
+                          <input
+                            type="number"
+                            className="form-control"
+                            id="consultationFee"
+                            name="consultationFee"
+                            value={profileData.consultationFee}
+                            onChange={handleInputChange}
+                            placeholder="Set your consultation fee"
+                          />
+                        </div>
+                        <div className="col-md-6 mb-3">
+                          <label htmlFor="password" className="form-label fw-semibold">Password</label>
+                          <input
+                            type="password"
+                            className="form-control"
+                            id="password"
+                            name="password"
+                            value={profileData.password}
+                            onChange={handleInputChange}
+                            placeholder="Update password"
+                          />
+                        </div>
+                      </div>
+                    </div>
+
                     <div className="profile-section">
                       <div className="mb-3">
                         <label htmlFor="bio" className="form-label fw-semibold">Bio</label>
@@ -209,8 +374,35 @@ const MyProfile = () => {
                         ></textarea>
                       </div>
                     </div>
+
+                    <div className="profile-section">
+                      <div className="mb-3">
+                        <label className="form-label fw-semibold">Documents (Certificates, Licenses etc.)</label>
+                        <input
+                          type="file"
+                          className="form-control"
+                          multiple
+                          onChange={handleDocumentsUpload}
+                          ref={documentInputRef}
+                        />
+                        {documentFiles.length > 0 && (
+                          <div className="mt-2">
+                            <ul className="list-group">
+                              {documentFiles.map((f, idx) => (
+                                <li key={idx} className="list-group-item d-flex justify-content-between align-items-center">
+                                  <span className="small">{f.name}</span>
+                                  <button type="button" className="btn btn-sm btn-outline-danger" onClick={removeDocuments}>
+                                    Clear
+                                  </button>
+                                </li>
+                              ))}
+                            </ul>
+                          </div>
+                        )}
+                      </div>
+                    </div>
                   </div>
-                  
+
                   {/* Right Column - Profile Picture & Availability */}
                   <div className="col-md-5 order-1 order-md-2">
                     <div className="profile-section">
@@ -226,11 +418,11 @@ const MyProfile = () => {
                             <div className="profile-overlay rounded-circle">
                               <label htmlFor="profileUpload" className="profile-upload-btn">
                                 <i className="fas fa-camera"></i>
-                                <input 
-                                  type="file" 
-                                  id="profileUpload" 
+                                <input
+                                  type="file"
+                                  id="profileUpload"
                                   ref={fileInputRef}
-                                  className="d-none" 
+                                  className="d-none"
                                   accept="image/*"
                                   onChange={handleImageUpload}
                                 />
@@ -242,7 +434,7 @@ const MyProfile = () => {
                             <button
                               type="button"
                               className="btn btn-outline-primary btn-sm"
-                              onClick={() => fileInputRef.current.click()}
+                              onClick={() => fileInputRef.current?.click()}
                             >
                               Upload New Photo
                             </button>
@@ -250,7 +442,7 @@ const MyProfile = () => {
                         </div>
                       </div>
                     </div>
-                    
+
                     <div className="profile-section">
                       <div className="availability-container p-3 rounded-3 shadow-sm mb-3">
                         <div className="d-flex justify-content-between align-items-center">
@@ -268,8 +460,8 @@ const MyProfile = () => {
                               id="availabilityToggle"
                               checked={isAvailable}
                               onChange={() => setIsAvailable(!isAvailable)}
-                              style={{ 
-                                backgroundColor: isAvailable ? '#F95918' : '#ccc', 
+                              style={{
+                                backgroundColor: isAvailable ? '#F95918' : '#ccc',
                                 borderColor: '#F95918',
                                 width: '2.5rem',
                                 height: '1.25rem'
@@ -277,7 +469,7 @@ const MyProfile = () => {
                             />
                           </div>
                         </div>
-                        
+
                         <div className={`status-indicator mt-2 ${isAvailable ? 'available' : 'unavailable'}`}>
                           <span className="status-dot"></span>
                           <span className="status-text small">
@@ -286,7 +478,7 @@ const MyProfile = () => {
                         </div>
                       </div>
                     </div>
-                    
+
                     <div className="profile-section">
                       <div className="d-grid mt-3 mb-3">
                         <button
@@ -303,7 +495,7 @@ const MyProfile = () => {
                             'Save Changes'
                           )}
                         </button>
-                        
+
                         {saveSuccess && (
                           <div className="alert alert-success mt-2 d-flex align-items-center small py-2" role="alert">
                             <i className="fas fa-check-circle me-2"></i>
@@ -319,148 +511,32 @@ const MyProfile = () => {
           </div>
         </div>
       </div>
-      
+
       <style jsx>{`
-        .profile-section {
-          opacity: 0;
-          transform: translateY(20px);
-          transition: opacity 0.5s ease, transform 0.5s ease;
-        }
-        
-        .profile-section.animate-in {
-          opacity: 1;
-          transform: translateY(0);
-        }
-        
-        .profile-img-container {
-          position: relative;
-          display: inline-block;
-        }
-        
-        .profile-overlay {
-          position: absolute;
-          top: 0;
-          left: 0;
-          width: 100%;
-          height: 100%;
-          background: rgba(0, 0, 0, 0.3);
-          border-radius: 50%;
-          opacity: 0;
-          transition: opacity 0.3s ease;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-        }
-        
-        .profile-img-container:hover .profile-overlay {
-          opacity: 1;
-        }
-        
-        .profile-upload-btn {
-          color: white;
-          font-size: 1.2rem;
-          cursor: pointer;
-          transition: transform 0.3s ease;
-        }
-        
-        .profile-upload-btn:hover {
-          transform: scale(1.2);
-        }
-        
-        .profile-img {
-          transition: transform 0.3s ease, box-shadow 0.3s ease;
-        }
-        
-        .profile-img-container:hover .profile-img {
-          transform: scale(1.05);
-          box-shadow: 0 0 15px rgba(249, 89, 24, 0.4);
-        }
-        
-        .availability-container {
-          background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
-          border-left: 3px solid #F95918;
-        }
-        
-        .status-indicator {
-          display: flex;
-          align-items: center;
-          font-weight: 600;
-        }
-        
-        .status-dot {
-          width: 10px;
-          height: 10px;
-          border-radius: 50%;
-          margin-right: 8px;
-        }
-        
-        .status-indicator.available .status-dot {
-          background-color: #28a745;
-          box-shadow: 0 0 0 2px rgba(40, 167, 69, 0.3);
-        }
-        
-        .status-indicator.unavailable .status-dot {
-          background-color: #dc3545;
-          box-shadow: 0 0 0 2px rgba(220, 53, 69, 0.3);
-        }
-        
-        .save-btn {
-          background: #F95918;
-          transition: all 0.3s ease;
-          position: relative;
-          overflow: hidden;
-        }
-        
-        .save-btn:before {
-          content: '';
-          position: absolute;
-          top: 0;
-          left: -100%;
-          width: 100%;
-          height: 100%;
-          background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.4), transparent);
-          transition: left 0.7s ease;
-        }
-        
-        .save-btn:hover:before {
-          left: 100%;
-        }
-        
-        .save-btn:hover {
-          background: #e04f15;
-          transform: translateY(-2px);
-          box-shadow: 0 5px 15px rgba(249, 89, 24, 0.4);
-        }
-        
-        .form-control, .form-select {
-          transition: all 0.3s ease;
-          border: 1px solid #dee2e6;
-          padding: 0.5rem 0.75rem;
-          font-size: 0.9rem;
-        }
-        
-        .form-control:focus, .form-select:focus {
-          border-color: #F95918;
-          box-shadow: 0 0 0 0.2rem rgba(249, 89, 24, 0.25);
-        }
-        
-        .card {
-          transition: transform 0.3s ease, box-shadow 0.3s ease;
-        }
-        
-        .card:hover {
-          transform: translateY(-3px);
-          box-shadow: 0 0.5rem 1.5rem rgba(0, 0, 0, 0.1) !important;
-        }
-        
-        .alert {
-          animation: fadeIn 0.5s ease;
-        }
-        
-        @keyframes fadeIn {
-          from { opacity: 0; transform: translateY(-10px); }
-          to { opacity: 1; transform: translateY(0); }
-        }
+        .profile-section { opacity: 0; transform: translateY(20px); transition: opacity 0.5s ease, transform 0.5s ease; }
+        .profile-section.animate-in { opacity: 1; transform: translateY(0); }
+        .profile-img-container { position: relative; display: inline-block; }
+        .profile-overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.3); border-radius: 50%; opacity: 0; transition: opacity 0.3s ease; display: flex; align-items: center; justify-content: center; }
+        .profile-img-container:hover .profile-overlay { opacity: 1; }
+        .profile-upload-btn { color: white; font-size: 1.2rem; cursor: pointer; transition: transform 0.3s ease; }
+        .profile-upload-btn:hover { transform: scale(1.2); }
+        .profile-img { transition: transform 0.3s ease, box-shadow 0.3s ease; }
+        .profile-img-container:hover .profile-img { transform: scale(1.05); box-shadow: 0 0 15px rgba(249, 89, 24, 0.4); }
+        .availability-container { background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%); border-left: 3px solid #F95918; }
+        .status-indicator { display: flex; align-items: center; font-weight: 600; }
+        .status-dot { width: 10px; height: 10px; border-radius: 50%; margin-right: 8px; }
+        .status-indicator.available .status-dot { background-color: #28a745; box-shadow: 0 0 0 2px rgba(40, 167, 69, 0.3); }
+        .status-indicator.unavailable .status-dot { background-color: #dc3545; box-shadow: 0 0 0 2px rgba(220, 53, 69, 0.3); }
+        .save-btn { background: #F95918; transition: all 0.3s ease; position: relative; overflow: hidden; }
+        .save-btn:before { content: ''; position: absolute; top: 0; left: -100%; width: 100%; height: 100%; background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.4), transparent); transition: left 0.7s ease; }
+        .save-btn:hover:before { left: 100%; }
+        .save-btn:hover { background: #e04f15; transform: translateY(-2px); box-shadow: 0 5px 15px rgba(249, 89, 24, 0.4); }
+        .form-control, .form-select { transition: all 0.3s ease; border: 1px solid #dee2e6; padding: 0.5rem 0.75rem; font-size: 0.9rem; }
+        .form-control:focus, .form-select:focus { border-color: #F95918; box-shadow: 0 0 0 0.2rem rgba(249, 89, 24, 0.25); }
+        .card { transition: transform 0.3s ease, box-shadow 0.3s ease; }
+        .card:hover { transform: translateY(-3px); box-shadow: 0 0.5rem 1.5rem rgba(0, 0, 0, 0.1) !important; }
+        .alert { animation: fadeIn 0.5s ease; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
       `}</style>
     </div>
   );

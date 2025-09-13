@@ -1,12 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import Base_Url from "../../Baseurl/Baseurl";
+import Swal from 'sweetalert2';
 
 const Verification = () => {
   const [allDoctors, setAllDoctors] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [selectedDocuments, setSelectedDocuments] = useState(null); // 👈 New for modal
+  const [selectedDocuments, setSelectedDocuments] = useState(null);
 
   // Fetch ALL doctors on mount
   useEffect(() => {
@@ -65,7 +66,7 @@ const Verification = () => {
     doctor => doctor.isVerify === "2"
   );
 
-  // Handle approve action
+  // Handle approve action — CENTERED ALERT
   const handleApprove = async (doctorId) => {
     try {
       await axios.put(`${Base_Url}/doctor/${doctorId}`, {
@@ -77,13 +78,43 @@ const Verification = () => {
           doctor._id === doctorId ? { ...doctor, isVerify: "1" } : doctor
         )
       );
+
+      // ✅ CENTERED SUCCESS ALERT (NON-TOAST)
+      Swal.fire({
+        icon: 'success',
+        title: 'Approved!',
+        text: 'Doctor has been successfully approved.',
+        timer: 2000,
+        showConfirmButton: false,
+        position: 'center', // 👈 Centered!
+        background: '#e8f5e9',
+        color: '#2e7d32',
+        heightAuto: false,
+        width: '300px',
+        padding: '20px',
+        willClose: () => {},
+      });
     } catch (err) {
       console.error("Error approving doctor:", err);
-      alert("Failed to approve doctor. Please try again.");
+      // ✅ CENTERED ERROR ALERT
+      Swal.fire({
+        icon: 'error',
+        title: 'Oops...',
+        text: 'Failed to approve doctor. Please try again.',
+        timer: 2500,
+        showConfirmButton: false,
+        position: 'center',
+        background: '#ffebee',
+        color: '#c62828',
+        heightAuto: false,
+        width: '300px',
+        padding: '20px',
+        willClose: () => {},
+      });
     }
   };
 
-  // Handle reject action
+  // Handle reject action — CENTERED ALERT
   const handleReject = async (doctorId) => {
     try {
       await axios.put(`${Base_Url}/doctor/${doctorId}`, {
@@ -95,23 +126,77 @@ const Verification = () => {
           doctor._id === doctorId ? { ...doctor, isVerify: "2" } : doctor
         )
       );
+
+      // ✅ CENTERED SUCCESS ALERT FOR REJECT
+      Swal.fire({
+        icon: 'success',
+        title: 'Rejected!',
+        text: 'Doctor has been successfully rejected.',
+        timer: 2000,
+        showConfirmButton: false,
+        position: 'center',
+        background: '#ffebee',
+        color: '#c62828',
+        heightAuto: false,
+        width: '300px',
+        padding: '20px',
+        willClose: () => {},
+      });
     } catch (err) {
       console.error("Error rejecting doctor:", err);
-      alert("Failed to reject doctor. Please try again.");
+      // ✅ CENTERED ERROR ALERT
+      Swal.fire({
+        icon: 'error',
+        title: 'Oops...',
+        text: 'Failed to reject doctor. Please try again.',
+        timer: 2500,
+        showConfirmButton: false,
+        position: 'center',
+        background: '#ffebee',
+        color: '#c62828',
+        heightAuto: false,
+        width: '300px',
+        padding: '20px',
+        willClose: () => {},
+      });
     }
   };
 
   // View documents — opens modal with clickable links
   const viewDocuments = (documents) => {
     if (!documents || typeof documents !== 'string') {
-      alert("No documents available.");
+      Swal.fire({
+        icon: 'warning',
+        title: 'No Documents',
+        text: 'No documents available.',
+        timer: 1500,
+        showConfirmButton: false,
+        position: 'center',
+        background: '#fff3e0',
+        color: '#e65100',
+        heightAuto: false,
+        width: '280px',
+        padding: '16px',
+      });
       return;
     }
 
     const trimmed = documents.trim();
 
     if (!trimmed) {
-      alert("No documents available.");
+      Swal.fire({
+        icon: 'warning',
+        title: 'No Documents',
+        text: 'No documents available.',
+        timer: 1500,
+        showConfirmButton: false,
+        position: 'center',
+        background: '#fff3e0',
+        color: '#e65100',
+        heightAuto: false,
+        width: '280px',
+        padding: '16px',
+      });
       return;
     }
 
@@ -202,57 +287,57 @@ const Verification = () => {
                       </tr>
                     </thead>
                     <tbody>
-                   {pendingDoctors.map((doctor, index) => (
-  <tr key={doctor._id}>
-    <td>{index + 1}</td> 
-    <td>
-      <img
-        src={(doctor.profile || '').trim() || 'https://cdn.pixabay.com/photo/2015/10/05/22/37/blank-profile-picture-973460_960_720.png'}
-        alt="Profile"
-        className="img-fluid rounded-circle"
-        style={{ width: '50px', height: '50px' }}
-      />
-    </td>
-    <td>
-      <strong>{doctor.name}</strong>
-    </td>
-    <td>{doctor.gender || 'N/A'}</td>
-    <td>{doctor.email}</td>
-    <td>
-      <span className="badge bg-secondary">{doctor.specialty}</span>
-    </td>
-    <td>{doctor.licenseNo}</td>
-    <td>{new Date(doctor.createdAt).toLocaleDateString()}</td>
-    <td>{doctor.availableDay || 'N/A'}</td>
-    <td>{doctor.openingTime} - {doctor.closingTime}</td>
-    <td>{doctor.experience}</td>
-    <td>${doctor.fee}</td>
-    <td>
-      <button
-        className="btn btn-sm btn-outline-primary"
-        onClick={() => viewDocuments(doctor.documents)}
-      >
-        <i className="fas fa-file-alt"></i> View Documents
-      </button>
-    </td>
-    <td>
-      <div className="d-flex gap-2">
-        <button
-          className="btn btn-sm btn-outline-success flex-fill"
-          onClick={() => handleApprove(doctor._id)}
-        >
-          Approve
-        </button>
-        <button
-          className="btn btn-sm btn-outline-danger flex-fill"
-          onClick={() => handleReject(doctor._id)}
-        >
-          Reject
-        </button>
-      </div>
-    </td>
-  </tr>
-))}
+                      {pendingDoctors.map((doctor, index) => (
+                        <tr key={doctor._id}>
+                          <td>{index + 1}</td>
+                          <td>
+                            <img
+                              src={(doctor.profile || '').trim() || 'https://cdn.pixabay.com/photo/2015/10/05/22/37/blank-profile-picture-973460_960_720.png'}
+                              alt="Profile"
+                              className="img-fluid rounded-circle"
+                              style={{ width: '50px', height: '50px' }}
+                            />
+                          </td>
+                          <td>
+                            <strong>{doctor.name}</strong>
+                          </td>
+                          <td>{doctor.gender || 'N/A'}</td>
+                          <td>{doctor.email}</td>
+                          <td>
+                            <span className="badge bg-secondary">{doctor.specialty}</span>
+                          </td>
+                          <td>{doctor.licenseNo}</td>
+                          <td>{new Date(doctor.createdAt).toLocaleDateString()}</td>
+                          <td>{doctor.availableDay || 'N/A'}</td>
+                          <td>{doctor.openingTime} - {doctor.closingTime}</td>
+                          <td>{doctor.experience}</td>
+                          <td>${doctor.fee}</td>
+                          <td>
+                            <button
+                              className="btn btn-sm btn-outline-primary"
+                              onClick={() => viewDocuments(doctor.documents)}
+                            >
+                              <i className="fas fa-file-alt"></i> View Documents
+                            </button>
+                          </td>
+                          <td>
+                            <div className="d-flex gap-2">
+                              <button
+                                className="btn btn-sm btn-outline-success flex-fill"
+                                onClick={() => handleApprove(doctor._id)}
+                              >
+                                Approve
+                              </button>
+                              <button
+                                className="btn btn-sm btn-outline-danger flex-fill"
+                                onClick={() => handleReject(doctor._id)}
+                              >
+                                Reject
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
                     </tbody>
                   </table>
                 </div>
