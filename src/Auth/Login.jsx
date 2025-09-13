@@ -30,7 +30,7 @@ const Login = () => {
     e.preventDefault();
     setLoading(true);
 try {
-      const response = await fetch(`${API_URL}/login`, {
+      const response = await fetch(`${API_URL}/auth/login`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -120,7 +120,7 @@ try {
 
               <form onSubmit={handleSubmit}>
                 {/* Role Select */}
-                <div className="mb-3">
+                {/* <div className="mb-3">
                   <label className="form-label fw-semibold" style={{ color: "#1B263B" }}>
                     Select Role
                   </label>
@@ -139,7 +139,7 @@ try {
                     <option value="Doctor">Provider / Doctor</option>
                     <option value="Caregiver">Caregiver</option>
                   </select>
-                </div>
+                </div> */}
 
                 {/* Email */}
                 <div className="mb-3">
