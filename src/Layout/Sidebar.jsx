@@ -90,6 +90,8 @@ const Sidebar = ({ collapsed, setCollapsed }) => {
     { label: "Dashboard", path: "/admin/dashboard", icon: faTachometerAlt },
     { label: "User Management", path: "/admin/user-management", icon: faUserShield },
     { label: "Caregiver", path: "/admin/caregiver", icon: faUsers },
+
+    { label: "All Patient", path: "/admin/patient", icon: faUsers },
     { label: "Verification", path: "/admin/verification", icon: faCheckCircle },
     { label: "Appointments", path: "/admin/appointments", icon: faCalendarCheck },
   ];
