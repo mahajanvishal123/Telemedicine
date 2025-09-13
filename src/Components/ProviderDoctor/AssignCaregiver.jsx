@@ -1,122 +1,28 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
+import axios from "axios";
+import API_URL from "../../Baseurl/Baseurl";
+
 const AssignCaregiver = () => {
-  // Sample patients data
+  // ====== CONFIG ======
+  const BASE_URL = API_URL;
+
+  // Patients (static)
   const [patients] = useState([
-    {
-      id: 1,
-      name: "John Doe",
-      email: "john@example.com",
-      joinDate: "2023-09-15",
-      status: "Active",
-      phone: "555-1234",
-      address: "123 Main St",
-    },
-    {
-      id: 2,
-      name: "Jane Smith",
-      email: "jane@example.com",
-      joinDate: "2023-10-05",
-      status: "Inactive",
-      phone: "555-5678",
-      address: "456 Oak Ave",
-    },
-    {
-      id: 3,
-      name: "Robert Johnson",
-      email: "robert@example.com",
-      joinDate: "2023-08-20",
-      status: "Active",
-      phone: "555-9012",
-      address: "789 Elm St",
-    },
-    {
-      id: 4,
-      name: "Emily Davis",
-      email: "emily@example.com",
-      joinDate: "2023-11-01",
-      status: "Active",
-      phone: "555-3456",
-      address: "321 Pine Rd",
-    },
+    { id: 1, name: "John Doe", email: "john@example.com", joinDate: "2023-09-15", status: "Active", phone: "555-1234", address: "123 Main St" },
+    { id: 2, name: "Jane Smith", email: "jane@example.com", joinDate: "2023-10-05", status: "Inactive", phone: "555-5678", address: "456 Oak Ave" },
+    { id: 3, name: "Robert Johnson", email: "robert@example.com", joinDate: "2023-08-20", status: "Active", phone: "555-9012", address: "789 Elm St" },
+    { id: 4, name: "Emily Davis", email: "emily@example.com", joinDate: "2023-11-01", status: "Active", phone: "555-3456", address: "321 Pine Rd" },
   ]);
-  
-  // Sample caregivers data - now updatable
-  const [caregivers, setCaregivers] = useState([
-    {
-      id: 201,
-      name: "Amy Rodriguez",
-      email: "amy@example.com",
-      password: "password123", // Added password field
-      joinDate: "2023-09-25",
-      status: "Active",
-      certification: "CNA",
-      yearsExperience: 5,
-      mobile: "555-9012",
-      address: "789 Care St",
-      skills: "BP Monitoring, Insulin Injection, Elderly Care",
-      profilePicture: "https://randomuser.me/api/portraits/women/44.jpg",
-      documents: [
-        { name: "Certification.pdf", url: "https://example.com/cert1.pdf" },
-        { name: "BackgroundCheck.pdf", url: "https://example.com/bg1.pdf" }
-      ]
-    },
-    {
-      id: 202,
-      name: "Michael Johnson",
-      email: "michael@example.com",
-      password: "securePass456", // Added password field
-      joinDate: "2023-08-15",
-      status: "Active",
-      certification: "RN",
-      yearsExperience: 8,
-      mobile: "555-3456",
-      address: "321 Health Ave",
-      skills: "Wound Care, Medication Administration, Physical Therapy",
-      profilePicture: "https://randomuser.me/api/portraits/men/32.jpg",
-      documents: [
-        { name: "License.pdf", url: "https://example.com/license1.pdf" }
-      ]
-    },
-    {
-      id: 203,
-      name: "Sarah Williams",
-      email: "sarah@example.com",
-      password: "sarah789", // Added password field
-      joinDate: "2023-10-10",
-      status: "Inactive",
-      certification: "LPN",
-      yearsExperience: 6,
-      mobile: "555-7890",
-      address: "654 Nurse Lane",
-      skills: "Patient Hygiene, Vital Signs Monitoring, Dementia Care",
-      profilePicture: "https://randomuser.me/api/portraits/women/68.jpg",
-      documents: []
-    },
-  ]);
-  
-  // State for assignments
-  const [assignments, setAssignments] = useState([
-    {
-      id: 1001,
-      patientId: 1,
-      patientName: "John Doe",
-      caregiverId: 201,
-      caregiverName: "Amy Rodriguez",
-      dateAssigned: "2023-10-15",
-      status: "Active",
-    },
-    {
-      id: 1002,
-      patientId: 3,
-      patientName: "Robert Johnson",
-      caregiverId: 202,
-      caregiverName: "Michael Johnson",
-      dateAssigned: "2023-10-20",
-      status: "Active",
-    },
-  ]);
-  
-  // State for form
+
+  // Caregivers from API
+  const [caregivers, setCaregivers] = useState([]);
+  const [loadingCaregivers, setLoadingCaregivers] = useState(false);
+  const [caregiversError, setCaregiversError] = useState(null);
+
+  // Assignments (UI me dikhne wale rows — ab yahi table me API data bhi render hoga)
+  const [assignments, setAssignments] = useState([]);
+
+  // UI state
   const [selectedPatient, setSelectedPatient] = useState("");
   const [selectedCaregiver, setSelectedCaregiver] = useState("");
   const [assignmentDate, setAssignmentDate] = useState("");
@@ -128,270 +34,64 @@ const AssignCaregiver = () => {
   const [selectedAssignment, setSelectedAssignment] = useState(null);
   const [editingAssignment, setEditingAssignment] = useState(null);
   const [viewingAssignment, setViewingAssignment] = useState(null);
-  
-  // State for new caregiver form
+
+  // New caregiver form (for POST)
   const [newCaregiver, setNewCaregiver] = useState({
     name: "",
     email: "",
-    password: "", // Added password field
     mobile: "",
     address: "",
     certification: "",
     yearsExperience: "",
     skills: "",
-    joinDate: "",
+    dateOfBirth: "",
+    gender: "",
+    bloodGroup: "",
+    password: "",
+    confirmPassword: "",
     profilePicture: "",
     profilePictureFile: null,
     documents: [],
     documentFiles: []
   });
+
   const [selectedPatientForNewCaregiver, setSelectedPatientForNewCaregiver] = useState("");
   const [assignmentDateForNewCaregiver, setAssignmentDateForNewCaregiver] = useState("");
-  
-  // State for editing caregiver
+  const [submitting, setSubmitting] = useState(false);
+
+  // Edit caregiver (local)
   const [editingCaregiver, setEditingCaregiver] = useState(null);
   const [showEditCaregiverModal, setShowEditCaregiverModal] = useState(false);
-  
-  // Handle form submission for assignment
-  const handleAssign = () => {
-    if (!selectedPatient || !selectedCaregiver || !assignmentDate) {
-      alert("Please fill all fields");
-      return;
-    }
-    
-    const patient = patients.find(p => p.id === parseInt(selectedPatient));
-    const caregiver = caregivers.find(c => c.id === parseInt(selectedCaregiver));
-    
-    if (!patient || !caregiver) {
-      alert("Invalid patient or caregiver");
-      return;
-    }
-    
-    const newAssignment = {
-      id: Date.now(),
-      patientId: patient.id,
-      patientName: patient.name,
-      caregiverId: caregiver.id,
-      caregiverName: caregiver.name,
-      dateAssigned: assignmentDate,
-      status: "Active",
-    };
-    
-    setAssignments([...assignments, newAssignment]);
-    setShowModal(false);
-    resetForm();
-  };
-  
-  // Reset form
+
+  // DELETE API state
+  const [deletingCaregiverId, setDeletingCaregiverId] = useState(null);
+  const [deleteError, setDeleteError] = useState(null);
+
+  // PUT update state
+  const [updatingCaregiver, setUpdatingCaregiver] = useState(false);
+  const [updateError, setUpdateError] = useState(null);
+
+  // ===== Helpers =====
   const resetForm = () => {
     setSelectedPatient("");
     setSelectedCaregiver("");
     setAssignmentDate("");
   };
-  
-  // Handle assignment deletion
-  const handleDelete = (assignment) => {
-    setSelectedAssignment(assignment);
-    setShowDeleteModal(true);
-  };
-  
-  const confirmDelete = () => {
-    setAssignments(assignments.filter(a => a.id !== selectedAssignment.id));
-    setShowDeleteModal(false);
-    setSelectedAssignment(null);
-  };
-  
-  // Toggle assignment status
-  const toggleStatus = (assignmentId) => {
-    setAssignments(assignments.map(assignment => 
-      assignment.id === assignmentId 
-        ? { 
-            ...assignment, 
-            status: assignment.status === "Active" ? "Inactive" : "Active" 
-          } 
-        : assignment
-    ));
-  };
-  
-  // Handle edit
-  const handleEdit = (assignment) => {
-    setEditingAssignment(assignment);
-    setSelectedPatient(assignment.patientId.toString());
-    setSelectedCaregiver(assignment.caregiverId.toString());
-    setAssignmentDate(assignment.dateAssigned);
-    setShowEditModal(true);
-  };
-  
-  // Handle view
-  const handleView = (assignment) => {
-    setViewingAssignment(assignment);
-    setShowViewModal(true);
-  };
-  
-  // Handle update
-  const handleUpdate = () => {
-    if (!selectedPatient || !selectedCaregiver || !assignmentDate) {
-      alert("Please fill all fields");
-      return;
-    }
-    
-    const patient = patients.find(p => p.id === parseInt(selectedPatient));
-    const caregiver = caregivers.find(c => c.id === parseInt(selectedCaregiver));
-    
-    if (!patient || !caregiver) {
-      alert("Invalid patient or caregiver");
-      return;
-    }
-    
-    const updatedAssignment = {
-      ...editingAssignment,
-      patientId: patient.id,
-      patientName: patient.name,
-      caregiverId: caregiver.id,
-      caregiverName: caregiver.name,
-      dateAssigned: assignmentDate,
-    };
-    
-    setAssignments(assignments.map(a => 
-      a.id === editingAssignment.id ? updatedAssignment : a
-    ));
-    
-    setShowEditModal(false);
-    resetForm();
-    setEditingAssignment(null);
-  };
-  
-  // Handle new caregiver form input changes
-  const handleNewCaregiverChange = (e) => {
-    const { name, value } = e.target;
-    setNewCaregiver({
-      ...newCaregiver,
-      [name]: value
-    });
-  };
-  
-  // Handle profile picture upload
-  const handleProfilePictureUpload = (e) => {
-    const file = e.target.files[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setNewCaregiver({
-          ...newCaregiver,
-          profilePicture: reader.result,
-          profilePictureFile: file
-        });
-      };
-      reader.readAsDataURL(file);
-    }
-  };
-  
-  // Handle document upload
-  const handleDocumentUpload = (e) => {
-    const files = Array.from(e.target.files);
-    const newDocuments = [...newCaregiver.documents];
-    const newDocumentFiles = [...newCaregiver.documentFiles];
-    
-    files.forEach(file => {
-      newDocuments.push({
-        name: file.name,
-        url: URL.createObjectURL(file)
-      });
-      newDocumentFiles.push(file);
-    });
-    
-    setNewCaregiver({
-      ...newCaregiver,
-      documents: newDocuments,
-      documentFiles: newDocumentFiles
-    });
-  };
-  
-  // Handle document removal
-  const handleDocumentRemove = (index) => {
-    const newDocuments = [...newCaregiver.documents];
-    const newDocumentFiles = [...newCaregiver.documentFiles];
-    
-    newDocuments.splice(index, 1);
-    newDocumentFiles.splice(index, 1);
-    
-    setNewCaregiver({
-      ...newCaregiver,
-      documents: newDocuments,
-      documentFiles: newDocumentFiles
-    });
-  };
-  
-  // Handle adding new caregiver and assignment
-  const handleAddCaregiverAndAssign = () => {
-    // Validate caregiver fields
-    if (!newCaregiver.name || !newCaregiver.email || !newCaregiver.mobile || !newCaregiver.password) {
-      alert("Please fill all required caregiver fields (Name, Email, Mobile, Password)");
-      return;
-    }
-    
-    // Validate assignment fields
-    if (!selectedPatientForNewCaregiver || !assignmentDateForNewCaregiver) {
-      alert("Please select a patient and assignment date");
-      return;
-    }
-    
-    // Generate new ID for caregiver
-    const newId = Math.max(...caregivers.map(c => c.id), 0) + 1;
-    
-    // Create new caregiver object
-    const caregiverToAdd = {
-      ...newCaregiver,
-      id: newId,
-      status: "Active",
-      joinDate: newCaregiver.joinDate || new Date().toISOString().split('T')[0],
-      documents: newCaregiver.documents.map(doc => ({
-        name: doc.name,
-        url: doc.url
-      }))
-    };
-    
-    // Remove file objects before adding to state
-    delete caregiverToAdd.profilePictureFile;
-    delete caregiverToAdd.documentFiles;
-    
-    // Add to caregivers list
-    setCaregivers([...caregivers, caregiverToAdd]);
-    
-    // Find selected patient
-    const patient = patients.find(p => p.id === parseInt(selectedPatientForNewCaregiver));
-    
-    // Create new assignment
-    const newAssignment = {
-      id: Date.now(),
-      patientId: patient.id,
-      patientName: patient.name,
-      caregiverId: newId,
-      caregiverName: caregiverToAdd.name,
-      dateAssigned: assignmentDateForNewCaregiver,
-      status: "Active",
-    };
-    
-    // Add to assignments
-    setAssignments([...assignments, newAssignment]);
-    
-    // Close modal and reset form
-    setShowAddCaregiverModal(false);
-    resetNewCaregiverForm();
-  };
-  
-  // Reset new caregiver form
+
   const resetNewCaregiverForm = () => {
     setNewCaregiver({
       name: "",
       email: "",
-      password: "", // Reset password field
       mobile: "",
       address: "",
       certification: "",
       yearsExperience: "",
       skills: "",
-      joinDate: "",
+      dateOfBirth: "",
+      gender: "",
+      bloodGroup: "",
+      password: "",
+      confirmPassword: "",
       profilePicture: "",
       profilePictureFile: null,
       documents: [],
@@ -400,118 +100,543 @@ const AssignCaregiver = () => {
     setSelectedPatientForNewCaregiver("");
     setAssignmentDateForNewCaregiver("");
   };
-  
-  // Handle edit caregiver
-  const handleEditCaregiver = (caregiver) => {
-    setEditingCaregiver({...caregiver});
-    setShowEditCaregiverModal(true);
+
+  const getStatusClass = (status) => {
+    switch (status) {
+      case "Active": return "bg-success";
+      case "Inactive": return "bg-secondary";
+      default: return "bg-secondary";
+    }
   };
-  
-  // Handle update caregiver
-  const handleUpdateCaregiver = () => {
-    if (!editingCaregiver.name || !editingCaregiver.email || !editingCaregiver.mobile || !editingCaregiver.password) {
-      alert("Please fill all required fields (Name, Email, Mobile, Password)");
+
+  const getPatientDetails = (patientId) =>
+    patients.find(p => String(p.id) === String(patientId));
+
+  const getCaregiverDetails = (caregiverId) =>
+    caregivers.find(c => String(c.id) === String(caregiverId));
+
+  const getPatientNameFromApiId = (pid) => {
+    const p = patients.find(p => String(p.id) === String(pid));
+    return p?.name || (pid ? `#${pid}` : "-");
+  };
+
+  // ===== Map API caregiver -> local caregiver object
+  const mapApiCaregiver = (api) => {
+    const trim = (v) => (typeof v === "string" ? v.trim() : v);
+    const expYears = (() => {
+      const e = trim(api.experience);
+      if (!e) return 0;
+      const m = String(e).match(/(\d+)/);
+      return m ? Number(m[1]) : 0;
+    })();
+
+    const docs = [];
+    if (api.certificate && String(api.certificate).length > 0) {
+      const fileName = String(api.certificate).split("/").pop() || "Certificate";
+      docs.push({ name: fileName, url: api.certificate });
+    }
+
+    return {
+      id: api._id,
+      name: trim(api.name) || "",
+      email: trim(api.email) || "",
+      joinDate: api.createdAt ? String(api.createdAt).slice(0, 10) : "",
+      status: "Active",
+      certification: "",
+      yearsExperience: expYears,
+      mobile: trim(api.mobile) || "",
+      address: trim(api.address) || "",
+      skills: trim(api.skills) || "",
+      profilePicture: trim(api.profile) || "https://via.placeholder.com/80",
+      dateOfBirth: trim(api.dob) || "",
+      gender: trim(api.gender) || "",
+      bloodGroup: trim(api.bloodGroup) || "",
+      password: "********",
+      documents: docs,
+      patientId: trim(api.patientId) || "",
+      age: api.age || "",
+      role: api.role || "caregiver",
+    };
+  };
+
+  // ===== GET /caregiver and seed Assignments table
+  const fetchCaregivers = async () => {
+    setLoadingCaregivers(true);
+    setCaregiversError(null);
+    try {
+      const res = await axios.get(`${BASE_URL}/caregiver`);
+      const raw = Array.isArray(res?.data)
+        ? res.data
+        : (Array.isArray(res?.data?.data) ? res.data.data : []);
+      const mapped = raw.map(mapApiCaregiver);
+      setCaregivers(mapped);
+
+      // seed into assignments table once
+      setAssignments(prev => {
+        if (prev.length > 0) return prev;
+        const seeded = mapped.map((c, idx) => ({
+          id: c.id || (Date.now() + idx),
+          patientId: c.patientId || "",
+          patientName: getPatientNameFromApiId(c.patientId),
+          caregiverId: c.id,
+          caregiverName: c.name,
+          dateAssigned: c.joinDate || new Date().toISOString().slice(0, 10),
+          status: c.status || "Active",
+        }));
+        return seeded;
+      });
+    } catch (err) {
+      console.error("Failed to fetch caregivers:", err);
+      setCaregiversError(
+        err?.response?.data?.message ||
+        err?.message ||
+        "Failed to fetch caregivers"
+      );
+    } finally {
+      setLoadingCaregivers(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchCaregivers();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // ===== Assignment actions (local)
+  const handleAssign = () => {
+    if (!selectedPatient || !selectedCaregiver || !assignmentDate) {
+      alert("Please fill all fields");
       return;
     }
-    
-    setCaregivers(caregivers.map(c => 
-      c.id === editingCaregiver.id ? editingCaregiver : c
-    ));
-    
-    setShowEditCaregiverModal(false);
-    setEditingCaregiver(null);
+    const patient = patients.find(p => p.id === parseInt(selectedPatient, 10));
+    const caregiver = caregivers.find(c => String(c.id) === String(selectedCaregiver));
+    if (!patient || !caregiver) {
+      alert("Invalid patient or caregiver");
+      return;
+    }
+    const newAssignment = {
+      id: Date.now(),
+      patientId: patient.id,
+      patientName: patient.name,
+      caregiverId: caregiver.id,
+      caregiverName: caregiver.name,
+      dateAssigned: assignmentDate,
+      status: "Active",
+    };
+    setAssignments(prev => [...prev, newAssignment]);
+    setShowModal(false);
+    resetForm();
   };
-  
-  // Handle caregiver form changes
-  const handleCaregiverChange = (e) => {
-    const { name, value } = e.target;
-    setEditingCaregiver({
-      ...editingCaregiver,
-      [name]: value
+
+  const handleDelete = (assignment) => {
+    setSelectedAssignment(assignment);
+    setDeleteError(null);
+    setShowDeleteModal(true);
+  };
+
+  // ====== DELETE caregiver API ======
+  const deleteCaregiverFromApi = async (caregiverId) => {
+    return axios.delete(`${BASE_URL}/caregiver/${caregiverId}`, {
+      headers: {
+        // Authorization: `Bearer ${token}`,
+      },
     });
   };
-  
-  // Handle caregiver profile picture update
-  const handleCaregiverProfilePictureUpdate = (e) => {
-    const file = e.target.files[0];
+
+  const confirmDelete = async () => {
+    if (!selectedAssignment) return;
+    const caregiverId = selectedAssignment.caregiverId;
+
+    try {
+      setDeletingCaregiverId(caregiverId);
+      setDeleteError(null);
+
+      await deleteCaregiverFromApi(caregiverId);
+
+      setCaregivers(prev => prev.filter(c => String(c.id) !== String(caregiverId)));
+      setAssignments(prev => prev.filter(a => String(a.caregiverId) !== String(caregiverId)));
+
+      setShowDeleteModal(false);
+      setSelectedAssignment(null);
+      alert("Caregiver deleted successfully.");
+    } catch (err) {
+      console.error(err);
+      setDeleteError(err?.response?.data?.message || err?.message || "Failed to delete caregiver");
+    } finally {
+      setDeletingCaregiverId(null);
+    }
+  };
+
+  const toggleStatus = (assignmentId) => {
+    setAssignments(prev =>
+      prev.map(assignment =>
+        assignment.id === assignmentId
+          ? { ...assignment, status: assignment.status === "Active" ? "Inactive" : "Active" }
+          : assignment
+      )
+    );
+  };
+
+  const handleEdit = (assignment) => {
+    const cg = getCaregiverDetails(assignment.caregiverId);
+    // start with caregiver details if available so we can PUT them
+    setEditingCaregiver({
+      ...(cg || {}),
+      // ensure fields exist
+      id: cg?.id || assignment.caregiverId,
+      name: cg?.name || assignment.caregiverName || "",
+      email: cg?.email || "",
+      gender: cg?.gender || "",
+      bloodGroup: cg?.bloodGroup || "",
+      age: cg?.age || "",
+      dateOfBirth: cg?.dateOfBirth || "",
+      role: cg?.role || "caregiver",
+      password: "",
+      confirmPassword: "",
+      profilePicture: cg?.profilePicture || "",
+      profileFile: null,            // <-- will hold File for PUT
+      certificateFiles: [],         // <-- will hold File(s) for PUT
+      documents: cg?.documents || []
+    });
+
+    setEditingAssignment(assignment);
+    setSelectedPatient(assignment.patientId?.toString?.() || "");
+    setSelectedCaregiver(assignment.caregiverId?.toString?.() || "");
+    setAssignmentDate(assignment.dateAssigned || "");
+    setUpdateError(null);
+    setShowEditModal(true);
+  };
+
+  const handleView = (assignment) => {
+    setViewingAssignment(assignment);
+    setShowViewModal(true);
+  };
+
+  const handleUpdate = () => {
+    if (!selectedPatient || !selectedCaregiver || !assignmentDate) {
+      alert("Please fill all fields");
+      return;
+    }
+    const patient = patients.find(p => p.id === parseInt(selectedPatient, 10));
+    const caregiver = caregivers.find(c => String(c.id) === String(selectedCaregiver));
+    if (!patient || !caregiver) {
+      alert("Invalid patient or caregiver");
+      return;
+    }
+    const updatedAssignment = {
+      ...editingAssignment,
+      patientId: patient.id,
+      patientName: patient.name,
+      caregiverId: caregiver.id,
+      caregiverName: caregiver.name,
+      dateAssigned: assignmentDate,
+    };
+    setAssignments(prev => prev.map(a => (a.id === editingAssignment.id ? updatedAssignment : a)));
+    setShowEditModal(false);
+    resetForm();
+    setEditingAssignment(null);
+  };
+
+  // ===== New Caregiver form handlers
+  const handleNewCaregiverChange = (e) => {
+    const { name, value } = e.target;
+    setNewCaregiver(prev => ({ ...prev, [name]: value }));
+  };
+
+  const handleProfilePictureUpload = (e) => {
+    const file = e.target.files?.[0];
     if (file) {
       const reader = new FileReader();
       reader.onloadend = () => {
-        setEditingCaregiver({
-          ...editingCaregiver,
-          profilePicture: reader.result
-        });
+        setNewCaregiver(prev => ({
+          ...prev,
+          profilePicture: reader.result,
+          profilePictureFile: file
+        }));
       };
       reader.readAsDataURL(file);
     }
   };
-  
-  // Handle caregiver document upload
-  const handleCaregiverDocumentUpload = (e) => {
-    const files = Array.from(e.target.files);
-    const newDocuments = [...editingCaregiver.documents];
-    
+
+  const handleDocumentUpload = (e) => {
+    const files = Array.from(e.target.files || []);
+    const newDocuments = [...newCaregiver.documents];
+    const newDocumentFiles = [...newCaregiver.documentFiles];
     files.forEach(file => {
-      newDocuments.push({
-        name: file.name,
-        url: URL.createObjectURL(file)
-      });
+      newDocuments.push({ name: file.name, url: URL.createObjectURL(file) });
+      newDocumentFiles.push(file);
     });
-    
-    setEditingCaregiver({
-      ...editingCaregiver,
-      documents: newDocuments
-    });
+    setNewCaregiver(prev => ({
+      ...prev,
+      documents: newDocuments,
+      documentFiles: newDocumentFiles
+    }));
   };
-  
-  // Handle caregiver document removal
-  const handleCaregiverDocumentRemove = (index) => {
-    const newDocuments = [...editingCaregiver.documents];
+
+  const handleDocumentRemove = (index) => {
+    const newDocuments = [...newCaregiver.documents];
+    const newDocumentFiles = [...newCaregiver.documentFiles];
     newDocuments.splice(index, 1);
-    
-    setEditingCaregiver({
-      ...editingCaregiver,
-      documents: newDocuments
-    });
+    newDocumentFiles.splice(index, 1);
+    setNewCaregiver(prev => ({ ...prev, documents: newDocuments, documentFiles: newDocumentFiles }));
   };
-  
-  // Get status class
-  const getStatusClass = (status) => {
-    switch (status) {
-      case "Active":
-        return "bg-success";
-      case "Inactive":
-        return "bg-secondary";
-      default:
-        return "bg-secondary";
+
+  // ===== Edit Caregiver (local) =====
+  const handleEditCaregiver = (caregiver) => {
+    setEditingCaregiver({
+      ...caregiver,
+      password: "",
+      confirmPassword: "",
+      profileFile: null,
+      certificateFiles: []
+    });
+    setShowEditCaregiverModal(true);
+  };
+
+  const handleCaregiverChange = (e) => {
+    const { name, value } = e.target;
+    setEditingCaregiver(prev => ({ ...prev, [name]: value }));
+  };
+
+  const handleCaregiverProfilePictureUpdate = (e) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setEditingCaregiver(prev => ({
+          ...prev,
+          profilePicture: reader.result, // preview
+          profileFile: file              // real file for PUT
+        }));
+      };
+      reader.readAsDataURL(file);
     }
   };
-  
-  // Get caregiver details by ID
-  const getCaregiverDetails = (caregiverId) => {
-    return caregivers.find(c => c.id === caregiverId);
+
+  const handleCaregiverCertificateUpload = (e) => {
+    const files = Array.from(e.target.files || []);
+    setEditingCaregiver(prev => ({
+      ...prev,
+      certificateFiles: files
+    }));
   };
-  
-  // Get patient details by ID
-  const getPatientDetails = (patientId) => {
-    return patients.find(p => p.id === patientId);
+
+  const handleCaregiverDocumentUpload = (e) => {
+    const files = Array.from(e.target.files || []);
+    const newDocuments = [...(editingCaregiver.documents || [])];
+    files.forEach(file => newDocuments.push({ name: file.name, url: URL.createObjectURL(file) }));
+    setEditingCaregiver(prev => ({ ...prev, documents: newDocuments }));
   };
-  
+
+  const handleCaregiverDocumentRemove = (index) => {
+    const newDocuments = [...(editingCaregiver.documents || [])];
+    newDocuments.splice(index, 1);
+    setEditingCaregiver(prev => ({ ...prev, documents: newDocuments }));
+  };
+
+  // ===== PUT /caregiver/:id (Update) — multipart/form-data
+  const handleUpdateCaregiver = async () => {
+    if (!editingCaregiver?.name || !editingCaregiver?.email) {
+      alert("Please fill required fields (Name, Email)");
+      return;
+    }
+
+    const caregiverIdForApi =
+      editingCaregiver?.id || "68c2d40a66c0d5af532795b7"; // fallback as per your example
+
+    const fd = new FormData();
+    // match payload keys you shared
+    fd.append("name", String(editingCaregiver.name || "").trim());
+    fd.append("email", String(editingCaregiver.email || "").trim());
+    if (editingCaregiver.password) {
+      fd.append("password", String(editingCaregiver.password || "").trim());
+    }
+    if (editingCaregiver.gender) fd.append("gender", String(editingCaregiver.gender).trim());
+    if (editingCaregiver.profileFile) fd.append("profile", editingCaregiver.profileFile);
+    if (editingCaregiver.age) fd.append("age", String(editingCaregiver.age).trim());
+    if (editingCaregiver.dateOfBirth) fd.append("dob", String(editingCaregiver.dateOfBirth).trim());
+    if (Array.isArray(editingCaregiver.certificateFiles) && editingCaregiver.certificateFiles.length) {
+      editingCaregiver.certificateFiles.forEach((file) => fd.append("certificate", file));
+    }
+    if (editingCaregiver.role) fd.append("role", String(editingCaregiver.role).trim());
+    if (editingCaregiver.bloodGroup) fd.append("bloodGroup", String(editingCaregiver.bloodGroup).trim());
+
+    try {
+      setUpdatingCaregiver(true);
+      setUpdateError(null);
+
+      const res = await axios.put(
+        `${BASE_URL}/caregiver/${caregiverIdForApi}`,
+        fd,
+        {
+          headers: {
+            "Content-Type": "multipart/form-data",
+            // Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+
+      // normalize response
+      const updatedApi =
+        res?.data?.appointment || // if backend reuses shapes
+        res?.data?.data ||
+        res?.data?.caregiver ||
+        res?.data ||
+        null;
+
+      if (!updatedApi) {
+        throw new Error("No caregiver returned from server");
+      }
+
+      const mapped = mapApiCaregiver(updatedApi);
+
+      // update caregivers list
+      setCaregivers((prev) =>
+        prev.map((c) =>
+          String(c.id) === String(caregiverIdForApi) ? { ...c, ...mapped } : c
+        )
+      );
+
+      // update any assignment rows that show the name/photo
+      setAssignments((prev) =>
+        prev.map((a) =>
+          String(a.caregiverId) === String(caregiverIdForApi)
+            ? { ...a, caregiverName: mapped.name }
+            : a
+        )
+      );
+
+      alert("Caregiver updated successfully.");
+      setShowEditCaregiverModal(false);
+      setEditingCaregiver(null);
+    } catch (err) {
+      console.error(err);
+      setUpdateError(err?.response?.data?.message || err?.message || "Failed to update caregiver");
+    } finally {
+      setUpdatingCaregiver(false);
+    }
+  };
+
+  // ===== POST /caregiver (Add & Assign)
+  const handleAddCaregiverAndAssign = async () => {
+    if (!newCaregiver.name || !newCaregiver.email || !newCaregiver.mobile || !newCaregiver.gender) {
+      alert("Please fill all required caregiver fields (Name, Email, Mobile, Gender)");
+      return;
+    }
+    if (!newCaregiver.password) {
+      alert("Please set a password for the caregiver");
+      return;
+    }
+    if (newCaregiver.password !== newCaregiver.confirmPassword) {
+      alert("Passwords do not match");
+      return;
+    }
+    if (!selectedPatientForNewCaregiver || !assignmentDateForNewCaregiver) {
+      alert("Please select a patient and assignment date");
+      return;
+    }
+
+    const fd = new FormData();
+    fd.append("name", newCaregiver.name.trim());
+    fd.append("namecccccccc", newCaregiver.name.trim()); // (if backend expects)
+    fd.append("email", newCaregiver.email.trim());
+    fd.append("password", newCaregiver.password);
+    fd.append("gender", newCaregiver.gender);
+    fd.append("role", "caregiver");
+    if (newCaregiver.profilePictureFile) fd.append("profile", newCaregiver.profilePictureFile);
+    if (newCaregiver.dateOfBirth) fd.append("dob", newCaregiver.dateOfBirth);
+    if (newCaregiver.bloodGroup) fd.append("bloodGroup", newCaregiver.bloodGroup);
+    if (newCaregiver.yearsExperience) fd.append("experience", `${newCaregiver.yearsExperience} yrs`);
+    if (newCaregiver.address) fd.append("address", newCaregiver.address);
+    if (newCaregiver.mobile) fd.append("mobile", newCaregiver.mobile);
+    if (newCaregiver.skills) fd.append("skills", newCaregiver.skills);
+    if (newCaregiver.documentFiles?.length) newCaregiver.documentFiles.forEach((file) => fd.append("certificate", file));
+    fd.append("patientId", String(selectedPatientForNewCaregiver));
+    fd.append("dateAssigned", assignmentDateForNewCaregiver);
+
+    try {
+      setSubmitting(true);
+      const url = `${BASE_URL}/caregiver`;
+      const res = await axios.post(url, fd, { headers: { "Content-Type": "multipart/form-data" } });
+
+      const apiData = res?.data?.data || res?.data || {};
+      const createdCaregiver = apiData.caregiver || apiData.createdCaregiver || apiData;
+      const newId = createdCaregiver?._id ??
+        (Math.max(0, ...caregivers.map((c) => Number(c.id) || 0)) + 1);
+
+      // add caregiver in list
+      const caregiverForState = {
+        id: newId,
+        name: createdCaregiver?.name?.trim() || newCaregiver.name,
+        email: createdCaregiver?.email?.trim() || newCaregiver.email,
+        mobile: createdCaregiver?.mobile?.trim?.() || newCaregiver.mobile || "",
+        address: createdCaregiver?.address?.trim?.() || newCaregiver.address || "",
+        certification: createdCaregiver?.certification || newCaregiver.certification || "",
+        yearsExperience: createdCaregiver?.yearsExperience ?? Number(newCaregiver.yearsExperience || 0),
+        skills: createdCaregiver?.skills?.trim?.() || newCaregiver.skills || "",
+        profilePicture: createdCaregiver?.profile || newCaregiver.profilePicture || "https://via.placeholder.com/80",
+        dateOfBirth: createdCaregiver?.dob || newCaregiver.dateOfBirth || "",
+        gender: createdCaregiver?.gender || newCaregiver.gender || "",
+        bloodGroup: createdCaregiver?.bloodGroup || newCaregiver.bloodGroup || "",
+        password: "********",
+        status: createdCaregiver?.status || "Active",
+        joinDate: createdCaregiver?.createdAt?.slice?.(0, 10) || new Date().toISOString().split("T")[0],
+        documents: createdCaregiver?.documents || newCaregiver.documents.map((d) => ({ name: d.name, url: d.url })),
+        patientId: createdCaregiver?.patientId || String(selectedPatientForNewCaregiver),
+      };
+
+      setCaregivers((prev) => [...prev, caregiverForState]);
+
+      // show in first (assignments) table
+      const patient = getPatientDetails(selectedPatientForNewCaregiver);
+      const assignmentForState = {
+        id: Date.now(),
+        patientId: patient?.id || Number(selectedPatientForNewCaregiver),
+        patientName: patient?.name || getPatientNameFromApiId(selectedPatientForNewCaregiver),
+        caregiverId: newId,
+        caregiverName: caregiverForState.name,
+        dateAssigned: assignmentDateForNewCaregiver,
+        status: "Active",
+      };
+      setAssignments((prev) => [...prev, assignmentForState]);
+
+      alert("Caregiver created and assigned successfully!");
+      setShowAddCaregiverModal(false);
+      resetNewCaregiverForm();
+    } catch (err) {
+      console.error(err);
+      const msg = err?.response?.data?.message || err?.message || "Failed to create caregiver";
+      alert(msg);
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
   return (
     <div className="">
-      {/* Page Header */}
+      {/* Header */}
       <div className="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center gap-3 mb-4">
         <h3 className="dashboard-heading">Assign Caregivers</h3>
-        <button
-          className="btn text-white"
-          style={{ backgroundColor: "#F95918" }}
-          onClick={() => setShowAddCaregiverModal(true)}
-        >
-          + Add Caregiver & Assign
-        </button>
+        <div className="d-flex gap-2">
+          <button className="btn btn-outline-secondary" onClick={() => setShowModal(true)}>
+            + Assign Existing
+          </button>
+          <button className="btn text-white" style={{ backgroundColor: "#F95918" }} onClick={() => setShowAddCaregiverModal(true)}>
+            + Add Caregiver & Assign
+          </button>
+        </div>
       </div>
-      
-      {/* Assignments Table */}
+
+      {/* Caregivers fetch state */}
+      {loadingCaregivers && <div className="alert alert-info">Loading caregivers…</div>}
+      {caregiversError && (
+        <div className="alert alert-danger d-flex justify-content-between align-items-center">
+          <span>{caregiversError}</span>
+          <button className="btn btn-sm btn-outline-light" onClick={fetchCaregivers}>Retry</button>
+        </div>
+      )}
+
+      {/* ======= SAME FIRST TABLE (Assignments) — yahi API data bhi show karegi ======= */}
       <div className="row">
         <div className="col-12">
           <div className="card shadow">
@@ -530,109 +655,87 @@ const AssignCaregiver = () => {
                     </tr>
                   </thead>
                   <tbody>
-                    {assignments.map((assignment) => {
-                      const caregiver = getCaregiverDetails(assignment.caregiverId);
-                      return (
-                        <tr key={assignment.id}>
-                          <td>#{assignment.id}</td>
-                          <td>{assignment.patientName}</td>
-                          <td>{assignment.caregiverName}</td>
-                          <td>
-                            {caregiver && caregiver.profilePicture && (
-                              <img 
-                                src={caregiver.profilePicture} 
-                                alt={caregiver.name}
+                    {assignments.length === 0 ? (
+                      <tr>
+                        <td colSpan={7} className="text-center text-muted">No assignments yet.</td>
+                      </tr>
+                    ) : (
+                      assignments.map((assignment) => {
+                        const caregiver = getCaregiverDetails(assignment.caregiverId);
+                        const isDeletingThis = String(deletingCaregiverId) === String(assignment.caregiverId);
+                        return (
+                          <tr key={assignment.id}>
+                            <td>#{assignment.id}</td>
+                            <td>{assignment.patientName || getPatientNameFromApiId(assignment.patientId)}</td>
+                            <td>{assignment.caregiverName}</td>
+                            <td>
+                              <img
+                                src={caregiver?.profilePicture || "https://via.placeholder.com/40"}
+                                alt={caregiver?.name || "caregiver"}
                                 className="rounded-circle"
-                                style={{ width: '40px', height: '40px', objectFit: 'cover' }}
+                                style={{ width: "40px", height: "40px", objectFit: "cover" }}
+                                onError={(e) => { e.currentTarget.src = "https://via.placeholder.com/40"; }}
                               />
-                            )}
-                          </td>
-                          <td>{assignment.dateAssigned}</td>
-                          <td>
-                            <span className={`badge ${getStatusClass(assignment.status)}`}>
-                              {assignment.status}
-                            </span>
-                          </td>
-                          <td>
-                            <div className="d-flex gap-2">
-                              <button
-                                className="btn btn-sm btn-outline-primary"
-                                onClick={() => handleView(assignment)}
-                                title="View"
-                              >
-                                <i className="fas fa-eye"></i>
-                              </button>
-                              <button
-                                className="btn btn-sm"
-                                onClick={() => handleEdit(assignment)}
-                                style={{
-                                  color: "#F95918",
-                                }}
-                                title="Edit"
-                              >
-                                <i className="fas fa-edit"></i>
-                              </button>
-                              <button
-                                className={`btn btn-sm ${assignment.status === "Active"
-                                  ? "btn-outline-danger"
-                                  : "btn-outline-success"
-                                  }`}
-                                onClick={() => toggleStatus(assignment.id)}
-                                title={assignment.status === "Active" ? "Deactivate" : "Activate"}
-                              >
-                                {assignment.status === "Active" ? (
-                                  <i className="fas fa-user-slash"></i>
-                                ) : (
-                                  <i className="fas fa-user-check"></i>
-                                )}
-                              </button>
-                              <button
-                                className="btn btn-sm btn-outline-danger"
-                                onClick={() => handleDelete(assignment)}
-                                title="Delete"
-                              >
-                                <i className="fas fa-trash"></i>
-                              </button>
-                            </div>
-                          </td>
-                        </tr>
-                      );
-                    })}
+                            </td>
+                            <td>{assignment.dateAssigned || "-"}</td>
+                            <td>
+                              <span className={`badge ${getStatusClass(assignment.status)}`}>{assignment.status}</span>
+                            </td>
+                            <td>
+                              <div className="d-flex gap-2">
+                                <button className="btn btn-sm btn-outline-primary" onClick={() => handleView(assignment)} title="View">
+                                  <i className="fas fa-eye"></i>
+                                </button>
+                                <button className="btn btn-sm" onClick={() => handleEdit(assignment)} style={{ color: "#F95918" }} title="Edit">
+                                  <i className="fas fa-edit"></i>
+                                </button>
+                                <button
+                                  className={`btn btn-sm ${assignment.status === "Active" ? "btn-outline-danger" : "btn-outline-success"}`}
+                                  onClick={() => toggleStatus(assignment.id)}
+                                  title={assignment.status === "Active" ? "Deactivate" : "Activate"}
+                                >
+                                  {assignment.status === "Active" ? <i className="fas fa-user-slash"></i> : <i className="fas fa-user-check"></i>}
+                                </button>
+                                <button
+                                  className="btn btn-sm btn-outline-danger"
+                                  onClick={() => handleDelete(assignment)}
+                                  title="Delete caregiver"
+                                  disabled={isDeletingThis}
+                                >
+                                  {isDeletingThis ? (
+                                    <span className="spinner-border spinner-border-sm" />
+                                  ) : (
+                                    <i className="fas fa-trash"></i>
+                                  )}
+                                </button>
+                              </div>
+                            </td>
+                          </tr>
+                        );
+                      })
+                    )}
                   </tbody>
                 </table>
               </div>
+              <div className="text-muted small">Caregivers loaded: {caregivers.length}</div>
             </div>
           </div>
         </div>
       </div>
-      
-      {/* Add Assignment Modal */}
+
+      {/* Add Assignment Modal (assign existing) */}
       {showModal && (
-        <div
-          className="modal fade show d-block"
-          style={{ backgroundColor: "rgba(0,0,0,0.5)" }}
-        >
+        <div className="modal fade show d-block" style={{ backgroundColor: "rgba(0,0,0,0.5)" }}>
           <div className="modal-dialog">
             <div className="modal-content">
               <div className="modal-header">
                 <h5 className="modal-title">Assign Caregiver to Patient</h5>
-                <button
-                  type="button"
-                  className="btn-close"
-                  onClick={() => {
-                    setShowModal(false);
-                    resetForm();
-                  }}
-                ></button>
+                <button type="button" className="btn-close" onClick={() => { setShowModal(false); resetForm(); }} />
               </div>
               <div className="modal-body">
                 <div className="mb-3">
                   <label className="form-label">Select Patient</label>
-                  <select
-                    className="form-select"
-                    value={selectedPatient}
-                    onChange={(e) => setSelectedPatient(e.target.value)}
-                  >
+                  <select className="form-select" value={selectedPatient} onChange={(e) => setSelectedPatient(e.target.value)}>
                     <option value="">-- Choose Patient --</option>
                     {patients.map((patient) => (
                       <option key={patient.id} value={patient.id}>
@@ -643,11 +746,7 @@ const AssignCaregiver = () => {
                 </div>
                 <div className="mb-3">
                   <label className="form-label">Select Caregiver</label>
-                  <select
-                    className="form-select"
-                    value={selectedCaregiver}
-                    onChange={(e) => setSelectedCaregiver(e.target.value)}
-                  >
+                  <select className="form-select" value={selectedCaregiver} onChange={(e) => setSelectedCaregiver(e.target.value)}>
                     <option value="">-- Choose Caregiver --</option>
                     {caregivers.map((caregiver) => (
                       <option key={caregiver.id} value={caregiver.id}>
@@ -658,31 +757,14 @@ const AssignCaregiver = () => {
                 </div>
                 <div className="mb-3">
                   <label className="form-label">Assignment Date</label>
-                  <input
-                    type="date"
-                    className="form-control"
-                    value={assignmentDate}
-                    onChange={(e) => setAssignmentDate(e.target.value)}
-                  />
+                  <input type="date" className="form-control" value={assignmentDate} onChange={(e) => setAssignmentDate(e.target.value)} />
                 </div>
               </div>
               <div className="modal-footer">
-                <button
-                  type="button"
-                  className="btn btn-secondary"
-                  onClick={() => {
-                    setShowModal(false);
-                    resetForm();
-                  }}
-                >
+                <button type="button" className="btn btn-secondary" onClick={() => { setShowModal(false); resetForm(); }}>
                   Cancel
                 </button>
-                <button
-                  type="button"
-                  className="btn text-white"
-                  onClick={handleAssign}
-                  style={{ backgroundColor: "#F95918" }}
-                >
+                <button type="button" className="btn text-white" onClick={handleAssign} style={{ backgroundColor: "#F95918" }}>
                   Assign Caregiver
                 </button>
               </div>
@@ -690,35 +772,20 @@ const AssignCaregiver = () => {
           </div>
         </div>
       )}
-      
+
       {/* Edit Assignment Modal */}
       {showEditModal && (
-        <div
-          className="modal fade show d-block"
-          style={{ backgroundColor: "rgba(0,0,0,0.5)" }}
-        >
+        <div className="modal fade show d-block" style={{ backgroundColor: "rgba(0,0,0,0.5)" }}>
           <div className="modal-dialog">
             <div className="modal-content">
               <div className="modal-header">
                 <h5 className="modal-title">Edit Assignment</h5>
-                <button
-                  type="button"
-                  className="btn-close"
-                  onClick={() => {
-                    setShowEditModal(false);
-                    resetForm();
-                    setEditingAssignment(null);
-                  }}
-                ></button>
+                <button type="button" className="btn-close" onClick={() => { setShowEditModal(false); resetForm(); setEditingAssignment(null); }} />
               </div>
               <div className="modal-body">
                 <div className="mb-3">
                   <label className="form-label">Select Patient</label>
-                  <select
-                    className="form-select"
-                    value={selectedPatient}
-                    onChange={(e) => setSelectedPatient(e.target.value)}
-                  >
+                  <select className="form-select" value={selectedPatient} onChange={(e) => setSelectedPatient(e.target.value)}>
                     <option value="">-- Choose Patient --</option>
                     {patients.map((patient) => (
                       <option key={patient.id} value={patient.id}>
@@ -729,11 +796,7 @@ const AssignCaregiver = () => {
                 </div>
                 <div className="mb-3">
                   <label className="form-label">Select Caregiver</label>
-                  <select
-                    className="form-select"
-                    value={selectedCaregiver}
-                    onChange={(e) => setSelectedCaregiver(e.target.value)}
-                  >
+                  <select className="form-select" value={selectedCaregiver} onChange={(e) => setSelectedCaregiver(e.target.value)}>
                     <option value="">-- Choose Caregiver --</option>
                     {caregivers.map((caregiver) => (
                       <option key={caregiver.id} value={caregiver.id}>
@@ -744,32 +807,14 @@ const AssignCaregiver = () => {
                 </div>
                 <div className="mb-3">
                   <label className="form-label">Assignment Date</label>
-                  <input
-                    type="date"
-                    className="form-control"
-                    value={assignmentDate}
-                    onChange={(e) => setAssignmentDate(e.target.value)}
-                  />
+                  <input type="date" className="form-control" value={assignmentDate} onChange={(e) => setAssignmentDate(e.target.value)} />
                 </div>
               </div>
               <div className="modal-footer">
-                <button
-                  type="button"
-                  className="btn btn-secondary"
-                  onClick={() => {
-                    setShowEditModal(false);
-                    resetForm();
-                    setEditingAssignment(null);
-                  }}
-                >
+                <button type="button" className="btn btn-secondary" onClick={() => { setShowEditModal(false); resetForm(); setEditingAssignment(null); }}>
                   Cancel
                 </button>
-                <button
-                  type="button"
-                  className="btn text-white"
-                  onClick={handleUpdate}
-                  style={{ backgroundColor: "#F95918" }}
-                >
+                <button type="button" className="btn text-white" onClick={handleUpdate} style={{ backgroundColor: "#F95918" }}>
                   Update Assignment
                 </button>
               </div>
@@ -777,69 +822,53 @@ const AssignCaregiver = () => {
           </div>
         </div>
       )}
-      
-      {/* Delete Confirmation Modal */}
+
+      {/* Delete Confirmation Modal (DELETE /caregiver/:id) */}
       {showDeleteModal && (
-        <div
-          className="modal fade show d-block"
-          style={{ backgroundColor: "rgba(0,0,0,0.5)" }}
-        >
+        <div className="modal fade show d-block" style={{ backgroundColor: "rgba(0,0,0,0.5)" }}>
           <div className="modal-dialog">
             <div className="modal-content">
               <div className="modal-header">
-                <h5 className="modal-title">Confirm Deletion</h5>
-                <button
-                  type="button"
-                  className="btn-close"
-                  onClick={() => setShowDeleteModal(false)}
-                ></button>
+                <h5 className="modal-title">Delete Caregiver</h5>
+                <button type="button" className="btn-close" onClick={() => setShowDeleteModal(false)} />
               </div>
               <div className="modal-body">
-                <p>Are you sure you want to delete this assignment?</p>
+                <p>Are you sure you want to delete this caregiver? This will remove their assignments as well.</p>
                 <div className="card bg-light">
                   <div className="card-body">
-                    <p><strong>Patient:</strong> {selectedAssignment?.patientName}</p>
+                    <p><strong>Patient:</strong> {selectedAssignment?.patientName || getPatientNameFromApiId(selectedAssignment?.patientId)}</p>
                     <p><strong>Caregiver:</strong> {selectedAssignment?.caregiverName}</p>
                     <p><strong>Date Assigned:</strong> {selectedAssignment?.dateAssigned}</p>
                   </div>
                 </div>
+                {deleteError && <div className="alert alert-danger mt-3">{deleteError}</div>}
               </div>
               <div className="modal-footer">
-                <button
-                  type="button"
-                  className="btn btn-secondary"
-                  onClick={() => setShowDeleteModal(false)}
-                >
-                  Cancel
-                </button>
+                <button type="button" className="btn btn-secondary" onClick={() => setShowDeleteModal(false)}>Cancel</button>
                 <button
                   type="button"
                   className="btn btn-danger"
                   onClick={confirmDelete}
+                  disabled={String(deletingCaregiverId) === String(selectedAssignment?.caregiverId)}
                 >
-                  Delete
+                  {String(deletingCaregiverId) === String(selectedAssignment?.caregiverId)
+                    ? (<><span className="spinner-border spinner-border-sm me-2" /> Deleting...</>)
+                    : "Delete"}
                 </button>
               </div>
             </div>
           </div>
         </div>
       )}
-      
+
       {/* View Assignment Modal */}
       {showViewModal && viewingAssignment && (
-        <div
-          className="modal fade show d-block"
-          style={{ backgroundColor: "rgba(0,0,0,0.5)" }}
-        >
+        <div className="modal fade show d-block" style={{ backgroundColor: "rgba(0,0,0,0.5)" }}>
           <div className="modal-dialog modal-lg">
             <div className="modal-content">
               <div className="modal-header">
                 <h5 className="modal-title">Assignment Details</h5>
-                <button
-                  type="button"
-                  className="btn-close"
-                  onClick={() => setShowViewModal(false)}
-                ></button>
+                <button type="button" className="btn-close" onClick={() => setShowViewModal(false)} />
               </div>
               <div className="modal-body">
                 <div className="row">
@@ -855,14 +884,14 @@ const AssignCaregiver = () => {
                             <p><strong>Phone:</strong> {patient.phone}</p>
                             <p><strong>Address:</strong> {patient.address}</p>
                             <p><strong>Join Date:</strong> {patient.joinDate}</p>
-                            <p><strong>Status:</strong> 
-                              <span className={`badge ${getStatusClass(patient.status)} ms-2`}>
-                                {patient.status}
-                              </span>
+                            <p><strong>Status:</strong>
+                              <span className={`badge ${getStatusClass(patient.status)} ms-2`}>{patient.status}</span>
                             </p>
                           </div>
                         </div>
-                      ) : null;
+                      ) : (
+                        <div className="text-muted">Patient: {getPatientNameFromApiId(viewingAssignment.patientId)}</div>
+                      );
                     })()}
                   </div>
                   <div className="col-md-6">
@@ -873,14 +902,13 @@ const AssignCaregiver = () => {
                         <div className="card mb-3">
                           <div className="card-body">
                             <div className="d-flex align-items-center mb-3">
-                              {caregiver.profilePicture && (
-                                <img 
-                                  src={caregiver.profilePicture} 
-                                  alt={caregiver.name}
-                                  className="rounded-circle me-3"
-                                  style={{ width: '80px', height: '80px', objectFit: 'cover' }}
-                                />
-                              )}
+                              <img
+                                src={caregiver.profilePicture || "https://via.placeholder.com/80"}
+                                alt={caregiver.name}
+                                className="rounded-circle me-3"
+                                style={{ width: "80px", height: "80px", objectFit: "cover" }}
+                                onError={(e) => { e.currentTarget.src = "https://via.placeholder.com/80"; }}
+                              />
                               <div>
                                 <h5 className="mb-1">{caregiver.name}</h5>
                                 <p className="mb-0">{caregiver.certification}</p>
@@ -891,40 +919,36 @@ const AssignCaregiver = () => {
                             <p><strong>Address:</strong> {caregiver.address}</p>
                             <p><strong>Experience:</strong> {caregiver.yearsExperience} years</p>
                             <p><strong>Skills:</strong> {caregiver.skills}</p>
-                            <p><strong>Join Date:</strong> {caregiver.joinDate}</p>
-                            <p><strong>Status:</strong> 
-                              <span className={`badge ${getStatusClass(caregiver.status)} ms-2`}>
-                                {caregiver.status}
-                              </span>
+                            <p><strong>Date of Birth:</strong> {caregiver.dateOfBirth}</p>
+                            <p><strong>Gender:</strong> {caregiver.gender}</p>
+                            <p><strong>Blood Group:</strong> {caregiver.bloodGroup}</p>
+                            <p><strong>Password:</strong> {caregiver.password}</p>
+                            <p><strong>Status:</strong>
+                              <span className={`badge ${getStatusClass(caregiver.status)} ms-2`}>{caregiver.status}</span>
                             </p>
-                            
-                            {caregiver.documents && caregiver.documents.length > 0 && (
+                            {caregiver.documents?.length > 0 && (
                               <div className="mt-3">
                                 <h6>Documents:</h6>
                                 <ul className="list-group">
                                   {caregiver.documents.map((doc, index) => (
                                     <li key={index} className="list-group-item d-flex justify-content-between align-items-center">
-                                      <a href={doc.url} target="_blank" rel="noopener noreferrer">
-                                        {doc.name}
-                                      </a>
+                                      <a href={doc.url} target="_blank" rel="noopener noreferrer">{doc.name}</a>
                                       <i className="fas fa-file-pdf text-danger"></i>
                                     </li>
                                   ))}
                                 </ul>
                               </div>
                             )}
-                            
                             <div className="mt-3">
-                              <button 
-                                className="btn btn-sm btn-outline-primary"
-                                onClick={() => handleEditCaregiver(caregiver)}
-                              >
-                                <i className="fas fa-edit me-1"></i> Edit Caregiver
+                              <button className="btn btn-sm btn-outline-primary" onClick={() => handleEditCaregiver(caregiver)}>
+                                <i className="fas fa-edit me-1" /> Edit Caregiver
                               </button>
                             </div>
                           </div>
                         </div>
-                      ) : null;
+                      ) : (
+                        <div className="text-muted">Caregiver not found in list.</div>
+                      );
                     })()}
                   </div>
                 </div>
@@ -934,23 +958,18 @@ const AssignCaregiver = () => {
                     <div className="card">
                       <div className="card-body">
                         <p><strong>Assignment ID:</strong> #{viewingAssignment.id}</p>
-                        <p><strong>Date Assigned:</strong> {viewingAssignment.dateAssigned}</p>
-                        <p><strong>Status:</strong> 
-                          <span className={`badge ${getStatusClass(viewingAssignment.status)} ms-2`}>
-                            {viewingAssignment.status}
-                          </span>
+                        <p><strong>Date Assigned:</strong> {viewingAssignment.dateAssigned || "-"}</p>
+                        <p><strong>Status:</strong>
+                          <span className={`badge ${getStatusClass(viewingAssignment.status)} ms-2`}>{viewingAssignment.status}</span>
                         </p>
                       </div>
                     </div>
                   </div>
                 </div>
               </div>
+
               <div className="modal-footer">
-                <button
-                  type="button"
-                  className="btn btn-secondary"
-                  onClick={() => setShowViewModal(false)}
-                >
+                <button type="button" className="btn btn-secondary" onClick={() => setShowViewModal(false)}>
                   Close
                 </button>
               </div>
@@ -958,191 +977,126 @@ const AssignCaregiver = () => {
           </div>
         </div>
       )}
-      
-      {/* Add Caregiver and Assign Modal */}
+
+      {/* Add Caregiver & Assign Modal (POST) */}
       {showAddCaregiverModal && (
-        <div
-          className="modal fade show d-block"
-          style={{ backgroundColor: "rgba(0,0,0,0.5)" }}
-        >
+        <div className="modal fade show d-block" style={{ backgroundColor: "rgba(0,0,0,0.5)" }}>
           <div className="modal-dialog modal-lg">
             <div className="modal-content">
               <div className="modal-header">
                 <h5 className="modal-title">Add New Caregiver & Assign to Patient</h5>
-                <button
-                  type="button"
-                  className="btn-close"
-                  onClick={() => {
-                    setShowAddCaregiverModal(false);
-                    resetNewCaregiverForm();
-                  }}
-                ></button>
+                <button type="button" className="btn-close" onClick={() => { setShowAddCaregiverModal(false); resetNewCaregiverForm(); }} />
               </div>
               <div className="modal-body">
+                {/* --- Caregiver Info fields --- */}
                 <h6 className="mb-3">Caregiver Information</h6>
                 <div className="row">
                   <div className="col-md-6">
                     <label className="form-label">Full Name*</label>
-                    <input
-                      type="text"
-                      className="form-control mb-2"
-                      name="name"
-                      value={newCaregiver.name}
-                      onChange={handleNewCaregiverChange}
-                      placeholder="Full Name"
-                      required
-                    />
+                    <input type="text" className="form-control mb-2" name="name" value={newCaregiver.name} onChange={handleNewCaregiverChange} placeholder="Full Name" required />
                   </div>
                   <div className="col-md-6">
                     <label className="form-label">Email*</label>
-                    <input
-                      type="email"
-                      className="form-control mb-2"
-                      name="email"
-                      value={newCaregiver.email}
-                      onChange={handleNewCaregiverChange}
-                      placeholder="Email"
-                      required
-                    />
+                    <input type="email" className="form-control mb-2" name="email" value={newCaregiver.email} onChange={handleNewCaregiverChange} placeholder="Email" required />
                   </div>
                 </div>
+
+                <div className="row">
+                  <div className="col-md-6">
+                    <label className="form-label">Mobile Number*</label>
+                    <input type="text" className="form-control mb-2" name="mobile" value={newCaregiver.mobile} onChange={handleNewCaregiverChange} placeholder="Mobile Number" required />
+                  </div>
+                  <div className="col-md-6">
+                    <label className="form-label">Gender*</label>
+                    <select className="form-select mb-2" name="gender" value={newCaregiver.gender} onChange={handleNewCaregiverChange} required>
+                      <option value="">-- Select Gender --</option>
+                      <option value="Male">Male</option>
+                      <option value="Female">Female</option>
+                      <option value="Other">Other</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div className="row">
+                  <div className="col-md-6">
+                    <label className="form-label">Blood Group</label>
+                    <select className="form-select mb-2" name="bloodGroup" value={newCaregiver.bloodGroup} onChange={handleNewCaregiverChange}>
+                      <option value="">-- Select Blood Group --</option>
+                      <option value="A+">A+</option><option value="A-">A-</option>
+                      <option value="B+">B+</option><option value="B-">B-</option>
+                      <option value="AB+">AB+</option><option value="AB-">AB-</option>
+                      <option value="O+">O+</option><option value="O-">O-</option>
+                    </select>
+                  </div>
+                  <div className="col-md-6">
+                    <label className="form-label">Date of Birth</label>
+                    <input type="date" className="form-control mb-2" name="dateOfBirth" value={newCaregiver.dateOfBirth} onChange={handleNewCaregiverChange} />
+                  </div>
+                </div>
+
                 <div className="row">
                   <div className="col-md-6">
                     <label className="form-label">Password*</label>
-                    <input
-                      type="password"
-                      className="form-control mb-2"
-                      name="password"
-                      value={newCaregiver.password}
-                      onChange={handleNewCaregiverChange}
-                      placeholder="Password"
-                      required
-                    />
+                    <input type="password" className="form-control mb-2" name="password" value={newCaregiver.password} onChange={handleNewCaregiverChange} placeholder="Password" required />
                   </div>
                   <div className="col-md-6">
-                    <label className="form-label">Mobile Number*</label>
-                    <input
-                      type="text"
-                      className="form-control mb-2"
-                      name="mobile"
-                      value={newCaregiver.mobile}
-                      onChange={handleNewCaregiverChange}
-                      placeholder="Mobile Number"
-                      required
-                    />
+                    <label className="form-label">Confirm Password*</label>
+                    <input type="password" className="form-control mb-2" name="confirmPassword" value={newCaregiver.confirmPassword} onChange={handleNewCaregiverChange} placeholder="Confirm Password" required />
                   </div>
                 </div>
+
                 <div className="row">
-                  <div className="col-md-6">
+                  <div className="col-md-12">
                     <label className="form-label">Address</label>
-                    <input
-                      type="text"
-                      className="form-control mb-2"
-                      name="address"
-                      value={newCaregiver.address}
-                      onChange={handleNewCaregiverChange}
-                      placeholder="Address"
-                    />
-                  </div>
-                  <div className="col-md-6">
-                    <label className="form-label">Certification</label>
-                    <input
-                      type="text"
-                      className="form-control mb-2"
-                      name="certification"
-                      value={newCaregiver.certification}
-                      onChange={handleNewCaregiverChange}
-                      placeholder="Certification"
-                    />
+                    <input type="text" className="form-control mb-2" name="address" value={newCaregiver.address} onChange={handleNewCaregiverChange} placeholder="Address" />
                   </div>
                 </div>
+
                 <div className="row">
                   <div className="col-md-6">
                     <label className="form-label">Years of Experience</label>
-                    <input
-                      type="number"
-                      className="form-control mb-2"
-                      name="yearsExperience"
-                      value={newCaregiver.yearsExperience}
-                      onChange={handleNewCaregiverChange}
-                      placeholder="Years of Experience"
-                    />
+                    <input type="number" className="form-control mb-2" name="yearsExperience" value={newCaregiver.yearsExperience} onChange={handleNewCaregiverChange} placeholder="Years of Experience" />
                   </div>
                   <div className="col-md-6">
                     <label className="form-label">Skills</label>
-                    <input
-                      type="text"
-                      className="form-control mb-2"
-                      name="skills"
-                      value={newCaregiver.skills}
-                      onChange={handleNewCaregiverChange}
-                      placeholder="Skills (comma separated)"
-                    />
+                    <input type="text" className="form-control mb-2" name="skills" value={newCaregiver.skills} onChange={handleNewCaregiverChange} placeholder="Skills (comma separated)" />
                   </div>
                 </div>
+
                 <div className="row">
-                  <div className="col-md-6">
-                    <label className="form-label">Join Date</label>
-                    <input
-                      type="date"
-                      className="form-control mb-2"
-                      name="joinDate"
-                      value={newCaregiver.joinDate}
-                      onChange={handleNewCaregiverChange}
-                    />
-                  </div>
                   <div className="col-md-6">
                     <label className="form-label">Profile Picture</label>
                     <div className="mb-2">
-                      <input
-                        type="file"
-                        className="form-control"
-                        accept="image/*"
-                        onChange={handleProfilePictureUpload}
-                      />
+                      <input type="file" className="form-control" accept="image/*" onChange={handleProfilePictureUpload} />
                     </div>
                     {newCaregiver.profilePicture && (
                       <div className="mt-2">
                         <p className="mb-1">Preview:</p>
-                        <img 
-                          src={newCaregiver.profilePicture} 
-                          alt="Profile Preview" 
-                          className="rounded-circle" 
-                          style={{ width: '80px', height: '80px', objectFit: 'cover' }}
-                          onError={(e) => {
-                            e.target.onerror = null;
-                            e.target.src = "https://via.placeholder.com/80";
-                          }}
+                        <img
+                          src={newCaregiver.profilePicture}
+                          alt="Profile Preview"
+                          className="rounded-circle"
+                          style={{ width: "80px", height: "80px", objectFit: "cover" }}
+                          onError={(e) => { e.currentTarget.src = "https://via.placeholder.com/80"; }}
                         />
                       </div>
                     )}
                   </div>
-                </div>
-                
-                <div className="row">
-                  <div className="col-12">
-                    <label className="form-label">Documents</label>
+
+                  <div className="col-md-6">
+                    <label className="form-label">Certificates</label>
                     <div className="mb-2">
-                      <input
-                        type="file"
-                        className="form-control"
-                        multiple
-                        onChange={handleDocumentUpload}
-                      />
+                      <input type="file" className="form-control" multiple onChange={handleDocumentUpload} />
                       <small className="text-muted">Upload certifications, licenses, etc.</small>
                     </div>
-                    
                     {newCaregiver.documents.length > 0 && (
                       <div className="mt-2">
-                        <p className="mb-1">Uploaded Documents:</p>
+                        <p className="mb-1">Uploaded Certificates:</p>
                         <ul className="list-group">
                           {newCaregiver.documents.map((doc, index) => (
                             <li key={index} className="list-group-item d-flex justify-content-between align-items-center">
                               <span>{doc.name}</span>
-                              <button 
-                                className="btn btn-sm btn-outline-danger"
-                                onClick={() => handleDocumentRemove(index)}
-                              >
+                              <button className="btn btn-sm btn-outline-danger" onClick={() => handleDocumentRemove(index)}>
                                 <i className="fas fa-trash"></i>
                               </button>
                             </li>
@@ -1152,18 +1106,13 @@ const AssignCaregiver = () => {
                     )}
                   </div>
                 </div>
-                
+
                 <hr className="my-4" />
-                
                 <h6 className="mb-3">Assignment Information</h6>
                 <div className="row">
                   <div className="col-md-6">
                     <label className="form-label">Select Patient*</label>
-                    <select
-                      className="form-select"
-                      value={selectedPatientForNewCaregiver}
-                      onChange={(e) => setSelectedPatientForNewCaregiver(e.target.value)}
-                    >
+                    <select className="form-select" value={selectedPatientForNewCaregiver} onChange={(e) => setSelectedPatientForNewCaregiver(e.target.value)}>
                       <option value="">-- Choose Patient --</option>
                       {patients.map((patient) => (
                         <option key={patient.id} value={patient.id}>
@@ -1174,247 +1123,133 @@ const AssignCaregiver = () => {
                   </div>
                   <div className="col-md-6">
                     <label className="form-label">Assignment Date*</label>
-                    <input
-                      type="date"
-                      className="form-control"
-                      value={assignmentDateForNewCaregiver}
-                      onChange={(e) => setAssignmentDateForNewCaregiver(e.target.value)}
-                    />
+                    <input type="date" className="form-control" value={assignmentDateForNewCaregiver} onChange={(e) => setAssignmentDateForNewCaregiver(e.target.value)} />
                   </div>
                 </div>
               </div>
+
               <div className="modal-footer">
-                <button
-                  type="button"
-                  className="btn btn-secondary"
-                  onClick={() => {
-                    setShowAddCaregiverModal(false);
-                    resetNewCaregiverForm();
-                  }}
-                >
+                <button type="button" className="btn btn-secondary" onClick={() => { setShowAddCaregiverModal(false); resetNewCaregiverForm(); }}>
                   Cancel
                 </button>
-                <button
-                  type="button"
-                  className="btn text-white"
-                  onClick={handleAddCaregiverAndAssign}
-                  style={{ backgroundColor: "#F95918" }}
-                >
-                  Add Caregiver & Assign
+                <button type="button" className="btn text-white" onClick={handleAddCaregiverAndAssign} style={{ backgroundColor: "#F95918" }} disabled={submitting}>
+                  {submitting ? "Saving..." : "Add Caregiver & Assign"}
                 </button>
               </div>
             </div>
           </div>
         </div>
       )}
-      
-      {/* Edit Caregiver Modal */}
+
+      {/* Edit Caregiver Modal (PUT /caregiver/:id) */}
       {showEditCaregiverModal && editingCaregiver && (
-        <div
-          className="modal fade show d-block"
-          style={{ backgroundColor: "rgba(0,0,0,0.5)" }}
-        >
+        <div className="modal fade show d-block" style={{ backgroundColor: "rgba(0,0,0,0.5)" }}>
           <div className="modal-dialog modal-lg">
             <div className="modal-content">
               <div className="modal-header">
                 <h5 className="modal-title">Edit Caregiver</h5>
-                <button
-                  type="button"
-                  className="btn-close"
-                  onClick={() => {
-                    setShowEditCaregiverModal(false);
-                    setEditingCaregiver(null);
-                  }}
-                ></button>
+                <button type="button" className="btn-close" onClick={() => { setShowEditCaregiverModal(false); setEditingCaregiver(null); }} />
               </div>
               <div className="modal-body">
+                {updateError && <div className="alert alert-danger">{updateError}</div>}
+
                 <div className="row">
                   <div className="col-md-6">
                     <label className="form-label">Full Name*</label>
-                    <input
-                      type="text"
-                      className="form-control mb-2"
-                      name="name"
-                      value={editingCaregiver.name}
-                      onChange={handleCaregiverChange}
-                      required
-                    />
+                    <input type="text" className="form-control mb-2" name="name" value={editingCaregiver.name || ""} onChange={handleCaregiverChange} required />
                   </div>
                   <div className="col-md-6">
                     <label className="form-label">Email*</label>
-                    <input
-                      type="email"
-                      className="form-control mb-2"
-                      name="email"
-                      value={editingCaregiver.email}
-                      onChange={handleCaregiverChange}
-                      required
-                    />
+                    <input type="email" className="form-control mb-2" name="email" value={editingCaregiver.email || ""} onChange={handleCaregiverChange} required />
                   </div>
                 </div>
+
                 <div className="row">
-                  <div className="col-md-6">
-                    <label className="form-label">Password*</label>
-                    <input
-                      type="password"
-                      className="form-control mb-2"
-                      name="password"
-                      value={editingCaregiver.password}
-                      onChange={handleCaregiverChange}
-                      placeholder="Password"
-                      required
-                    />
+                  <div className="col-md-4">
+                    <label className="form-label">Password</label>
+                    <input type="password" className="form-control mb-2" name="password" value={editingCaregiver.password || ""} onChange={handleCaregiverChange} placeholder="Leave blank to keep current password" />
                   </div>
-                  <div className="col-md-6">
-                    <label className="form-label">Mobile Number*</label>
-                    <input
-                      type="text"
-                      className="form-control mb-2"
-                      name="mobile"
-                      value={editingCaregiver.mobile}
-                      onChange={handleCaregiverChange}
-                      required
-                    />
-                  </div>
-                </div>
-                <div className="row">
-                  <div className="col-md-6">
-                    <label className="form-label">Address</label>
-                    <input
-                      type="text"
-                      className="form-control mb-2"
-                      name="address"
-                      value={editingCaregiver.address}
-                      onChange={handleCaregiverChange}
-                    />
-                  </div>
-                  <div className="col-md-6">
-                    <label className="form-label">Certification</label>
-                    <input
-                      type="text"
-                      className="form-control mb-2"
-                      name="certification"
-                      value={editingCaregiver.certification}
-                      onChange={handleCaregiverChange}
-                    />
-                  </div>
-                </div>
-                <div className="row">
-                  <div className="col-md-6">
-                    <label className="form-label">Years of Experience</label>
-                    <input
-                      type="number"
-                      className="form-control mb-2"
-                      name="yearsExperience"
-                      value={editingCaregiver.yearsExperience}
-                      onChange={handleCaregiverChange}
-                    />
-                  </div>
-                  <div className="col-md-6">
-                    <label className="form-label">Skills</label>
-                    <input
-                      type="text"
-                      className="form-control mb-2"
-                      name="skills"
-                      value={editingCaregiver.skills}
-                      onChange={handleCaregiverChange}
-                      placeholder="Skills (comma separated)"
-                    />
-                  </div>
-                </div>
-                <div className="row">
-                  <div className="col-md-6">
-                    <label className="form-label">Status</label>
-                    <select
-                      className="form-select mb-2"
-                      name="status"
-                      value={editingCaregiver.status}
-                      onChange={handleCaregiverChange}
-                    >
-                      <option value="Active">Active</option>
-                      <option value="Inactive">Inactive</option>
+                  <div className="col-md-4">
+                    <label className="form-label">Gender</label>
+                    <select className="form-select mb-2" name="gender" value={editingCaregiver.gender || ""} onChange={handleCaregiverChange}>
+                      <option value="">-- Select Gender --</option>
+                      <option value="Male">Male</option>
+                      <option value="Female">Female</option>
+                      <option value="Other">Other</option>
                     </select>
                   </div>
-                  <div className="col-md-6">
-                    <label className="form-label">Join Date</label>
-                    <input
-                      type="date"
-                      className="form-control mb-2"
-                      name="joinDate"
-                      value={editingCaregiver.joinDate}
-                      onChange={handleCaregiverChange}
-                    />
+                  <div className="col-md-4">
+                    <label className="form-label">Blood Group</label>
+                    <select className="form-select mb-2" name="bloodGroup" value={editingCaregiver.bloodGroup || ""} onChange={handleCaregiverChange}>
+                      <option value="">-- Select Blood Group --</option>
+                      <option value="A+">A+</option><option value="A-">A-</option>
+                      <option value="B+">B+</option><option value="B-">B-</option>
+                      <option value="AB+">AB+</option><option value="AB-">AB-</option>
+                      <option value="O+">O+</option><option value="O-">O-</option>
+                    </select>
                   </div>
                 </div>
-                
+
+                <div className="row">
+                  <div className="col-md-4">
+                    <label className="form-label">Age</label>
+                    <input type="number" className="form-control mb-2" name="age" value={editingCaregiver.age || ""} onChange={handleCaregiverChange} />
+                  </div>
+                  <div className="col-md-4">
+                    <label className="form-label">Date of Birth</label>
+                    <input type="date" className="form-control mb-2" name="dateOfBirth" value={editingCaregiver.dateOfBirth || ""} onChange={handleCaregiverChange} />
+                  </div>
+                  <div className="col-md-4">
+                    <label className="form-label">Role</label>
+                    <input type="text" className="form-control mb-2" name="role" value={editingCaregiver.role || "caregiver"} onChange={handleCaregiverChange} />
+                  </div>
+                </div>
+
                 <div className="row">
                   <div className="col-md-6">
                     <label className="form-label">Profile Picture</label>
                     <div className="mb-2">
-                      <input
-                        type="file"
-                        className="form-control"
-                        accept="image/*"
-                        onChange={handleCaregiverProfilePictureUpdate}
-                      />
+                      <input type="file" className="form-control" accept="image/*" onChange={handleCaregiverProfilePictureUpdate} />
                     </div>
                     {editingCaregiver.profilePicture && (
                       <div className="mt-2">
-                        <p className="mb-1">Current Profile Picture:</p>
-                        <img 
-                          src={editingCaregiver.profilePicture} 
-                          alt="Profile" 
-                          className="rounded-circle" 
-                          style={{ width: '80px', height: '80px', objectFit: 'cover' }}
-                        />
+                        <p className="mb-1">Current / New Profile Picture:</p>
+                        <img src={editingCaregiver.profilePicture} alt="Profile" className="rounded-circle" style={{ width: "80px", height: "80px", objectFit: "cover" }} />
                       </div>
                     )}
                   </div>
-                  
+
                   <div className="col-md-6">
-                    <label className="form-label">Documents</label>
+                    <label className="form-label">Upload Certificate(s)</label>
                     <div className="mb-2">
-                      <input
-                        type="file"
-                        className="form-control"
-                        multiple
-                        onChange={handleCaregiverDocumentUpload}
-                      />
-                      <small className="text-muted">Upload certifications, licenses, etc.</small>
+                      <input type="file" className="form-control" multiple onChange={handleCaregiverCertificateUpload} />
+                      <small className="text-muted">PDFs or images accepted.</small>
                     </div>
-                    
-                    {editingCaregiver.documents && editingCaregiver.documents.length > 0 && (
-                      <div className="mt-2">
-                        <p className="mb-1">Current Documents:</p>
-                        <ul className="list-group">
-                          {editingCaregiver.documents.map((doc, index) => (
-                            <li key={index} className="list-group-item d-flex justify-content-between align-items-center">
-                              <a href={doc.url} target="_blank" rel="noopener noreferrer">
-                                {doc.name}
-                              </a>
-                              <button 
-                                className="btn btn-sm btn-outline-danger"
-                                onClick={() => handleCaregiverDocumentRemove(index)}
-                              >
-                                <i className="fas fa-trash"></i>
-                              </button>
-                            </li>
-                          ))}
-                        </ul>
-                      </div>
-                    )}
                   </div>
                 </div>
+
+                {/* (Optional) keep a local list for previewing non-sent documents */}
+                {editingCaregiver.documents?.length > 0 && (
+                  <div className="row mt-2">
+                    <div className="col-12">
+                      <p className="mb-1">Existing Documents:</p>
+                      <ul className="list-group">
+                        {editingCaregiver.documents.map((doc, index) => (
+                          <li key={index} className="list-group-item d-flex justify-content-between align-items-center">
+                            <a href={doc.url} target="_blank" rel="noopener noreferrer">{doc.name}</a>
+                            <button className="btn btn-sm btn-outline-danger" onClick={() => handleCaregiverDocumentRemove(index)}>
+                              <i className="fas fa-trash"></i>
+                            </button>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  </div>
+                )}
               </div>
+
               <div className="modal-footer">
-                <button
-                  type="button"
-                  className="btn btn-secondary"
-                  onClick={() => {
-                    setShowEditCaregiverModal(false);
-                    setEditingCaregiver(null);
-                  }}
-                >
+                <button type="button" className="btn btn-secondary" onClick={() => { setShowEditCaregiverModal(false); setEditingCaregiver(null); }}>
                   Cancel
                 </button>
                 <button
@@ -1422,8 +1257,9 @@ const AssignCaregiver = () => {
                   className="btn text-white"
                   onClick={handleUpdateCaregiver}
                   style={{ backgroundColor: "#F95918" }}
+                  disabled={updatingCaregiver}
                 >
-                  Update Caregiver
+                  {updatingCaregiver ? (<><span className="spinner-border spinner-border-sm me-2" /> Updating...</>) : "Update Caregiver"}
                 </button>
               </div>
             </div>
@@ -1433,4 +1269,5 @@ const AssignCaregiver = () => {
     </div>
   );
 };
+
 export default AssignCaregiver;

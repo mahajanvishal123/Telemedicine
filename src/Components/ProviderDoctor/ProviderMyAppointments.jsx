@@ -1,153 +1,286 @@
-import React, { useState, useEffect } from 'react';
+import React, { useEffect, useState } from "react";
+import axios from "axios";
+import API_URL from "../../Baseurl/Baseurl";
 
 const ProviderMyAppointments = () => {
-  // Sample appointment data
-  const [appointments, setAppointments] = useState([
-    {
-      id: 1,
-      dateTime: '2023-10-15 09:30 AM',
-      patientName: 'John Smith',
-      status: 'Confirmed',
-      paymentStatus: 'Paid',
-      notes: ''
-    },
-    {
-      id: 2,
-      dateTime: '2023-10-16 11:00 AM',
-      patientName: 'Emily Johnson',
-      status: 'Confirmed',
-      paymentStatus: 'Pending',
-      notes: ''
-    },
-    {
-      id: 3,
-      dateTime: '2023-10-17 02:15 PM',
-      patientName: 'Michael Brown',
-      status: 'Completed',
-      paymentStatus: 'Paid',
-      notes: 'Patient reported improvement in symptoms.'
-    },
-    {
-      id: 4,
-      dateTime: '2023-10-18 10:45 AM',
-      patientName: 'Sarah Williams',
-      status: 'Scheduled',
-      paymentStatus: 'Pending',
-      notes: ''
-    }
-  ]);
+  const BASE_URL = API_URL;
 
+  // API state
+  const [appointments, setAppointments] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [apiError, setApiError] = useState(null);
+
+  // UI state
   const [showNotesModal, setShowNotesModal] = useState(false);
   const [currentAppointment, setCurrentAppointment] = useState(null);
-  const [notesText, setNotesText] = useState('');
-  const [filter, setFilter] = useState('all');
-  const [searchTerm, setSearchTerm] = useState('');
-  const [animateHeader, setAnimateHeader] = useState(false);
+  const [notesText, setNotesText] = useState("");
+  const [savingNotes, setSavingNotes] = useState(false);
+  const [cancellingId, setCancellingId] = useState(null);
+  const [deletingId, setDeletingId] = useState(null); // <-- NEW: delete spinner
+
+  const [filter, setFilter] = useState("all"); // all | scheduled | confirmed | completed
+  const [searchTerm, setSearchTerm] = useState("");
   const [buttonAnimations, setButtonAnimations] = useState({});
 
-  useEffect(() => {
-    // Header animation on component mount
-    setAnimateHeader(true);
+  // ---- utils ----
+  const properCase = (s) =>
+    typeof s === "string" && s.length
+      ? s.charAt(0).toUpperCase() + s.slice(1).toLowerCase()
+      : s;
 
-    // Remove animation after it completes
-    const timer = setTimeout(() => setAnimateHeader(false), 1000);
-    return () => clearTimeout(timer);
+  const formatDate = (iso) => {
+    try {
+      const d = new Date(iso);
+      return d.toLocaleDateString(undefined, {
+        day: "2-digit",
+        month: "short",
+        year: "numeric",
+      });
+    } catch {
+      return iso || "-";
+    }
+  };
+
+  // API -> UI mapping
+  const mapApiAppointment = (a) => {
+    const rawStatus = String(a?.status || "").toLowerCase(); // scheduled
+    const status = properCase(rawStatus) || "Scheduled";
+    const date = formatDate(a?.appointmentDate);
+    const time = (a?.appointmentTime || "").trim();
+    const patientName =
+      (a?.patientId?.name || a?.patient?.name || "").trim() || "Unknown";
+    const reason = (a?.reason || "").trim();
+    const paymentStatus = status === "Completed" ? "Paid" : "Pending";
+
+    return {
+      id: a?._id || Date.now(),
+      dateTime: time ? `${date} ${time}` : date,
+      patientName,
+      status,
+      paymentStatus,
+      notes: reason,
+      _raw: a, // keep original
+    };
+  };
+
+  // GET: list
+  const fetchAppointments = async () => {
+    setLoading(true);
+    setApiError(null);
+    try {
+      const res = await axios.get(`${BASE_URL}/appointment`);
+      const list = Array.isArray(res?.data)
+        ? res.data
+        : Array.isArray(res?.data?.data)
+        ? res.data.data
+        : [];
+      const mapped = list.map(mapApiAppointment);
+      setAppointments(mapped);
+    } catch (err) {
+      console.error(err);
+      setApiError(
+        err?.response?.data?.message ||
+          err?.message ||
+          "Failed to fetch appointments"
+      );
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchAppointments();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Filter appointments based on status and search term
-  const filteredAppointments = appointments.filter(appointment => {
-    const matchesFilter = filter === 'all' || appointment.status.toLowerCase() === filter;
-    const matchesSearch = appointment.patientName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      appointment.dateTime.toLowerCase().includes(searchTerm.toLowerCase());
+  // ---- filtering/search ----
+  const filteredAppointments = appointments.filter((appointment) => {
+    const matchesFilter =
+      filter === "all" ||
+      String(appointment.status).toLowerCase() === filter;
+    const q = searchTerm.toLowerCase();
+    const matchesSearch =
+      appointment.patientName.toLowerCase().includes(q) ||
+      appointment.dateTime.toLowerCase().includes(q) ||
+      (appointment.notes || "").toLowerCase().includes(q);
     return matchesFilter && matchesSearch;
   });
 
-  // Handle starting a call with animation
+  // ---- actions ----
   const handleStartCall = (appointment) => {
-    // Set animation for this button
-    setButtonAnimations({ ...buttonAnimations, [`call-${appointment.id}`]: true });
-
-    // Remove animation after it completes
+    setButtonAnimations((p) => ({ ...p, [`call-${appointment.id}`]: true }));
     setTimeout(() => {
-      setButtonAnimations({ ...buttonAnimations, [`call-${appointment.id}`]: false });
+      setButtonAnimations((p) => ({ ...p, [`call-${appointment.id}`]: false }));
       alert(`Starting call with ${appointment.patientName}`);
     }, 300);
   };
 
-  // Handle canceling an appointment with animation
-  const handleCancel = (appointmentId) => {
-    // Set animation for this button
-    setButtonAnimations({ ...buttonAnimations, [`cancel-${appointmentId}`]: true });
+  // PUT: cancel -> status: 'cancelled'
+  const handleCancel = async (appointmentId) => {
+    const appt = appointments.find((a) => a.id === appointmentId);
+    if (!appt) return;
 
-    // Remove animation after it completes
+    setButtonAnimations((p) => ({ ...p, [`cancel-${appointmentId}`]: true }));
     setTimeout(() => {
-      setButtonAnimations({ ...buttonAnimations, [`cancel-${appointmentId}`]: false });
-      if (window.confirm('Are you sure you want to cancel this appointment?')) {
-        // Animate row removal
-        const updatedAppointments = appointments.filter(apt => apt.id !== appointmentId);
-        setAppointments(updatedAppointments);
-      }
+      setButtonAnimations((p) => ({ ...p, [`cancel-${appointmentId}`]: false }));
     }, 300);
+
+    if (!window.confirm("Are you sure you want to cancel this appointment?"))
+      return;
+
+    try {
+      setCancellingId(appointmentId);
+      const idForApi = appt._raw?._id || appointmentId;
+      const res = await axios.put(
+        `${BASE_URL}/appointment/${idForApi}`,
+        { status: "cancelled" },
+        { headers: { "Content-Type": "application/json" } }
+      );
+
+      const updated =
+        res?.data?.appointment || res?.data?.data || res?.data || null;
+      if (updated) {
+        const mapped = mapApiAppointment(updated);
+        setAppointments((prev) =>
+          prev.map((a) => (a.id === appointmentId ? mapped : a))
+        );
+      } else {
+        // fallback: just flip to Cancelled in UI
+        setAppointments((prev) =>
+          prev.map((a) =>
+            a.id === appointmentId ? { ...a, status: "Cancelled" } : a
+          )
+        );
+      }
+    } catch (err) {
+      console.error(err);
+      alert(
+        err?.response?.data?.message ||
+          err?.message ||
+          "Failed to cancel appointment"
+      );
+    } finally {
+      setCancellingId(null);
+    }
   };
 
-  // Handle opening the notes modal with animation
   const handleAddNotes = (appointment) => {
-    // Set animation for this button
-    setButtonAnimations({ ...buttonAnimations, [`notes-${appointment.id}`]: true });
-
-    // Remove animation after it completes
+    setButtonAnimations((p) => ({ ...p, [`notes-${appointment.id}`]: true }));
     setTimeout(() => {
-      setButtonAnimations({ ...buttonAnimations, [`notes-${appointment.id}`]: false });
+      setButtonAnimations((p) => ({ ...p, [`notes-${appointment.id}`]: false }));
       setCurrentAppointment(appointment);
-      setNotesText(appointment.notes || '');
+      setNotesText(appointment.notes || "");
       setShowNotesModal(true);
     }, 300);
   };
 
-  // Handle saving notes
-  const handleSaveNotes = () => {
-    setAppointments(appointments.map(apt =>
-      apt.id === currentAppointment.id
-        ? { ...apt, notes: notesText }
-        : apt
-    ));
-    setShowNotesModal(false);
+  // PUT: save notes -> { reason: notesText }
+  const handleSaveNotes = async () => {
+    if (!currentAppointment) return;
+    try {
+      setSavingNotes(true);
+      const idForApi =
+        currentAppointment._raw?._id || currentAppointment.id;
+
+      const res = await axios.put(
+        `${BASE_URL}/appointment/${idForApi}`,
+        { reason: notesText },
+        { headers: { "Content-Type": "application/json" } }
+      );
+
+      const updated =
+        res?.data?.appointment || res?.data?.data || res?.data || null;
+      const mapped = updated
+        ? mapApiAppointment(updated)
+        : { ...currentAppointment, notes: notesText };
+
+      setAppointments((prev) =>
+        prev.map((a) => (a.id === currentAppointment.id ? mapped : a))
+      );
+      setShowNotesModal(false);
+    } catch (err) {
+      console.error(err);
+      alert(
+        err?.response?.data?.message ||
+          err?.message ||
+          "Failed to update appointment"
+      );
+    } finally {
+      setSavingNotes(false);
+    }
   };
 
-  // Format status badge
+  // DELETE: permanently delete appointment
+  const handleDelete = async (appointmentId) => {
+    const appt = appointments.find((a) => a.id === appointmentId);
+    if (!appt) return;
+
+    if (
+      !window.confirm(
+        "This will permanently delete the appointment. Continue?"
+      )
+    )
+      return;
+
+    try {
+      setDeletingId(appointmentId);
+      const idForApi = appt._raw?._id || appointmentId;
+
+      // If you need auth, add headers here (e.g., Authorization)
+      const res = await axios.delete(`${BASE_URL}/appointment/${idForApi}`);
+
+      // success: remove from UI (API may return 200/204)
+      if (res?.status === 200 || res?.status === 204 || res?.data) {
+        setAppointments((prev) => prev.filter((a) => a.id !== appointmentId));
+      } else {
+        // fallback if no clear success response structure
+        setAppointments((prev) => prev.filter((a) => a.id !== appointmentId));
+      }
+    } catch (err) {
+      console.error(err);
+      alert(
+        err?.response?.data?.message ||
+          err?.message ||
+          "Failed to delete appointment"
+      );
+    } finally {
+      setDeletingId(null);
+    }
+  };
+
+  // ---- badges ----
   const getStatusBadge = (status) => {
-    let className = 'badge ';
+    let className = "badge ";
     switch (status) {
-      case 'Confirmed':
-        className += 'bg-primary';
+      case "Confirmed":
+        className += "bg-primary";
         break;
-      case 'Completed':
-        className += 'bg-success';
+      case "Completed":
+        className += "bg-success";
         break;
-      case 'Cancelled':
-        className += 'bg-danger';
+      case "Cancelled":
+        className += "bg-danger";
         break;
-      case 'Scheduled':
-        className += 'bg-info text-dark';
+      case "Scheduled":
+        className += "bg-info text-dark";
         break;
       default:
-        className += 'bg-secondary';
+        className += "bg-secondary";
     }
     return <span className={className}>{status}</span>;
   };
 
-  // Format payment status badge
   const getPaymentBadge = (status) => {
-    let className = 'badge ';
+    let className = "badge ";
     switch (status) {
-      case 'Paid':
-        className += 'bg-success';
+      case "Paid":
+        className += "bg-success";
         break;
-      case 'Pending':
-        className += 'bg-warning text-dark';
+      case "Pending":
+        className += "bg-warning text-dark";
         break;
       default:
-        className += 'bg-secondary';
+        className += "bg-secondary";
     }
     return <span className={className}>{status}</span>;
   };
@@ -155,12 +288,37 @@ const ProviderMyAppointments = () => {
   return (
     <div className="">
       <div className="">
-        <h3 className="dashboard-heading">My Appointment</h3>
-        <p className="text-muted mb-4">Manage your patient appointments and consultations</p>
+        <div className="d-flex align-items-center gap-2">
+          <h3 className="dashboard-heading mb-0">My Appointment</h3>
+          <button
+            className="btn btn-sm btn-outline-secondary"
+            onClick={fetchAppointments}
+            title="Refresh"
+          >
+            <i className="fas fa-sync-alt me-1" />
+            Refresh
+          </button>
+        </div>
+        <p className="text-muted mb-4">
+          Manage your patient appointments and consultations
+        </p>
       </div>
+
+      {loading && (
+        <div className="alert alert-info py-2">Loading appointments…</div>
+      )}
+      {apiError && (
+        <div className="alert alert-danger d-flex justify-content-between align-items-center">
+          <span>{apiError}</span>
+          <button className="btn btn-sm btn-light" onClick={fetchAppointments}>
+            Retry
+          </button>
+        </div>
+      )}
+
       <div className="card shadow-lg border-0">
         <div className="card-body">
-          {/* Search and Filter Controls */}
+          {/* Search & Filters */}
           <div className="row mb-4">
             <div className="col-md-6">
               <div className="input-group">
@@ -180,26 +338,34 @@ const ProviderMyAppointments = () => {
             <div className="col-md-6 mt-3">
               <div className="d-flex flex-wrap justify-content-md-end gap-2">
                 <button
-                  className={`btn btn-sm ${filter === 'all' ? 'btn-primary' : 'btn-outline-primary'} animate__animated ${filter === 'all' ? 'animate__pulse' : ''}`}
-                  onClick={() => setFilter('all')}
+                  className={`btn btn-sm ${
+                    filter === "all" ? "btn-primary" : "btn-outline-primary"
+                  }`}
+                  onClick={() => setFilter("all")}
                 >
                   All
                 </button>
                 <button
-                  className={`btn btn-sm ${filter === 'scheduled' ? 'btn-info text-white' : 'btn-outline-info'} animate__animated ${filter === 'scheduled' ? 'animate__pulse' : ''}`}
-                  onClick={() => setFilter('scheduled')}
+                  className={`btn btn-sm ${
+                    filter === "scheduled" ? "btn-info text-white" : "btn-outline-info"
+                  }`}
+                  onClick={() => setFilter("scheduled")}
                 >
                   Scheduled
                 </button>
                 <button
-                  className={`btn btn-sm ${filter === 'confirmed' ? 'btn-primary' : 'btn-outline-primary'} animate__animated ${filter === 'confirmed' ? 'animate__pulse' : ''}`}
-                  onClick={() => setFilter('confirmed')}
+                  className={`btn btn-sm ${
+                    filter === "confirmed" ? "btn-primary" : "btn-outline-primary"
+                  }`}
+                  onClick={() => setFilter("confirmed")}
                 >
                   Confirmed
                 </button>
                 <button
-                  className={`btn btn-sm ${filter === 'completed' ? 'btn-success' : 'btn-outline-success'} animate__animated ${filter === 'completed' ? 'animate__pulse' : ''}`}
-                  onClick={() => setFilter('completed')}
+                  className={`btn btn-sm ${
+                    filter === "completed" ? "btn-success" : "btn-outline-success"
+                  }`}
+                  onClick={() => setFilter("completed")}
                 >
                   Completed
                 </button>
@@ -207,11 +373,11 @@ const ProviderMyAppointments = () => {
             </div>
           </div>
 
-          {/* Appointments Table */}
+          {/* Table */}
           <div className="table-responsive rounded">
             <table className="table table-hover align-middle">
               <thead>
-                <tr style={{ backgroundColor: '#F95918', color: 'white' }}>
+                <tr style={{ backgroundColor: "#F95918", color: "white" }}>
                   <th className="ps-4">
                     <i className="fas fa-clock me-1"></i>
                     Date/Time
@@ -250,16 +416,15 @@ const ProviderMyAppointments = () => {
                     <td>
                       <div className="d-flex align-items-center">
                         <div
-                          className="rounded-circle d-flex align-items-center justify-content-center me-2 animate__animated animate__bounceIn"
+                          className="rounded-circle d-flex align-items-center justify-content-center me-2"
                           style={{
-                            width: '36px',
-                            height: '36px',
-                            backgroundColor: '#F95918',
-                            color: 'white',
-                            animationDelay: `${index * 0.2}s`
+                            width: "36px",
+                            height: "36px",
+                            backgroundColor: "#F95918",
+                            color: "white",
                           }}
                         >
-                          {appointment.patientName.charAt(0)}
+                          {appointment.patientName.charAt(0).toUpperCase()}
                         </div>
                         <span>{appointment.patientName}</span>
                       </div>
@@ -269,25 +434,65 @@ const ProviderMyAppointments = () => {
                     <td className="pe-4">
                       <div className="d-flex justify-content-center gap-2">
                         <button
-                          className={`btn text-white btn-sm ${buttonAnimations[`call-${appointment.id}`] ? 'animate__animated animate__pulse' : ''}`}
-                          style={{ backgroundColor: '#F95918' }}
+                          className={`btn text-white btn-sm ${
+                            buttonAnimations[`call-${appointment.id}`]
+                              ? "animate__animated animate__pulse"
+                              : ""
+                          }`}
+                          style={{ backgroundColor: "#F95918" }}
                           onClick={() => handleStartCall(appointment)}
-                          disabled={appointment.status !== 'Confirmed' && appointment.status !== 'Scheduled'}
+                          disabled={
+                            appointment.status !== "Confirmed" &&
+                            appointment.status !== "Scheduled"
+                          }
                         >
                           <i className="fas fa-video me-1"></i>
                           Start Call
                         </button>
+
+                        {/* Cancel (PUT) */}
                         <button
-                          className={`btn btn-outline-danger btn-sm ${buttonAnimations[`cancel-${appointment.id}`] ? 'animate__animated animate__shakeX' : ''}`}
+                          className={`btn btn-outline-danger btn-sm ${
+                            buttonAnimations[`cancel-${appointment.id}`]
+                              ? "animate__animated animate__shakeX"
+                              : ""
+                          }`}
                           onClick={() => handleCancel(appointment.id)}
+                          disabled={cancellingId === appointment.id}
+                          title="Cancel appointment"
                         >
-                          <i className="fas fa-times"></i>
+                          {cancellingId === appointment.id ? (
+                            <span className="spinner-border spinner-border-sm" />
+                          ) : (
+                            <i className="fas fa-times"></i>
+                          )}
                         </button>
+
+                        {/* Notes (PUT reason) */}
                         <button
-                          className={`btn btn-outline-secondary btn-sm ${buttonAnimations[`notes-${appointment.id}`] ? 'animate__animated animate__rubberBand' : ''}`}
+                          className={`btn btn-outline-secondary btn-sm ${
+                            buttonAnimations[`notes-${appointment.id}`]
+                              ? "animate__animated animate__rubberBand"
+                              : ""
+                          }`}
                           onClick={() => handleAddNotes(appointment)}
+                          title="Edit notes"
                         >
                           <i className="fas fa-edit"></i>
+                        </button>
+
+                        {/* Delete (DELETE) */}
+                        <button
+                          className="btn btn-outline-dark btn-sm"
+                          onClick={() => handleDelete(appointment.id)}
+                          disabled={deletingId === appointment.id}
+                          title="Delete appointment permanently"
+                        >
+                          {deletingId === appointment.id ? (
+                            <span className="spinner-border spinner-border-sm" />
+                          ) : (
+                            <i className="fas fa-trash"></i>
+                          )}
                         </button>
                       </div>
                     </td>
@@ -296,8 +501,8 @@ const ProviderMyAppointments = () => {
               </tbody>
             </table>
 
-            {filteredAppointments.length === 0 && (
-              <div className="text-center py-5 animate__animated animate__fadeIn">
+            {!loading && filteredAppointments.length === 0 && (
+              <div className="text-center py-5">
                 <i className="far fa-calendar-times display-4 text-muted mb-3"></i>
                 <p className="text-muted">No appointments found</p>
               </div>
@@ -307,10 +512,10 @@ const ProviderMyAppointments = () => {
       </div>
 
       {/* Notes Modal */}
-      <div className={`modal fade ${showNotesModal ? 'show d-block' : ''}`} tabIndex="-1">
-        <div className="modal-dialog modal-dialog-centered animate__animated animate__zoomIn">
+      <div className={`modal fade ${showNotesModal ? "show d-block" : ""}`} tabIndex="-1">
+        <div className="modal-dialog modal-dialog-centered">
           <div className="modal-content">
-            <div className="modal-header" >
+            <div className="modal-header">
               <h5 className="modal-title">
                 <i className="fas fa-edit me-2"></i>
                 Consultation Notes
@@ -319,12 +524,19 @@ const ProviderMyAppointments = () => {
                 type="button"
                 className="btn-close"
                 onClick={() => setShowNotesModal(false)}
+                disabled={savingNotes}
               ></button>
             </div>
             <div className="modal-body">
               <div className="mb-3 p-3 bg-light rounded">
-                <p className="mb-1"><strong>Patient:</strong> {currentAppointment?.patientName}</p>
-                <p className="mb-0"><strong>Date/Time:</strong> {currentAppointment?.dateTime}</p>
+                <p className="mb-1">
+                  <strong>Patient:</strong>{" "}
+                  {currentAppointment?.patientName || "-"}
+                </p>
+                <p className="mb-0">
+                  <strong>Date/Time:</strong>{" "}
+                  {currentAppointment?.dateTime || "-"}
+                </p>
               </div>
               <textarea
                 className="form-control"
@@ -333,6 +545,7 @@ const ProviderMyAppointments = () => {
                 onChange={(e) => setNotesText(e.target.value)}
                 placeholder="Enter your notes about this consultation..."
                 autoFocus
+                disabled={savingNotes}
               ></textarea>
             </div>
             <div className="modal-footer">
@@ -340,23 +553,25 @@ const ProviderMyAppointments = () => {
                 type="button"
                 className="btn btn-secondary"
                 onClick={() => setShowNotesModal(false)}
+                disabled={savingNotes}
               >
                 Cancel
               </button>
               <button
                 type="button"
-                className="btn text-white animate__animated animate__pulse animate__infinite"
-                style={{ backgroundColor: '#F95918', animationDuration: '2s' }}
+                className="btn text-white"
+                style={{ backgroundColor: "#F95918" }}
                 onClick={handleSaveNotes}
+                disabled={savingNotes}
               >
-                Save Notes
+                {savingNotes ? "Saving..." : "Save Notes"}
               </button>
             </div>
           </div>
         </div>
       </div>
 
-      {/* Modal Backdrop */}
+      {/* Backdrop */}
       {showNotesModal && <div className="modal-backdrop fade show"></div>}
     </div>
   );
