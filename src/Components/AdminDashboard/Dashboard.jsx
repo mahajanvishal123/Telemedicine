@@ -146,11 +146,7 @@ useEffect(() => {
           <div className="card shadow mb-4">
             <div className="card-header py-3 d-flex justify-content-between align-items-center">
               <h6 className="m-0 font-weight-bold">Recent Sign-ups</h6>
-              <Link to="/admin/user-management">
-                <button className="btn btn-sm" style={{ backgroundColor: '#f95918', color: 'white' }}>
-                  View All
-                </button>
-              </Link>
+            
             </div>
             <div className="card-body">
               <div className="table-responsive">

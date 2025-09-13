@@ -303,7 +303,7 @@ const PatientManagement = () => {
                     </div>
                     <div className="col-md-6">
                       <p><strong>Gender:</strong> {selectedPatient.gender || "-"}</p>
-                      <p><strong>Address:</strong> {selectedPatient.address || "-"}</p>
+                
                       <p><strong>Status:</strong> 
                         <span className={`badge ms-2 ${getStatusClass(selectedPatient.status)}`}>
                           {selectedPatient.status}
@@ -425,19 +425,20 @@ const PatientManagement = () => {
                       </select>
                     </div>
                     <div className="col-md-6 mb-3">
-                      <label className="form-label">Address</label>
-                      <textarea
-                        className="form-control"
-                        rows="2"
-                        value={selectedPatient?.address || ""}
-                        onChange={(e) =>
-                          setSelectedPatient({
-                            ...selectedPatient,
-                            address: e.target.value,
-                          })
-                        }
-                      />
-                    </div>
+  <label className="form-label">Joining Date</label>
+  <input
+    type="date"
+    className="form-control"
+    value={selectedPatient?.createdAt ? selectedPatient.createdAt.split('T')[0] : ""}
+    onChange={(e) =>
+      setSelectedPatient({
+        ...selectedPatient,
+        createdAt: e.target.value, // Format: YYYY-MM-DD
+      })
+    }
+    disabled={actionLoading.edit} // Optional: disable during loading
+  />
+</div>
                   </div>
                 </div>
                 <div className="modal-footer">

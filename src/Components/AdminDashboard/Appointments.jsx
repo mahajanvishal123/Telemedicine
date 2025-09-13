@@ -1,13 +1,20 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import axios from 'axios';
+import Base_Url from '../../Baseurl/Baseurl';
 
 const Appointments = () => {
-  // State for filters
+  // States
+  const [appointments, setAppointments] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  // Filter states
   const [filters, setFilters] = useState({
     date: '',
     status: 'all'
   });
 
-  // State for modals
+  // Modal states
   const [showDetailModal, setShowDetailModal] = useState(false);
   const [showRescheduleModal, setShowRescheduleModal] = useState(false);
   const [showCancelModal, setShowCancelModal] = useState(false);
@@ -15,113 +22,76 @@ const Appointments = () => {
   const [rescheduleDate, setRescheduleDate] = useState('');
   const [rescheduleTime, setRescheduleTime] = useState('');
 
-  // Sample appointments data
-  const [appointments, setAppointments] = useState([
-    {
-      id: 1,
-      patientName: 'John Doe',
-      patientEmail: 'john.doe@example.com',
-      patientPhone: '555-1234',
-      patientAge: 45,
-      doctorName: 'Dr. Sarah Wilson',
-      doctorSpecialty: 'Cardiology',
-      date: '2023-11-15',
-      time: '10:00 AM',
-      status: 'confirmed',
-      type: 'Follow-up',
-      reason: 'Routine checkup',
-      notes: 'Patient has history of hypertension'
-    },
-    {
-      id: 2,
-      patientName: 'Jane Smith',
-      patientEmail: 'jane.smith@example.com',
-      patientPhone: '555-5678',
-      patientAge: 32,
-      doctorName: 'Dr. James Miller',
-      doctorSpecialty: 'Orthopedics',
-      date: '2023-11-15',
-      time: '2:30 PM',
-      status: 'pending',
-      type: 'Consultation',
-      reason: 'Back pain',
-      notes: 'New patient, referred by Dr. Adams'
-    },
-    {
-      id: 3,
-      patientName: 'Robert Brown',
-      patientEmail: 'robert.brown@example.com',
-      patientPhone: '555-9012',
-      patientAge: 28,
-      doctorName: 'Dr. Lisa Taylor',
-      doctorSpecialty: 'Dermatology',
-      date: '2023-11-16',
-      time: '9:15 AM',
-      status: 'confirmed',
-      type: 'New Patient',
-      reason: 'Skin examination',
-      notes: 'Concern about mole on left arm'
-    },
-    {
-      id: 4,
-      patientName: 'Emily Johnson',
-      patientEmail: 'emily.johnson@example.com',
-      patientPhone: '555-3456',
-      patientAge: 52,
-      doctorName: 'Dr. David Clark',
-      doctorSpecialty: 'Surgery',
-      date: '2023-11-16',
-      time: '4:00 PM',
-      status: 'cancelled',
-      type: 'Follow-up',
-      reason: 'Post-surgery check',
-      notes: 'Appointment cancelled by patient'
-    },
-    {
-      id: 5,
-      patientName: 'Michael Davis',
-      patientEmail: 'michael.davis@example.com',
-      patientPhone: '555-7890',
-      patientAge: 38,
-      doctorName: 'Dr. Sarah Wilson',
-      doctorSpecialty: 'Cardiology',
-      date: '2023-11-17',
-      time: '11:45 AM',
-      status: 'completed',
-      type: 'Consultation',
-      reason: 'Medication review',
-      notes: 'Patient responding well to new medication'
-    },
-    {
-      id: 6,
-      patientName: 'Sarah Wilson',
-      patientEmail: 'sarah.wilson@example.com',
-      patientPhone: '555-2345',
-      patientAge: 29,
-      doctorName: 'Dr. James Miller',
-      doctorSpecialty: 'Orthopedics',
-      date: '2023-11-17',
-      time: '3:30 PM',
-      status: 'confirmed',
-      type: 'Vaccination',
-      reason: 'Flu shot',
-      notes: 'Annual flu vaccination'
+  // Fetch appointments on mount
+  useEffect(() => {
+    const fetchAppointments = async () => {
+      try {
+        const response = await axios.get(`${Base_Url}/appointment/`);
+        if (!Array.isArray(response.data)) {
+          throw new Error("Invalid response format");
+        }
+
+        const transformedAppointments = response.data.map(app => ({
+          id: app._id,
+          patientName: app.patientId?.name || 'Unknown',
+          patientEmail: app.patientId?.email || '',
+          patientPhone: '', // Not available — could be fetched from /patients later
+          patientAge: '',  // Not available — could be fetched from /patients later
+          doctorName: app.doctorId?.name || 'Not Assigned',
+          doctorSpecialty: app.doctorId?.specialty || '',
+          date: new Date(app.appointmentDate).toLocaleDateString(),
+          time: app.appointmentTime,
+          status: mapStatus(app.status),
+          type: determineType(app.reason),
+          reason: app.reason,
+          notes: app.reason, // or use a separate field if exists
+          duration: app.duration,
+          slots: app.slots,
+          createdAt: new Date(app.createdAt).toLocaleString(),
+          updatedAt: new Date(app.updatedAt).toLocaleString()
+        }));
+
+        setAppointments(transformedAppointments);
+      } catch (err) {
+        console.error("Error fetching appointments:", err);
+        setError(err.response?.data?.message || "Failed to load appointments");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchAppointments();
+  }, []);
+
+  // Map API status to UI status
+  const mapStatus = (status) => {
+    switch (status.toLowerCase()) {
+      case 'scheduled': return 'confirmed';
+      case 'cancelled': return 'cancelled';
+      case 'completed': return 'completed';
+      default: return status;
     }
-  ]);
+  };
+
+  // Determine appointment type based on reason
+  const determineType = (reason) => {
+    if (reason.toLowerCase().includes('checkup') || reason.toLowerCase().includes('health')) return 'Consultation';
+    if (reason.toLowerCase().includes('follow-up')) return 'Follow-up';
+    if (reason.toLowerCase().includes('vaccination')) return 'Vaccination';
+    if (reason.toLowerCase().includes('new')) return 'New Patient';
+    return 'Other';
+  };
 
   // Handle filter changes
   const handleFilterChange = (e) => {
     const { name, value } = e.target;
-    setFilters(prev => ({
-      ...prev,
-      [name]: value
-    }));
+    setFilters(prev => ({ ...prev, [name]: value }));
   };
 
-  // Filter appointments based on selected filters
-  const filteredAppointments = appointments.filter(appointment => {
-    const matchesDate = filters.date ? appointment.date === filters.date : true;
-    const matchesStatus = filters.status === 'all' ? true : appointment.status === filters.status;
+  // Filter appointments
+  const filteredAppointments = appointments.filter(app => {
+    const matchesDate = filters.date ? app.date === filters.date : true;
+    const matchesStatus = filters.status === 'all' ? true : app.status === filters.status;
     return matchesDate && matchesStatus;
   });
 
@@ -144,16 +114,11 @@ const Appointments = () => {
   // Get type badge class
   const getTypeClass = (type) => {
     switch (type) {
-      case 'New Patient':
-        return 'bg-info';
-      case 'Follow-up':
-        return 'bg-primary';
-      case 'Consultation':
-        return 'bg-secondary';
-      case 'Vaccination':
-        return 'bg-success';
-      default:
-        return 'bg-light text-dark';
+      case 'New Patient': return 'bg-info';
+      case 'Follow-up': return 'bg-primary';
+      case 'Consultation': return 'bg-secondary';
+      case 'Vaccination': return 'bg-success';
+      default: return 'bg-light text-dark';
     }
   };
 
@@ -177,15 +142,15 @@ const Appointments = () => {
     setShowCancelModal(true);
   };
 
-  // Handle rescheduling an appointment
+  // Handle rescheduling
   const handleReschedule = () => {
     if (!rescheduleDate || !rescheduleTime) {
       alert('Please select both date and time');
       return;
     }
 
-    setAppointments(prevAppointments =>
-      prevAppointments.map(app =>
+    setAppointments(prev =>
+      prev.map(app =>
         app.id === selectedAppointment.id
           ? { ...app, date: rescheduleDate, time: rescheduleTime }
           : app
@@ -196,10 +161,10 @@ const Appointments = () => {
     alert('Appointment rescheduled successfully!');
   };
 
-  // Handle canceling an appointment
+  // Handle canceling
   const handleCancel = () => {
-    setAppointments(prevAppointments =>
-      prevAppointments.map(app =>
+    setAppointments(prev =>
+      prev.map(app =>
         app.id === selectedAppointment.id
           ? { ...app, status: 'cancelled' }
           : app
@@ -218,10 +183,22 @@ const Appointments = () => {
     setSelectedAppointment(null);
   };
 
+  // Reset filters
+  const resetFilters = () => {
+    setFilters({ date: '', status: 'all' });
+  };
+
+  // Stats
+  const totalAppointments = appointments.length;
+  const confirmed = appointments.filter(a => a.status === 'confirmed').length;
+  const pending = appointments.filter(a => a.status === 'pending').length;
+  const completed = appointments.filter(a => a.status === 'completed').length;
+  const cancelled = appointments.filter(a => a.status === 'cancelled').length;
+
   return (
-    <div className="">
+    <div className="container-fluid">
       {/* Page Header */}
-      <div className="d-flex justify-content-between align-items-center">
+      <div className="d-flex justify-content-between align-items-center mb-4">
         <h3 className="dashboard-heading">Appointments</h3>
       </div>
 
@@ -235,7 +212,7 @@ const Appointments = () => {
                 View and manage all appointments on the platform. Use the filters below to find specific appointments by date or status.
               </p>
               <p className="card-text mb-0">
-                <strong>Total appointments:</strong> {appointments.length} | <strong>Filtered:</strong> {filteredAppointments.length}
+                <strong>Total appointments:</strong> {totalAppointments} | <strong>Filtered:</strong> {filteredAppointments.length}
               </p>
             </div>
           </div>
@@ -283,11 +260,11 @@ const Appointments = () => {
                   </div>
                 </div>
               </div>
-              <div className="mt-3">
+              <div className="mt-3 d-flex justify-content-between align-items-center">
                 <button
                   className="btn me-2"
                   style={{ backgroundColor: '#F95918', color: 'white' }}
-                  onClick={() => setFilters({ date: '', status: 'all' })}
+                  onClick={resetFilters}
                 >
                   <i className="fas fa-sync me-1"></i> Reset Filters
                 </button>
@@ -310,7 +287,17 @@ const Appointments = () => {
               <span className="badge bg-light text-dark">{filteredAppointments.length} appointments</span>
             </div>
             <div className="card-body">
-              {filteredAppointments.length === 0 ? (
+              {loading ? (
+                <div className="d-flex justify-content-center align-items-center" style={{ height: '200px' }}>
+                  <div className="spinner-border text-primary" role="status">
+                    <span className="visually-hidden">Loading...</span>
+                  </div>
+                </div>
+              ) : error ? (
+                <div className="alert alert-danger text-center">
+                  {error}
+                </div>
+              ) : filteredAppointments.length === 0 ? (
                 <div className="text-center py-4">
                   <i className="fas fa-calendar-times fa-3x text-muted mb-3"></i>
                   <h5>No appointments found</h5>
@@ -332,26 +319,26 @@ const Appointments = () => {
                       </tr>
                     </thead>
                     <tbody>
-                      {filteredAppointments.map(appointment => {
-                        const statusInfo = getStatusInfo(appointment.status);
+                      {filteredAppointments.map(app => {
+                        const statusInfo = getStatusInfo(app.status);
                         return (
-                          <tr key={appointment.id}>
-                            <td>#{appointment.id}</td>
+                          <tr key={app.id}>
+                            <td>#{app.id}</td>
                             <td>
-                              <strong>{appointment.patientName}</strong>
+                              <strong>{app.patientName}</strong>
                             </td>
-                            <td>{appointment.doctorName}</td>
+                            <td>{app.doctorName}</td>
                             <td>
-                              <div>{appointment.date}</div>
-                              <small className="text-muted">{appointment.time}</small>
+                              <div>{app.date}</div>
+                              <small className="text-muted">{app.time}</small>
                             </td>
                             <td>
-                              <span className={`badge ${getTypeClass(appointment.type)}`}>
-                                {appointment.type}
+                              <span className={`badge ${getTypeClass(app.type)}`}>
+                                {app.type}
                               </span>
                             </td>
                             <td>
-                              <small>{appointment.reason}</small>
+                              <small>{app.reason}</small>
                             </td>
                             <td>
                               <span className={`badge ${statusInfo.class}`}>
@@ -363,23 +350,23 @@ const Appointments = () => {
                                 <button
                                   className="btn btn-sm btn-outline-primary"
                                   title="View Details"
-                                  onClick={() => openDetailModal(appointment)}
+                                  onClick={() => openDetailModal(app)}
                                 >
                                   <i className="fas fa-eye"></i>
                                 </button>
                                 <button
                                   className="btn btn-sm btn-outline-secondary"
                                   title="Reschedule"
-                                  onClick={() => openRescheduleModal(appointment)}
-                                  disabled={appointment.status === 'cancelled' || appointment.status === 'completed'}
+                                  onClick={() => openRescheduleModal(app)}
+                                  disabled={app.status === 'cancelled' || app.status === 'completed'}
                                 >
                                   <i className="fas fa-calendar-alt"></i>
                                 </button>
                                 <button
                                   className="btn btn-sm btn-outline-danger"
                                   title="Cancel Appointment"
-                                  onClick={() => openCancelModal(appointment)}
-                                  disabled={appointment.status === 'cancelled' || appointment.status === 'completed'}
+                                  onClick={() => openCancelModal(app)}
+                                  disabled={app.status === 'cancelled' || app.status === 'completed'}
                                 >
                                   <i className="fas fa-times"></i>
                                 </button>
@@ -402,7 +389,7 @@ const Appointments = () => {
         <div className="col-12 col-sm-6 col-md-3 mb-3">
           <div
             style={{
-              backgroundColor: "#e3f2fd", // light blue
+              backgroundColor: "#e3f2fd",
               color: "#0d47a1",
               textAlign: "center",
               borderRadius: "12px",
@@ -412,7 +399,7 @@ const Appointments = () => {
             }}
           >
             <h6 style={{ fontWeight: "600" }}>Total</h6>
-            <h4 style={{ fontWeight: "700" }}>{appointments.length}</h4>
+            <h4 style={{ fontWeight: "700" }}>{totalAppointments}</h4>
             <small>Appointments</small>
           </div>
         </div>
@@ -420,7 +407,7 @@ const Appointments = () => {
         <div className="col-12 col-sm-6 col-md-3 mb-3">
           <div
             style={{
-              backgroundColor: "#e8f5e9", // light green
+              backgroundColor: "#e8f5e9",
               color: "#1b5e20",
               textAlign: "center",
               borderRadius: "12px",
@@ -430,9 +417,7 @@ const Appointments = () => {
             }}
           >
             <h6 style={{ fontWeight: "600" }}>Confirmed</h6>
-            <h4 style={{ fontWeight: "700" }}>
-              {appointments.filter((a) => a.status === "confirmed").length}
-            </h4>
+            <h4 style={{ fontWeight: "700" }}>{confirmed}</h4>
             <small>Appointments</small>
           </div>
         </div>
@@ -440,7 +425,7 @@ const Appointments = () => {
         <div className="col-12 col-sm-6 col-md-3 mb-3">
           <div
             style={{
-              backgroundColor: "#fffde7", // light yellow
+              backgroundColor: "#fffde7",
               color: "#f57f17",
               textAlign: "center",
               borderRadius: "12px",
@@ -450,9 +435,7 @@ const Appointments = () => {
             }}
           >
             <h6 style={{ fontWeight: "600" }}>Pending</h6>
-            <h4 style={{ fontWeight: "700" }}>
-              {appointments.filter((a) => a.status === "pending").length}
-            </h4>
+            <h4 style={{ fontWeight: "700" }}>{pending}</h4>
             <small>Appointments</small>
           </div>
         </div>
@@ -460,7 +443,7 @@ const Appointments = () => {
         <div className="col-12 col-sm-6 col-md-3 mb-3">
           <div
             style={{
-              backgroundColor: "#ffebee", // light red/pink
+              backgroundColor: "#ffebee",
               color: "#b71c1c",
               textAlign: "center",
               borderRadius: "12px",
@@ -470,21 +453,18 @@ const Appointments = () => {
             }}
           >
             <h6 style={{ fontWeight: "600" }}>Cancelled</h6>
-            <h4 style={{ fontWeight: "700" }}>
-              {appointments.filter((a) => a.status === "cancelled").length}
-            </h4>
+            <h4 style={{ fontWeight: "700" }}>{cancelled}</h4>
             <small>Appointments</small>
           </div>
         </div>
       </div>
-
 
       {/* Detail Modal */}
       {showDetailModal && selectedAppointment && (
         <div className="modal fade show d-block" tabIndex="-1" style={{ backgroundColor: 'rgba(0,0,0,0.5)' }}>
           <div className="modal-dialog modal-lg">
             <div className="modal-content">
-              <div className="modal-header" >
+              <div className="modal-header">
                 <h5 className="modal-title">Appointment Details</h5>
                 <button type="button" className="btn-close" onClick={closeModals}></button>
               </div>
@@ -494,13 +474,13 @@ const Appointments = () => {
                     <h6 className="text-muted">Patient Information</h6>
                     <p><strong>Name:</strong> {selectedAppointment.patientName}</p>
                     <p><strong>Email:</strong> {selectedAppointment.patientEmail}</p>
-                    <p><strong>Phone:</strong> {selectedAppointment.patientPhone}</p>
-                    <p><strong>Age:</strong> {selectedAppointment.patientAge}</p>
+                    <p><strong>Phone:</strong> {selectedAppointment.patientPhone || 'N/A'}</p>
+                    <p><strong>Age:</strong> {selectedAppointment.patientAge || 'N/A'}</p>
                   </div>
                   <div className="col-md-6">
                     <h6 className="text-muted">Doctor Information</h6>
                     <p><strong>Name:</strong> {selectedAppointment.doctorName}</p>
-                    <p><strong>Specialty:</strong> {selectedAppointment.doctorSpecialty}</p>
+                    <p><strong>Specialty:</strong> {selectedAppointment.doctorSpecialty || 'N/A'}</p>
                   </div>
                 </div>
                 <hr />
@@ -513,11 +493,14 @@ const Appointments = () => {
                     <p><strong>Status:</strong> <span className={`badge ${getStatusInfo(selectedAppointment.status).class}`}>
                       {getStatusInfo(selectedAppointment.status).text}
                     </span></p>
+                    <p><strong>Duration:</strong> {selectedAppointment.duration} min</p>
+                    <p><strong>Slots:</strong> {selectedAppointment.slots}</p>
                   </div>
                   <div className="col-md-6">
                     <h6 className="text-muted">Reason & Notes</h6>
                     <p><strong>Reason:</strong> {selectedAppointment.reason}</p>
-                    <p><strong>Notes:</strong> {selectedAppointment.notes}</p>
+                    <p><strong>Created At:</strong> {selectedAppointment.createdAt}</p>
+                    <p><strong>Updated At:</strong> {selectedAppointment.updatedAt}</p>
                   </div>
                 </div>
               </div>
@@ -599,7 +582,7 @@ const Appointments = () => {
                 <button type="button" className="btn btn-secondary" onClick={closeModals}>No, Keep Appointment</button>
                 <button
                   type="button"
-                  className="btn btn"
+                  className="btn"
                   onClick={handleCancel}
                   style={{ backgroundColor: '#F95918', color: 'white' }}
                 >
