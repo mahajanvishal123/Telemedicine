@@ -160,46 +160,56 @@ const Caregiver = () => {
   };
 
   // ===== GET /caregiver and seed Assignments table
-  const fetchCaregivers = async () => {
-    setLoadingCaregivers(true);
-    setCaregiversError(null);
-    try {
-      const res = await axios.get(`${BASE_URL}/caregiver`);
-      const raw = Array.isArray(res?.data)
-        ? res.data
-        : (Array.isArray(res?.data?.data) ? res.data.data : []);
-      const mapped = raw.map(mapApiCaregiver);
-      setCaregivers(mapped);
+const fetchCaregivers = async () => {
+  setLoadingCaregivers(true); // Loading UI show karo
+  setCaregiversError(null);   // Purani errors clear karo
 
-      // seed into assignments table once
-      setAssignments(prev => {
-        if (prev.length > 0) return prev;
-        const seeded = mapped.map((c, idx) => ({
-          id: c.id || (Date.now() + idx),
-          patientId: c.patientId || "",
-          patientName: getPatientNameFromApiId(c.patientId),
-          caregiverId: c.id,
-          caregiverName: c.name,
-          dateAssigned: c.joinDate || new Date().toISOString().slice(0, 10),
-          status: c.status || "Active",
-        }));
-        return seeded;
-      });
-    } catch (err) {
-      console.error("Failed to fetch caregivers:", err);
-      setCaregiversError(
-        err?.response?.data?.message ||
-        err?.message ||
-        "Failed to fetch caregivers"
-      );
-    } finally {
-      setLoadingCaregivers(false);
-    }
-  };
+  try {
+    // ===== YAHAN API CALL HOTI HAI =====
+    const res = await axios.get(`${BASE_URL}/caregiver`);
+
+    // Response ko process karo
+    const raw = Array.isArray(res?.data)
+      ? res.data
+      : (Array.isArray(res?.data?.data) ? res.data.data : []);
+
+    // API ke data ko apne local format mein convert karo
+    const mapped = raw.map(mapApiCaregiver);
+
+    // State mein daal do
+    setCaregivers(mapped);
+
+    // Assignment table ke liye bhi data taiyar karo
+    setAssignments(prev => {
+      if (prev.length > 0) return prev;
+      const seeded = mapped.map((c, idx) => ({
+        id: c.id || (Date.now() + idx),
+        patientId: c.patientId || "",
+        patientName: getPatientNameFromApiId(c.patientId),
+        caregiverId: c.id,
+        caregiverName: c.name,
+        dateAssigned: c.joinDate || new Date().toISOString().slice(0, 10),
+        status: c.status || "Active",
+      }));
+      return seeded;
+    });
+  } catch (err) {
+    // Agar error aaye toh usko handle karo
+    console.error("Failed to fetch caregivers:", err);
+    setCaregiversError(
+      err?.response?.data?.message ||
+      err?.message ||
+      "Failed to fetch caregivers"
+    );
+  } finally {
+    // Loading hamesha band karo, chahe success ho ya error
+    setLoadingCaregivers(false);
+  }
+};
 
   useEffect(() => {
     fetchCaregivers();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    
   }, []);
 
   // ===== Assignment actions (local)
@@ -517,100 +527,6 @@ const Caregiver = () => {
     }
   };
 
-  // ===== POST /caregiver (Add & Assign)
-  const handleAddCaregiverAndAssign = async () => {
-    if (!newCaregiver.name || !newCaregiver.email || !newCaregiver.mobile || !newCaregiver.gender) {
-      alert("Please fill all required caregiver fields (Name, Email, Mobile, Gender)");
-      return;
-    }
-    if (!newCaregiver.password) {
-      alert("Please set a password for the caregiver");
-      return;
-    }
-    if (newCaregiver.password !== newCaregiver.confirmPassword) {
-      alert("Passwords do not match");
-      return;
-    }
-    if (!selectedPatientForNewCaregiver || !assignmentDateForNewCaregiver) {
-      alert("Please select a patient and assignment date");
-      return;
-    }
-
-    const fd = new FormData();
-    fd.append("name", newCaregiver.name.trim());
-    fd.append("namecccccccc", newCaregiver.name.trim()); // (if backend expects)
-    fd.append("email", newCaregiver.email.trim());
-    fd.append("password", newCaregiver.password);
-    fd.append("gender", newCaregiver.gender);
-    fd.append("role", "caregiver");
-    if (newCaregiver.profilePictureFile) fd.append("profile", newCaregiver.profilePictureFile);
-    if (newCaregiver.dateOfBirth) fd.append("dob", newCaregiver.dateOfBirth);
-    if (newCaregiver.bloodGroup) fd.append("bloodGroup", newCaregiver.bloodGroup);
-    if (newCaregiver.yearsExperience) fd.append("experience", `${newCaregiver.yearsExperience} yrs`);
-    if (newCaregiver.address) fd.append("address", newCaregiver.address);
-    if (newCaregiver.mobile) fd.append("mobile", newCaregiver.mobile);
-    if (newCaregiver.skills) fd.append("skills", newCaregiver.skills);
-    if (newCaregiver.documentFiles?.length) newCaregiver.documentFiles.forEach((file) => fd.append("certificate", file));
-    fd.append("patientId", String(selectedPatientForNewCaregiver));
-    fd.append("dateAssigned", assignmentDateForNewCaregiver);
-
-    try {
-      setSubmitting(true);
-      const url = `${BASE_URL}/caregiver`;
-      const res = await axios.post(url, fd, { headers: { "Content-Type": "multipart/form-data" } });
-
-      const apiData = res?.data?.data || res?.data || {};
-      const createdCaregiver = apiData.caregiver || apiData.createdCaregiver || apiData;
-      const newId = createdCaregiver?._id ??
-        (Math.max(0, ...caregivers.map((c) => Number(c.id) || 0)) + 1);
-
-      // add caregiver in list
-      const caregiverForState = {
-        id: newId,
-        name: createdCaregiver?.name?.trim() || newCaregiver.name,
-        email: createdCaregiver?.email?.trim() || newCaregiver.email,
-        mobile: createdCaregiver?.mobile?.trim?.() || newCaregiver.mobile || "",
-        address: createdCaregiver?.address?.trim?.() || newCaregiver.address || "",
-        certification: createdCaregiver?.certification || newCaregiver.certification || "",
-        yearsExperience: createdCaregiver?.yearsExperience ?? Number(newCaregiver.yearsExperience || 0),
-        skills: createdCaregiver?.skills?.trim?.() || newCaregiver.skills || "",
-        profilePicture: createdCaregiver?.profile || newCaregiver.profilePicture || "https://via.placeholder.com/80",
-        dateOfBirth: createdCaregiver?.dob || newCaregiver.dateOfBirth || "",
-        gender: createdCaregiver?.gender || newCaregiver.gender || "",
-        bloodGroup: createdCaregiver?.bloodGroup || newCaregiver.bloodGroup || "",
-        password: "********",
-        status: createdCaregiver?.status || "Active",
-        joinDate: createdCaregiver?.createdAt?.slice?.(0, 10) || new Date().toISOString().split("T")[0],
-        documents: createdCaregiver?.documents || newCaregiver.documents.map((d) => ({ name: d.name, url: d.url })),
-        patientId: createdCaregiver?.patientId || String(selectedPatientForNewCaregiver),
-      };
-
-      setCaregivers((prev) => [...prev, caregiverForState]);
-
-      // show in first (assignments) table
-      const patient = getPatientDetails(selectedPatientForNewCaregiver);
-      const assignmentForState = {
-        id: Date.now(),
-        patientId: patient?.id || Number(selectedPatientForNewCaregiver),
-        patientName: patient?.name || getPatientNameFromApiId(selectedPatientForNewCaregiver),
-        caregiverId: newId,
-        caregiverName: caregiverForState.name,
-        dateAssigned: assignmentDateForNewCaregiver,
-        status: "Active",
-      };
-      setAssignments((prev) => [...prev, assignmentForState]);
-
-      alert("Caregiver created and assigned successfully!");
-      setShowAddCaregiverModal(false);
-      resetNewCaregiverForm();
-    } catch (err) {
-      console.error(err);
-      const msg = err?.response?.data?.message || err?.message || "Failed to create caregiver";
-      alert(msg);
-    } finally {
-      setSubmitting(false);
-    }
-  };
 
   return (
     <div className="">
@@ -629,7 +545,7 @@ const Caregiver = () => {
         </div>
       )}
 
-      {/* ======= SAME FIRST TABLE (Assignments) — yahi API data bhi show karegi ======= */}
+      
       <div className="row">
         <div className="col-12">
           <div className="card shadow">
@@ -638,7 +554,7 @@ const Caregiver = () => {
                 <table className="table table-hover">
                   <thead>
                     <tr>
-                      <th>Assignment ID</th>
+                      <th>ID</th>
                       <th>Patient</th>
                       <th>Caregiver</th>
                       <th>Photo</th>
@@ -653,12 +569,12 @@ const Caregiver = () => {
                         <td colSpan={7} className="text-center text-muted">No assignments yet.</td>
                       </tr>
                     ) : (
-                      assignments.map((assignment) => {
+                      assignments.map((assignment,index) => {
                         const caregiver = getCaregiverDetails(assignment.caregiverId);
                         const isDeletingThis = String(deletingCaregiverId) === String(assignment.caregiverId);
                         return (
                           <tr key={assignment.id}>
-                            <td>#{assignment.id}</td>
+                            <td>{index+1}</td>
                             <td>{assignment.patientName || getPatientNameFromApiId(assignment.patientId)}</td>
                             <td>{assignment.caregiverName}</td>
                             <td>
