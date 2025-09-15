@@ -14,6 +14,7 @@ const DoctorManagement = () => {
   const [selectedDoctorForView, setSelectedDoctorForView] = useState(null);
   const [formData, setFormData] = useState({});
   const [selectedDoctorIndex, setSelectedDoctorIndex] = useState(null);
+
   // 🔹 GET API Call
   useEffect(() => {
     const fetchDoctors = async () => {
@@ -24,7 +25,7 @@ const DoctorManagement = () => {
       } catch (error) {
         console.error("Error fetching doctors:", error);
         setError("Failed to fetch doctors");
-        Swal.fire({
+        window.Swal.fire({
           title: "Error!",
           text: "Failed to fetch doctors",
           icon: "error",
@@ -55,7 +56,7 @@ const DoctorManagement = () => {
             d._id === selectedUser._id ? { ...d, ...formData } : d
           )
         );
-        Swal.fire({
+        window.Swal.fire({
           title: "Success!",
           text: "Doctor updated successfully!",
           icon: "success",
@@ -65,7 +66,7 @@ const DoctorManagement = () => {
         });
       } catch (error) {
         console.error("Error updating doctor:", error);
-        Swal.fire({
+        window.Swal.fire({
           title: "Error!",
           text: "Failed to update doctor",
           icon: "error",
@@ -79,12 +80,12 @@ const DoctorManagement = () => {
 
   // 🟠 Delete Doctor (DELETE API)
   const handleDelete = async (doctorId) => {
-    const result = await Swal.fire({
+    const result = await window.Swal.fire({
       title: "Are you sure?",
       text: "You won't be able to revert this!",
       icon: "warning",
       showCancelButton: true,
-      confirmButtonColor: "#F95918", // 👈 Your brand color!
+      confirmButtonColor: "#F95918",
       cancelButtonColor: "#6c757d",
       confirmButtonText: "Yes, delete it!",
       cancelButtonText: "Cancel",
@@ -94,7 +95,7 @@ const DoctorManagement = () => {
       try {
         await axios.delete(`${API_URL}/doctor/${doctorId}`);
         setDoctors(doctors.filter((d) => d._id !== doctorId));
-        Swal.fire({
+        window.Swal.fire({
           title: "Deleted!",
           text: "Doctor deleted successfully",
           icon: "success",
@@ -104,7 +105,7 @@ const DoctorManagement = () => {
         });
       } catch (error) {
         console.error("Error deleting doctor:", error);
-        Swal.fire({
+        window.Swal.fire({
           title: "Error!",
           text: "Failed to delete doctor",
           icon: "error",
@@ -114,7 +115,7 @@ const DoctorManagement = () => {
     }
   };
 
-  const handleView = (doctor,index) => {
+  const handleView = (doctor, index) => {
     setSelectedDoctorForView(doctor);
     setShowViewModal(true);
     setSelectedDoctorIndex(index);
@@ -143,7 +144,7 @@ const DoctorManagement = () => {
   return (
     <div className="">
       {/* Header */}
-      <div className="d-flex justify-content-between align-items-center mb-3 mt-5">
+      <div className="d-flex justify-content-between align-items-center mb-3 mt-2">
         <h3>Doctor Management</h3>
       </div>
 
@@ -157,7 +158,7 @@ const DoctorManagement = () => {
           <div className="card-body">
             <div className="table-responsive">
               <table className="table table-hover">
-                <thead>
+              <thead className="text-center">
                   <tr>
                     <th>User ID</th>
                     <th>Photo</th>
@@ -196,7 +197,6 @@ const DoctorManagement = () => {
                       </td>
                       <td>{d.name}</td>
                       <td>{d.email}</td>
-
                       <td>{d.gender}</td>
                       <td>{d.specialty}</td>
                       <td>{d.licenseNo}</td>
@@ -206,25 +206,27 @@ const DoctorManagement = () => {
                       <td>{d.openingTime}</td>
                       <td>{d.closingTime}</td>
                       <td>
-  <span
-    className={`badge px-3 py-2 rounded-pill fw-medium ${
-      getDisplayStatus(d.isVerify) === "Active" ? "bg-success" : "bg-danger"
-    }`}
-    style={{
-      fontSize: "0.85rem",
-      cursor: "default",
-      border: "none",
-      transition: "all 0.2s"
-    }}
-  >
-    {getDisplayStatus(d.isVerify)}
-  </span>
-</td>
+                        <span
+                          className={`badge px-3 py-2 rounded-pill fw-medium ${
+                            getDisplayStatus(d.isVerify) === "Active"
+                              ? "bg-success"
+                              : "bg-secondary text-white"
+                          }`}
+                          style={{
+                            fontSize: "0.85rem",
+                            cursor: "default",
+                            border: "none",
+                            transition: "all 0.2s",
+                          }}
+                        >
+                          {getDisplayStatus(d.isVerify)}
+                        </span>
+                      </td>
                       <td>
-                        <div className="d-flex ">
+                        <div className="d-flex">
                           <button
                             className="btn btn-sm"
-                            onClick={() => handleView(d)}
+                            onClick={() => handleView(d, index)}
                             style={{ color: "#F95918" }}
                           >
                             <i className="fas fa-eye"></i>
@@ -237,7 +239,7 @@ const DoctorManagement = () => {
                             <i className="fas fa-edit"></i>
                           </button>
                           <button
-                            className="btn btn-sm "
+                            className="btn btn-sm"
                             onClick={() => handleDelete(d._id)}
                             style={{ color: "#F95918" }}
                           >
@@ -285,17 +287,13 @@ const DoctorManagement = () => {
                   onChange={handleInputChange}
                   placeholder="Full Name"
                 />
-
-
-<input
+                <input
                   className="form-control mb-2"
-                  name="Email"
+                  name="email"
                   value={formData.email || ""}
                   onChange={handleInputChange}
                   placeholder="Email"
                 />
-
-
                 <input
                   className="form-control mb-2"
                   name="gender"
@@ -312,28 +310,28 @@ const DoctorManagement = () => {
                 />
                 <input
                   className="form-control mb-2"
-                  name="medicalLicence"
+                  name="licenseNo"
                   value={formData.licenseNo || ""}
                   onChange={handleInputChange}
                   placeholder="Medical Licence"
                 />
                 <input
                   className="form-control mb-2"
-                  name="yearsExperience"
+                  name="experience"
                   value={formData.experience || ""}
                   onChange={handleInputChange}
                   placeholder="Years of Experience"
                 />
                 <input
                   className="form-control mb-2"
-                  name="consultationFee"
-                  value={formData.fee|| ""}
+                  name="fee"
+                  value={formData.fee || ""}
                   onChange={handleInputChange}
                   placeholder="Consultation Fee"
                 />
                 <input
                   className="form-control mb-2"
-                  name="availableDays"
+                  name="availableDay"
                   value={formData.availableDay || ""}
                   onChange={handleInputChange}
                   placeholder="Available Days"
@@ -354,16 +352,28 @@ const DoctorManagement = () => {
                 />
                 <select
                   className="form-control mb-2"
-                  name="status"
-                  value={formData.isVerify || "Active"}
-                  onChange={handleInputChange}
+                  name="isVerify"
+                  value={
+                    formData.isVerify === true || formData.isVerify === "true"
+                      ? "true"
+                      : "false"
+                  }
+                  onChange={(e) =>
+                    setFormData({
+                      ...formData,
+                      isVerify: e.target.value === "true",
+                    })
+                  }
                 >
-                  <option value="Active">Active</option>
-                  <option value="Inactive">Inactive</option>
+                  <option value="true">Active</option>
+                  <option value="false">Inactive</option>
                 </select>
               </div>
               <div className="modal-footer">
-                <button className="btn btn-secondary" onClick={handleCloseModal}>
+                <button
+                  className="btn btn-secondary"
+                  onClick={handleCloseModal}
+                >
                   Cancel
                 </button>
                 <button
@@ -379,7 +389,7 @@ const DoctorManagement = () => {
         </div>
       )}
 
-      {/* 🔹 View Modal (same as before) */}
+      {/* 🔹 View Modal */}
       {showViewModal && (
         <div
           className="modal fade show d-block"
@@ -398,20 +408,54 @@ const DoctorManagement = () => {
               <div className="modal-body">
                 {selectedDoctorForView && (
                   <>
-                    <p><strong>User ID:</strong> {selectedDoctorForView._id}</p>
-
-                    <p><strong>Name:</strong> {selectedDoctorForView.name}</p>
-                    <p><strong>Email:</strong>  {selectedDoctorForView.email}</p>
-                    <p><strong>Gender:</strong> {selectedDoctorForView.gender}</p>
-                    <p><strong>Specialty:</strong> {selectedDoctorForView.specialty}</p>
-                    <p><strong>Documents:</strong> {selectedDoctorForView.documents}</p>
-                    <p><strong>Medical Licence:</strong> {selectedDoctorForView.licenseNo}</p>
-                    <p><strong>Experience:</strong> {selectedDoctorForView.experience} yrs</p>
-                    <p><strong>Consultation Fee:</strong> ${selectedDoctorForView.fee}</p>
-                    <p><strong>Available Days:</strong> {selectedDoctorForView.availableDay}</p>
-                    <p><strong>Opening Time:</strong> {selectedDoctorForView.openingTime}</p>
-                    <p><strong>Closing Time:</strong> {selectedDoctorForView.closingTime}</p>
-                    <p><strong>Status:</strong> {selectedDoctorForView.isVerify}</p>
+                    <p>
+                      <strong>User ID:</strong> {selectedDoctorForView._id}
+                    </p>
+                    <p>
+                      <strong>Name:</strong> {selectedDoctorForView.name}
+                    </p>
+                    <p>
+                      <strong>Email:</strong> {selectedDoctorForView.email}
+                    </p>
+                    <p>
+                      <strong>Gender:</strong> {selectedDoctorForView.gender}
+                    </p>
+                    <p>
+                      <strong>Specialty:</strong>{" "}
+                      {selectedDoctorForView.specialty}
+                    </p>
+                    <p>
+                      <strong>Documents:</strong>{" "}
+                      {selectedDoctorForView.documents}
+                    </p>
+                    <p>
+                      <strong>Medical Licence:</strong>{" "}
+                      {selectedDoctorForView.licenseNo}
+                    </p>
+                    <p>
+                      <strong>Experience:</strong>{" "}
+                      {selectedDoctorForView.experience} yrs
+                    </p>
+                    <p>
+                      <strong>Consultation Fee:</strong> $
+                      {selectedDoctorForView.fee}
+                    </p>
+                    <p>
+                      <strong>Available Days:</strong>{" "}
+                      {selectedDoctorForView.availableDay}
+                    </p>
+                    <p>
+                      <strong>Opening Time:</strong>{" "}
+                      {selectedDoctorForView.openingTime}
+                    </p>
+                    <p>
+                      <strong>Closing Time:</strong>{" "}
+                      {selectedDoctorForView.closingTime}
+                    </p>
+                    <p>
+                      <strong>Status:</strong>{" "}
+                      {getDisplayStatus(selectedDoctorForView.isVerify)}
+                    </p>
                   </>
                 )}
               </div>
