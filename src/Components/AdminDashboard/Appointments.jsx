@@ -322,7 +322,7 @@ const Appointments = () => {
                         const statusInfo = getStatusInfo(app.status);
                         return (
                           <tr key={app.id}>
-                            <td>#{index+1}</td>
+                            <td>{index+1}</td>
                             <td>
                               <strong>{app.patientName}</strong>
                             </td>
