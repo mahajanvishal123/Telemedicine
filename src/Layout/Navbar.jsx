@@ -8,7 +8,7 @@ import {
   faTimes,
   faCamera,
 } from "@fortawesome/free-solid-svg-icons";
-import { Link,useNavigate} from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import "./Navbar.css";
 
 // Profile Modal Component (Editable)
@@ -253,6 +253,7 @@ const Navbar = ({ toggleSidebar }) => {
   const dropdownRef = useRef();
   const notifRef = useRef();
   const navigate = useNavigate();
+  
   useEffect(() => {
     const handleClickOutside = (event) => {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
@@ -275,6 +276,11 @@ const Navbar = ({ toggleSidebar }) => {
     setIsProfileModalOpen(false);
   };
 
+  const logout = () => {
+    localStorage.clear();
+    navigate("/login");
+  }
+
   return (
     <>
       <nav className="navbar navbar-expand px-3 py-2 custom-navbar d-flex justify-content-between align-items-center fixed-top">
@@ -288,6 +294,8 @@ const Navbar = ({ toggleSidebar }) => {
             height="45"
             width={60}
             className="navbar-logo"
+            onClick={() => navigate("/")}
+            style={{ cursor: 'pointer' }}
           />
         </div>
 
@@ -329,9 +337,9 @@ const Navbar = ({ toggleSidebar }) => {
                   <hr className="dropdown-divider" />
                 </li>
                 <li>
-                  <Link className="dropdown-item" to="/login">
+                  <button className="dropdown-item" onClick={logout}>
                     Logout
-                  </Link>
+                  </button>
                 </li>
               </ul>
             )}

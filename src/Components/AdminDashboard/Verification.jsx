@@ -2,7 +2,6 @@ import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import Base_Url from "../../Baseurl/Baseurl";
 
-
 const Verification = () => {
   const [allDoctors, setAllDoctors] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -53,13 +52,13 @@ const Verification = () => {
     fetchDoctors();
   }, []);
 
-  // Derived Stats
+  // Derived Stats - Updated for consistency
   const pendingDoctors = allDoctors.filter(
-    doctor => doctor.isVerify === "0" || doctor.isVerify === "false"
+    doctor => doctor.isVerify === "0" || doctor.isVerify === false || doctor.isVerify === "false"
   );
 
   const verifiedDoctors = allDoctors.filter(
-    doctor => doctor.isVerify === "1"
+    doctor => doctor.isVerify === "1" || doctor.isVerify === true || doctor.isVerify === "true"
   );
 
   const rejectedDoctors = allDoctors.filter(
@@ -292,7 +291,7 @@ const Verification = () => {
                           <td>{index + 1}</td>
                           <td>
                             <img
-                              src={(doctor.profile || '').trim() || 'https://cdn.pixabay.com/photo/2015/10/05/22/37/blank-profile-picture-973460_960_720.png'}
+                              src={(doctor.profile || '').trim() || 'https://cdn.pixabay.com/photo/2015/10/05/22/37/blank-profile-picture-973460_960_720.png  '}
                               alt="Profile"
                               className="img-fluid rounded-circle"
                               style={{ width: '50px', height: '50px' }}
