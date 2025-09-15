@@ -13,6 +13,7 @@ const DoctorManagement = () => {
   const [selectedUser, setSelectedUser] = useState(null);
   const [selectedDoctorForView, setSelectedDoctorForView] = useState(null);
   const [formData, setFormData] = useState({});
+  const [actionLoading, setActionLoading] = useState({}); // 🔹 Track button spinners
 
   // 🔹 GET API Call
   useEffect(() => {
@@ -43,6 +44,7 @@ const DoctorManagement = () => {
   const handleSave = async () => {
     if (selectedUser) {
       try {
+        setActionLoading({ edit: selectedUser._id });
         await axios.put(`${API_URL}/doctor/${selectedUser._id}`, formData);
         setDoctors((prev) =>
           prev.map((d) =>
@@ -54,6 +56,7 @@ const DoctorManagement = () => {
         console.error("Error updating doctor:", error);
         alert("Failed to update doctor");
       } finally {
+        setActionLoading({});
         handleCloseModal();
       }
     }
@@ -63,19 +66,24 @@ const DoctorManagement = () => {
   const handleDelete = async (doctorId) => {
     if (window.confirm("Are you sure you want to delete this doctor?")) {
       try {
+        setActionLoading({ delete: doctorId });
         await axios.delete(`${API_URL}/doctor/${doctorId}`);
         setDoctors(doctors.filter((d) => d._id !== doctorId));
         alert("Doctor deleted successfully");
       } catch (error) {
         console.error("Error deleting doctor:", error);
         alert("Failed to delete doctor");
+      } finally {
+        setActionLoading({});
       }
     }
   };
 
   const handleView = (doctor) => {
+    setActionLoading({ view: doctor._id });
     setSelectedDoctorForView(doctor);
     setShowViewModal(true);
+    setTimeout(() => setActionLoading({}), 500); // simulate small delay
   };
 
   const handleCloseModal = () => {
@@ -132,7 +140,6 @@ const DoctorManagement = () => {
                     <th>Licence</th>
                     <th>Experience</th>
                     <th>Fee</th>
-                    {/* <th>Available Days</th> */}
                     <th>Opening</th>
                     <th>Closing</th>
                     <th>Status</th>
@@ -140,9 +147,9 @@ const DoctorManagement = () => {
                   </tr>
                 </thead>
                 <tbody>
-                  {doctors.map((d,index) => (
+                  {doctors.map((d, index) => (
                     <tr key={d._id}>
-                      <td>{index+1}</td>
+                      <td>{index + 1}</td>
                       <td>
                         {d.profilePicture ? (
                           <img
@@ -163,8 +170,7 @@ const DoctorManagement = () => {
                       <td>{d.specialty}</td>
                       <td>{d.medicalLicence}</td>
                       <td>{d.yearsExperience} yrs</td>
-                      <td>${d.consultationFee}</td>
-                      {/* <td>{d.availableDays}</td> */}
+                      <td>₹{d.consultationFee}</td>
                       <td>{d.openingTime}</td>
                       <td>{d.closingTime}</td>
                       <td>
@@ -173,26 +179,47 @@ const DoctorManagement = () => {
                         </span>
                       </td>
                       <td>
-                        <div className="d-flex gap-2">
+                        <div className="d-flex gap-1">
+                          {/* View */}
                           <button
                             className="btn btn-sm"
                             onClick={() => handleView(d)}
-                            style={{ color: "#F95918" }}
+                            disabled={actionLoading.view === d._id}
+                            style={{ color: "#0d6efd" }}
                           >
-                            <i className="fas fa-eye"></i>
+                            {actionLoading.view === d._id ? (
+                              <span className="spinner-border spinner-border-sm" />
+                            ) : (
+                              <i className="fas fa-eye"></i>
+                            )}
                           </button>
+
+                          {/* Edit */}
                           <button
                             className="btn btn-sm"
                             onClick={() => handleEdit(d)}
-                            style={{ color: "#F95918" }}
+                            disabled={actionLoading.edit === d._id}
+                            style={{ color: "#f39c12" }}
                           >
-                            <i className="fas fa-edit"></i>
+                            {actionLoading.edit === d._id ? (
+                              <span className="spinner-border spinner-border-sm" />
+                            ) : (
+                              <i className="fas fa-edit"></i>
+                            )}
                           </button>
+
+                          {/* Delete */}
                           <button
-                            className="btn btn-sm btn-outline-danger"
+                            className="btn btn-sm"
                             onClick={() => handleDelete(d._id)}
+                            disabled={actionLoading.delete === d._id}
+                            style={{ color: "#dc3545" }}
                           >
-                            <i className="fas fa-trash"></i>
+                            {actionLoading.delete === d._id ? (
+                              <span className="spinner-border spinner-border-sm" />
+                            ) : (
+                              <i className="fas fa-trash"></i>
+                            )}
                           </button>
                         </div>
                       </td>
@@ -229,6 +256,7 @@ const DoctorManagement = () => {
                 ></button>
               </div>
               <div className="modal-body">
+                {/* Form Fields */}
                 <input
                   className="form-control mb-2"
                   name="name"
@@ -319,7 +347,7 @@ const DoctorManagement = () => {
         </div>
       )}
 
-      {/* 🔹 View Modal (same as before) */}
+      {/* 🔹 View Modal */}
       {showViewModal && (
         <div
           className="modal fade show d-block"
@@ -345,7 +373,6 @@ const DoctorManagement = () => {
                     <p><strong>Medical Licence:</strong> {selectedDoctorForView.medicalLicence}</p>
                     <p><strong>Experience:</strong> {selectedDoctorForView.yearsExperience} yrs</p>
                     <p><strong>Consultation Fee:</strong> ₹{selectedDoctorForView.consultationFee}</p>
-                    {/* <p><strong>Available Days:</strong> {selectedDoctorForView.availableDays}</p> */}
                     <p><strong>Opening Time:</strong> {selectedDoctorForView.openingTime}</p>
                     <p><strong>Closing Time:</strong> {selectedDoctorForView.closingTime}</p>
                     <p><strong>Status:</strong> {selectedDoctorForView.status}</p>

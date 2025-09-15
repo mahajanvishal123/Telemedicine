@@ -228,43 +228,52 @@ const PatientManagement = () => {
                               {patient.status}
                             </span>
                           </td>
-                          <td>
-                            <div className="d-flex gap-2">
-                              <button
-                                className="btn btn-sm btn-info"
-                                onClick={() => handleView(patient)}
-                                disabled={actionLoading.view}
-                              >
-                                {actionLoading.view ? (
-                                  <span className="spinner-border spinner-border-sm" />
-                                ) : (
-                                  "View"
-                                )}
-                              </button>
-                              <button
-                                className="btn btn-sm btn-warning"
-                                onClick={() => handleEdit(patient)}
-                                disabled={actionLoading.edit}
-                              >
-                                {actionLoading.edit ? (
-                                  <span className="spinner-border spinner-border-sm" />
-                                ) : (
-                                  "Edit"
-                                )}
-                              </button>
-                              <button
-                                className="btn btn-sm btn-danger"
-                                onClick={() => handleDeleteClick(patient)}
-                                disabled={actionLoading.delete}
-                              >
-                                {actionLoading.delete ? (
-                                  <span className="spinner-border spinner-border-sm" />
-                                ) : (
-                                  "Delete"
-                                )}
-                              </button>
-                            </div>
-                          </td>
+                       <td>
+  <div className="d-flex"> {/* 👈 gap-2 → gap-1 */}
+    {/* View */}
+    <button
+      className="btn btn-sm"
+      onClick={() => handleView(patient)}
+      disabled={actionLoading.view}
+      style={{ color: "#0d6efd" }}
+    >
+      {actionLoading.view ? (
+        <span className="spinner-border spinner-border-sm" />
+      ) : (
+        <i className="fas fa-eye"></i>
+      )}
+    </button>
+
+    {/* Edit */}
+    <button
+      className="btn btn-sm"
+      onClick={() => handleEdit(patient)}
+      disabled={actionLoading.edit}
+      style={{ color: "#f39c12" }}
+    >
+      {actionLoading.edit ? (
+        <span className="spinner-border spinner-border-sm" />
+      ) : (
+        <i className="fas fa-edit"></i>
+      )}
+    </button>
+
+    {/* Delete */}
+    <button
+      className="btn btn-sm"
+      onClick={() => handleDeleteClick(patient)}
+      disabled={actionLoading.delete}
+      style={{ color: "#dc3545" }}
+    >
+      {actionLoading.delete ? (
+        <span className="spinner-border spinner-border-sm" />
+      ) : (
+        <i className="fas fa-trash"></i>
+      )}
+    </button>
+  </div>
+</td>
+
                         </tr>
                       ))
                     )}
@@ -293,6 +302,7 @@ const PatientManagement = () => {
                 {selectedPatient ? (
                   <div className="row">
                     <div className="col-md-6">
+                      <p><strong>Profile</strong> {selectedPatient.profile || "-"}</p>
                       <p><strong>User ID:</strong> #{selectedPatient._id}</p>
                       <p><strong>Name:</strong> {selectedPatient.name}</p>
                       <p><strong>Email:</strong> {selectedPatient.email}</p>
@@ -300,8 +310,11 @@ const PatientManagement = () => {
                       {/* 👇 DOB IS CORRUPTED — HIDDEN */}
                       {/* <p><strong>DOB:</strong> {selectedPatient.dob || "-"}</p> */}
                       <p><strong>Age:</strong> {selectedPatient.age || "-"}</p> {/* ✅ SAFE & DIRECT */}
+                      
                     </div>
                     <div className="col-md-6">
+                       <p><strong>DOB:</strong> {selectedPatient.dob || "-"}</p>
+                      <p><strong>Blood Group:</strong> {selectedPatient.bloodGroup || "-"}</p>
                       <p><strong>Gender:</strong> {selectedPatient.gender || "-"}</p>
                 
                       <p><strong>Status:</strong> 
