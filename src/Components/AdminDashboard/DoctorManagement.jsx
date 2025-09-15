@@ -176,7 +176,7 @@ const DoctorManagement = () => {
                     <th>Actions</th>
                   </tr>
                 </thead>
-                <tbody>
+                <tbody className="text-center">
                   {doctors.map((d, index) => (
                     <tr key={d._id}>
                       <td>{index + 1}</td>
@@ -408,9 +408,7 @@ const DoctorManagement = () => {
               <div className="modal-body">
                 {selectedDoctorForView && (
                   <>
-                    <p>
-                      <strong>User ID:</strong> {selectedDoctorForView._id}
-                    </p>
+             <p><strong>User ID:</strong> #{selectedDoctorIndex + 1}</p>
                     <p>
                       <strong>Name:</strong> {selectedDoctorForView.name}
                     </p>

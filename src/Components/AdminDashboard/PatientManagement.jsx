@@ -12,6 +12,7 @@ const PatientManagement = () => {
   const [showEditModal, setShowEditModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [selectedPatient, setSelectedPatient] = useState(null);
+  const [selectedPatientIndex, setSelectedPatientIndex] = useState(null);
 
   // Loading states for actions
   const [actionLoading, setActionLoading] = useState({ view: false, edit: false, delete: false });
@@ -34,8 +35,8 @@ const PatientManagement = () => {
       setLoading(false);
     }
   };
-  useEffect(() => {
 
+  useEffect(() => {
     fetchPatients();
   }, []);
 
@@ -58,16 +59,26 @@ const PatientManagement = () => {
   // ======================
 
   // Handle View
-  const handleView = async (patient) => {
+  const handleView = async (patient, index) => {
     setSelectedPatient(patient);
     setActionLoading({ ...actionLoading, view: true });
     setShowViewModal(true);
+    setSelectedPatientIndex(index);
 
     try {
       const res = await axios.get(`${API_URL}/patient/${patient._id}`);
       setSelectedPatient(res.data);
     } catch (err) {
       console.error('Error fetching patient detail:', err);
+      Swal.fire({
+        icon: 'error',
+        title: 'Failed to Load',
+        text: 'Could not load patient details. Please try again.',
+        confirmButtonText: 'OK',
+        customClass: {
+          confirmButton: 'btn btn-danger'
+        }
+      });
     } finally {
       setActionLoading({ ...actionLoading, view: false });
     }
@@ -76,9 +87,7 @@ const PatientManagement = () => {
   // Handle Edit
   const handleEdit = (patient) => {
     setSelectedPatient({ ...patient });
-    setActionLoading({ ...actionLoading, edit: true });
     setShowEditModal(true);
-    setActionLoading({ ...actionLoading, edit: false });
   };
 
   // Handle Delete Confirmation
@@ -96,10 +105,30 @@ const PatientManagement = () => {
       await axios.delete(`${API_URL}/patient/${selectedPatient._id}`);
       setPatients(patients.filter(p => p._id !== selectedPatient._id));
       setShowDeleteModal(false);
-      alert("Patient deleted successfully!");
+
+      // ✅ SweetAlert Success
+      Swal.fire({
+        icon: 'success',
+        title: 'Deleted!',
+        text: 'Patient has been deleted successfully.',
+        confirmButtonText: 'OK',
+        customClass: {
+          confirmButton: 'btn btn-success'
+        }
+      });
     } catch (err) {
       console.error("Delete error:", err.response?.data || err.message);
-      alert("Failed to delete patient. Please try again.");
+
+      // ✅ SweetAlert Error
+      Swal.fire({
+        icon: 'error',
+        title: 'Failed to Delete',
+        text: "Failed to delete patient. Please try again.",
+        confirmButtonText: 'OK',
+        customClass: {
+          confirmButton: 'btn btn-danger'
+        }
+      });
     } finally {
       setActionLoading({ ...actionLoading, delete: false });
     }
@@ -120,19 +149,24 @@ const PatientManagement = () => {
         address: selectedPatient.address,
         gender: selectedPatient.gender,
         status: selectedPatient.status,
-        // 👇👇👇 DO NOT INCLUDE dob — IT'S INVALID ("22") AND CAUSES ERROR
-        // dob: selectedPatient.dob,  // ← DELETED! BACKEND WILL IGNORE IT
       };
 
-      const response = await axios.put(
-        `${API_URL}/patient/${selectedPatient._id}`,
-        payload
-      );
+      await axios.put(`${API_URL}/patient/${selectedPatient._id}`, payload);
 
-   
       setShowEditModal(false);
-      await fetchPatients()
-      alert("Patient updated successfully!");
+      await fetchPatients();
+
+      // ✅ SweetAlert Success
+      Swal.fire({
+        icon: 'success',
+        title: 'Updated!',
+        text: 'Patient details updated successfully.',
+        confirmButtonText: 'OK',
+        customClass: {
+          confirmButton: 'btn btn-success'
+        }
+      });
+
     } catch (err) {
       console.error("Update error:", err.response?.data || err.message);
 
@@ -141,7 +175,17 @@ const PatientManagement = () => {
       if (err.response?.status === 404) message = "Patient not found. Refresh the page.";
       if (err.response?.data?.message) message = err.response.data.message;
 
-      alert(message);
+      // ✅ SweetAlert Error
+      Swal.fire({
+        icon: 'error',
+        title: 'Update Failed',
+        text: message,
+        confirmButtonText: 'Try Again',
+        customClass: {
+          confirmButton: 'btn btn-danger'
+        }
+      });
+
     } finally {
       setActionLoading({ ...actionLoading, edit: false });
     }
@@ -180,7 +224,7 @@ const PatientManagement = () => {
   return (
     <div className="container-fluid">
       {/* Page Header */}
-      <div className="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center gap-3 mb-4">
+      <div className="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center gap-3 mb-1">
         <h3 className="dashboard-heading">Patient Management</h3>
       </div>
 
@@ -191,7 +235,7 @@ const PatientManagement = () => {
             <div className="card-body">
               <div className="table-responsive">
                 <table className="table table-hover">
-                  <thead>
+                  <thead className="text-center">
                     <tr>
                       <th>User ID</th>
                       <th>Name</th>
@@ -200,67 +244,70 @@ const PatientManagement = () => {
                       <th>Age</th>
                       <th>Gender</th>
                       <th>Phone</th>
-                      {/* <th>Address</th> */}
                       <th>Status</th>
                       <th>Actions</th>
                     </tr>
                   </thead>
-                  <tbody>
+                  <tbody className="text-center">
                     {patients.length === 0 ? (
                       <tr>
-                        <td colSpan="10" className="text-center py-4">
+                        <td colSpan="9" className="text-center py-4">
                           No patients found.
                         </td>
                       </tr>
                     ) : (
-                      patients.map((patient,index) => (
+                      patients.map((patient, index) => (
                         <tr key={patient._id}>
-                          <td>{index+1}</td>
+                          <td>{index + 1}</td>
                           <td>{patient.name}</td>
                           <td>{patient.email}</td>
                           <td>{new Date(patient.createdAt).toLocaleDateString()}</td>
                           <td>{patient.age}</td>
                           <td>{patient.gender || "-"}</td>
                           <td>{patient.phone || "-"}</td>
-                          {/* <td>{patient.address || "-"}</td> */}
                           <td>
                             <span className={`badge ${getStatusClass(patient.status)}`}>
                               {patient.status}
                             </span>
                           </td>
                           <td>
-                            <div className="d-flex gap-2">
+                            <div className="btn-group" role="group">
                               <button
-                                className="btn btn-sm btn-info"
-                                onClick={() => handleView(patient)}
+                                className="btn btn-sm"
+                                onClick={() => handleView(patient, index)}
                                 disabled={actionLoading.view}
+                                style={{ color: "#F95918" }}
                               >
                                 {actionLoading.view ? (
                                   <span className="spinner-border spinner-border-sm" />
                                 ) : (
-                                  "View"
+                                  <i className="fas fa-eye"></i>
                                 )}
                               </button>
+
                               <button
-                                className="btn btn-sm btn-warning"
+                                className="btn btn-sm"
                                 onClick={() => handleEdit(patient)}
                                 disabled={actionLoading.edit}
+                                style={{ color: "#F95918" }}
                               >
                                 {actionLoading.edit ? (
                                   <span className="spinner-border spinner-border-sm" />
                                 ) : (
-                                  "Edit"
+                                  <i className="fas fa-edit"></i>
                                 )}
                               </button>
+
                               <button
-                                className="btn btn-sm btn-danger"
+                                className="btn btn-sm"
                                 onClick={() => handleDeleteClick(patient)}
                                 disabled={actionLoading.delete}
+                                style={{ color: "#F95918" }}
                               >
                                 {actionLoading.delete ? (
                                   <span className="spinner-border spinner-border-sm" />
                                 ) : (
-                                  "Delete"
+                                  <i className="fas fa-trash"></i>
                                 )}
                               </button>
                             </div>
@@ -293,18 +340,15 @@ const PatientManagement = () => {
                 {selectedPatient ? (
                   <div className="row">
                     <div className="col-md-6">
-                      <p><strong>User ID:</strong> #{selectedPatient._id}</p>
+                      <p><strong>User ID:</strong> #{selectedPatientIndex + 1}</p>
                       <p><strong>Name:</strong> {selectedPatient.name}</p>
                       <p><strong>Email:</strong> {selectedPatient.email}</p>
                       <p><strong>Phone:</strong> {selectedPatient.phone || "-"}</p>
-                      {/* 👇 DOB IS CORRUPTED — HIDDEN */}
-                      {/* <p><strong>DOB:</strong> {selectedPatient.dob || "-"}</p> */}
-                      <p><strong>Age:</strong> {selectedPatient.age || "-"}</p> {/* ✅ SAFE & DIRECT */}
+                      <p><strong>Age:</strong> {selectedPatient.age || "-"}</p>
                     </div>
                     <div className="col-md-6">
                       <p><strong>Gender:</strong> {selectedPatient.gender || "-"}</p>
-                
-                      <p><strong>Status:</strong> 
+                      <p><strong>Status:</strong>
                         <span className={`badge ms-2 ${getStatusClass(selectedPatient.status)}`}>
                           {selectedPatient.status}
                         </span>
@@ -425,20 +469,20 @@ const PatientManagement = () => {
                       </select>
                     </div>
                     <div className="col-md-6 mb-3">
-  <label className="form-label">Joining Date</label>
-  <input
-    type="date"
-    className="form-control"
-    value={selectedPatient?.createdAt ? selectedPatient.createdAt.split('T')[0] : ""}
-    onChange={(e) =>
-      setSelectedPatient({
-        ...selectedPatient,
-        createdAt: e.target.value, // Format: YYYY-MM-DD
-      })
-    }
-    disabled={actionLoading.edit} // Optional: disable during loading
-  />
-</div>
+                      <label className="form-label">Joining Date</label>
+                      <input
+                        type="date"
+                        className="form-control"
+                        value={selectedPatient?.createdAt ? selectedPatient.createdAt.split('T')[0] : ""}
+                        onChange={(e) =>
+                          setSelectedPatient({
+                            ...selectedPatient,
+                            createdAt: e.target.value,
+                          })
+                        }
+                        disabled={actionLoading.edit}
+                      />
+                    </div>
                   </div>
                 </div>
                 <div className="modal-footer">
