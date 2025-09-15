@@ -13,7 +13,7 @@ const DoctorManagement = () => {
   const [selectedUser, setSelectedUser] = useState(null);
   const [selectedDoctorForView, setSelectedDoctorForView] = useState(null);
   const [formData, setFormData] = useState({});
-
+  const [selectedDoctorIndex, setSelectedDoctorIndex] = useState(null);
   // 🔹 GET API Call
   useEffect(() => {
     const fetchDoctors = async () => {
@@ -24,6 +24,12 @@ const DoctorManagement = () => {
       } catch (error) {
         console.error("Error fetching doctors:", error);
         setError("Failed to fetch doctors");
+        Swal.fire({
+          title: "Error!",
+          text: "Failed to fetch doctors",
+          icon: "error",
+          confirmButtonText: "OK",
+        });
       } finally {
         setLoading(false);
       }
@@ -49,10 +55,22 @@ const DoctorManagement = () => {
             d._id === selectedUser._id ? { ...d, ...formData } : d
           )
         );
-        alert("Doctor updated successfully");
+        Swal.fire({
+          title: "Success!",
+          text: "Doctor updated successfully!",
+          icon: "success",
+          confirmButtonText: "OK",
+          timer: 3000,
+          timerProgressBar: true,
+        });
       } catch (error) {
         console.error("Error updating doctor:", error);
-        alert("Failed to update doctor");
+        Swal.fire({
+          title: "Error!",
+          text: "Failed to update doctor",
+          icon: "error",
+          confirmButtonText: "OK",
+        });
       } finally {
         handleCloseModal();
       }
@@ -61,21 +79,45 @@ const DoctorManagement = () => {
 
   // 🟠 Delete Doctor (DELETE API)
   const handleDelete = async (doctorId) => {
-    if (window.confirm("Are you sure you want to delete this doctor?")) {
+    const result = await Swal.fire({
+      title: "Are you sure?",
+      text: "You won't be able to revert this!",
+      icon: "warning",
+      showCancelButton: true,
+      confirmButtonColor: "#F95918", // 👈 Your brand color!
+      cancelButtonColor: "#6c757d",
+      confirmButtonText: "Yes, delete it!",
+      cancelButtonText: "Cancel",
+    });
+
+    if (result.isConfirmed) {
       try {
         await axios.delete(`${API_URL}/doctor/${doctorId}`);
         setDoctors(doctors.filter((d) => d._id !== doctorId));
-        alert("Doctor deleted successfully");
+        Swal.fire({
+          title: "Deleted!",
+          text: "Doctor deleted successfully",
+          icon: "success",
+          confirmButtonText: "OK",
+          timer: 2500,
+          timerProgressBar: true,
+        });
       } catch (error) {
         console.error("Error deleting doctor:", error);
-        alert("Failed to delete doctor");
+        Swal.fire({
+          title: "Error!",
+          text: "Failed to delete doctor",
+          icon: "error",
+          confirmButtonText: "OK",
+        });
       }
     }
   };
 
-  const handleView = (doctor) => {
+  const handleView = (doctor,index) => {
     setSelectedDoctorForView(doctor);
     setShowViewModal(true);
+    setSelectedDoctorIndex(index);
   };
 
   const handleCloseModal = () => {
@@ -94,15 +136,8 @@ const DoctorManagement = () => {
     setFormData({ ...formData, [name]: value });
   };
 
-  const getStatusClass = (status) => {
-    switch (status) {
-      case "Active":
-        return "bg-success";
-      case "Inactive":
-        return "bg-secondary";
-      default:
-        return "bg-secondary";
-    }
+  const getDisplayStatus = (isVerify) => {
+    return isVerify === true || isVerify === "true" ? "Active" : "Inactive";
   };
 
   return (
@@ -126,13 +161,14 @@ const DoctorManagement = () => {
                   <tr>
                     <th>User ID</th>
                     <th>Photo</th>
-                    <th>Full Name</th>
+                    <th>Name</th>
+                    <th>Email</th>
                     <th>Gender</th>
                     <th>Specialty</th>
                     <th>Licence</th>
                     <th>Experience</th>
                     <th>Fee</th>
-                    {/* <th>Available Days</th> */}
+                    <th>Available Days</th>
                     <th>Opening</th>
                     <th>Closing</th>
                     <th>Status</th>
@@ -140,11 +176,11 @@ const DoctorManagement = () => {
                   </tr>
                 </thead>
                 <tbody>
-                  {doctors.map((d,index) => (
+                  {doctors.map((d, index) => (
                     <tr key={d._id}>
-                      <td>{index+1}</td>
+                      <td>{index + 1}</td>
                       <td>
-                        {d.profilePicture ? (
+                        {d.profile ? (
                           <img
                             src={d.profilePicture}
                             alt="Profile"
@@ -159,21 +195,33 @@ const DoctorManagement = () => {
                         )}
                       </td>
                       <td>{d.name}</td>
+                      <td>{d.email}</td>
+
                       <td>{d.gender}</td>
                       <td>{d.specialty}</td>
-                      <td>{d.medicalLicence}</td>
-                      <td>{d.yearsExperience} yrs</td>
-                      <td>${d.consultationFee}</td>
-                      {/* <td>{d.availableDays}</td> */}
+                      <td>{d.licenseNo}</td>
+                      <td>{d.experience}</td>
+                      <td>${d.fee}</td>
+                      <td>{d.availableDay}</td>
                       <td>{d.openingTime}</td>
                       <td>{d.closingTime}</td>
                       <td>
-                        <span className={`badge ${getStatusClass(d.status)}`}>
-                          {d.status}
-                        </span>
-                      </td>
+  <span
+    className={`badge px-3 py-2 rounded-pill fw-medium ${
+      getDisplayStatus(d.isVerify) === "Active" ? "bg-success" : "bg-danger"
+    }`}
+    style={{
+      fontSize: "0.85rem",
+      cursor: "default",
+      border: "none",
+      transition: "all 0.2s"
+    }}
+  >
+    {getDisplayStatus(d.isVerify)}
+  </span>
+</td>
                       <td>
-                        <div className="d-flex gap-2">
+                        <div className="d-flex ">
                           <button
                             className="btn btn-sm"
                             onClick={() => handleView(d)}
@@ -189,8 +237,9 @@ const DoctorManagement = () => {
                             <i className="fas fa-edit"></i>
                           </button>
                           <button
-                            className="btn btn-sm btn-outline-danger"
+                            className="btn btn-sm "
                             onClick={() => handleDelete(d._id)}
+                            style={{ color: "#F95918" }}
                           >
                             <i className="fas fa-trash"></i>
                           </button>
@@ -236,6 +285,17 @@ const DoctorManagement = () => {
                   onChange={handleInputChange}
                   placeholder="Full Name"
                 />
+
+
+<input
+                  className="form-control mb-2"
+                  name="Email"
+                  value={formData.email || ""}
+                  onChange={handleInputChange}
+                  placeholder="Email"
+                />
+
+
                 <input
                   className="form-control mb-2"
                   name="gender"
@@ -253,28 +313,28 @@ const DoctorManagement = () => {
                 <input
                   className="form-control mb-2"
                   name="medicalLicence"
-                  value={formData.medicalLicence || ""}
+                  value={formData.licenseNo || ""}
                   onChange={handleInputChange}
                   placeholder="Medical Licence"
                 />
                 <input
                   className="form-control mb-2"
                   name="yearsExperience"
-                  value={formData.yearsExperience || ""}
+                  value={formData.experience || ""}
                   onChange={handleInputChange}
                   placeholder="Years of Experience"
                 />
                 <input
                   className="form-control mb-2"
                   name="consultationFee"
-                  value={formData.consultationFee || ""}
+                  value={formData.fee|| ""}
                   onChange={handleInputChange}
                   placeholder="Consultation Fee"
                 />
                 <input
                   className="form-control mb-2"
                   name="availableDays"
-                  value={formData.availableDays || ""}
+                  value={formData.availableDay || ""}
                   onChange={handleInputChange}
                   placeholder="Available Days"
                 />
@@ -295,7 +355,7 @@ const DoctorManagement = () => {
                 <select
                   className="form-control mb-2"
                   name="status"
-                  value={formData.status || "Active"}
+                  value={formData.isVerify || "Active"}
                   onChange={handleInputChange}
                 >
                   <option value="Active">Active</option>
@@ -339,16 +399,19 @@ const DoctorManagement = () => {
                 {selectedDoctorForView && (
                   <>
                     <p><strong>User ID:</strong> {selectedDoctorForView._id}</p>
-                    <p><strong>Full Name:</strong> {selectedDoctorForView.name}</p>
+
+                    <p><strong>Name:</strong> {selectedDoctorForView.name}</p>
+                    <p><strong>Email:</strong>  {selectedDoctorForView.email}</p>
                     <p><strong>Gender:</strong> {selectedDoctorForView.gender}</p>
                     <p><strong>Specialty:</strong> {selectedDoctorForView.specialty}</p>
-                    <p><strong>Medical Licence:</strong> {selectedDoctorForView.medicalLicence}</p>
-                    <p><strong>Experience:</strong> {selectedDoctorForView.yearsExperience} yrs</p>
-                    <p><strong>Consultation Fee:</strong> ₹{selectedDoctorForView.consultationFee}</p>
-                    {/* <p><strong>Available Days:</strong> {selectedDoctorForView.availableDays}</p> */}
+                    <p><strong>Documents:</strong> {selectedDoctorForView.documents}</p>
+                    <p><strong>Medical Licence:</strong> {selectedDoctorForView.licenseNo}</p>
+                    <p><strong>Experience:</strong> {selectedDoctorForView.experience} yrs</p>
+                    <p><strong>Consultation Fee:</strong> ${selectedDoctorForView.fee}</p>
+                    <p><strong>Available Days:</strong> {selectedDoctorForView.availableDay}</p>
                     <p><strong>Opening Time:</strong> {selectedDoctorForView.openingTime}</p>
                     <p><strong>Closing Time:</strong> {selectedDoctorForView.closingTime}</p>
-                    <p><strong>Status:</strong> {selectedDoctorForView.status}</p>
+                    <p><strong>Status:</strong> {selectedDoctorForView.isVerify}</p>
                   </>
                 )}
               </div>
