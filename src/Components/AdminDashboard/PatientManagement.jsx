@@ -235,7 +235,7 @@ const PatientManagement = () => {
       className="btn btn-sm"
       onClick={() => handleView(patient)}
       disabled={actionLoading.view}
-      style={{ color: "#0d6efd" }}
+      style={{ color: "#121E34" }}
     >
       {actionLoading.view ? (
         <span className="spinner-border spinner-border-sm" />
@@ -249,7 +249,7 @@ const PatientManagement = () => {
       className="btn btn-sm"
       onClick={() => handleEdit(patient)}
       disabled={actionLoading.edit}
-      style={{ color: "#f39c12" }}
+      style={{ color: "#FF6600" }}
     >
       {actionLoading.edit ? (
         <span className="spinner-border spinner-border-sm" />
@@ -263,7 +263,7 @@ const PatientManagement = () => {
       className="btn btn-sm"
       onClick={() => handleDeleteClick(patient)}
       disabled={actionLoading.delete}
-      style={{ color: "#dc3545" }}
+      style={{ color: "#FF3100" }}
     >
       {actionLoading.delete ? (
         <span className="spinner-border spinner-border-sm" />

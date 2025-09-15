@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import Base_Url from "../../Baseurl/Baseurl";
-// import Swal from 'sweetalert2';
 
 const Verification = () => {
   const [allDoctors, setAllDoctors] = useState([]);

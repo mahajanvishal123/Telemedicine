@@ -35,8 +35,7 @@ const Appointments = () => {
           id: app._id,
           patientName: app.patientId?.name || 'Unknown',
           patientEmail: app.patientId?.email || '',
-          patientPhone: '', // Not available — could be fetched from /patients later
-          patientAge: '',  // Not available — could be fetched from /patients later
+        
           doctorName: app.doctorId?.name || 'Not Assigned',
           doctorSpecialty: app.doctorId?.specialty || '',
           date: new Date(app.appointmentDate).toLocaleDateString(),
@@ -319,11 +318,11 @@ const Appointments = () => {
                       </tr>
                     </thead>
                     <tbody>
-                      {filteredAppointments.map(app => {
+                      {filteredAppointments.map((app,index) => {
                         const statusInfo = getStatusInfo(app.status);
                         return (
                           <tr key={app.id}>
-                            <td>#{app.id}</td>
+                            <td>#{index+1}</td>
                             <td>
                               <strong>{app.patientName}</strong>
                             </td>
@@ -474,8 +473,7 @@ const Appointments = () => {
                     <h6 className="text-muted">Patient Information</h6>
                     <p><strong>Name:</strong> {selectedAppointment.patientName}</p>
                     <p><strong>Email:</strong> {selectedAppointment.patientEmail}</p>
-                    <p><strong>Phone:</strong> {selectedAppointment.patientPhone || 'N/A'}</p>
-                    <p><strong>Age:</strong> {selectedAppointment.patientAge || 'N/A'}</p>
+                   
                   </div>
                   <div className="col-md-6">
                     <h6 className="text-muted">Doctor Information</h6>
