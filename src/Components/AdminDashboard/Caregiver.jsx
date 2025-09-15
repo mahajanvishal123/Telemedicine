@@ -23,21 +23,7 @@ const Caregiver = () => {
   });
   
   const [caregivers, setCaregivers] = useState([
-    {
-      id: 201,
-      name: "Amy Rodriguez",
-      email: "amy@example.com",
-      joinDate: "2023-09-25",
-      status: "Active",
-      type: "caregivers",
-      certification: "CNA",
-      yearsExperience: 5,
-      mobile: "555-9012",
-      address: "789 Care St",
-      skills: "BP Monitoring, Insulin Injection, Elderly Care",
-      document: "certification.pdf",
-      profilePicture: "https://randomuser.me/api/portraits/women/44.jpg",
-    },
+
     {
       id: 202,
       name: "Michael Johnson",
@@ -53,6 +39,7 @@ const Caregiver = () => {
       document: "license.pdf",
       profilePicture: "https://randomuser.me/api/portraits/men/32.jpg",
     },
+    
     {
       id: 203,
       name: "Sarah Williams",
