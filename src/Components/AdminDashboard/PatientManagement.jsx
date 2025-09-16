@@ -6,7 +6,8 @@ const PatientManagement = () => {
   const [patients, setPatients] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-
+  const [newProfileImage, setNewProfileImage] = useState(null);
+  const [previewUrl, setPreviewUrl] = useState("");
   // Modal States
   const [showViewModal, setShowViewModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
@@ -84,11 +85,13 @@ const PatientManagement = () => {
     }
   };
 
-  // Handle Edit
-  const handleEdit = (patient) => {
-    setSelectedPatient({ ...patient });
-    setShowEditModal(true);
-  };
+// Handle Edit
+const handleEdit = (patient) => {
+  setSelectedPatient({ ...patient });
+  setPreviewUrl(patient.profile || ""); // 👈 Initialize preview
+  setNewProfileImage(null); // Reset file
+  setShowEditModal(true);
+};
 
   // Handle Delete Confirmation
   const handleDeleteClick = (patient) => {
@@ -134,62 +137,72 @@ const PatientManagement = () => {
     }
   };
 
-  // Handle Edit Form Submit — NO DOB IN PAYLOAD!
-  const handleEditSubmit = async (e) => {
-    e.preventDefault();
-    if (!selectedPatient) return;
+// Handle Edit Form Submit — WITH PROFILE IMAGE
+const handleEditSubmit = async (e) => {
+  e.preventDefault();
+  if (!selectedPatient) return;
 
-    setActionLoading({ ...actionLoading, edit: true });
+  setActionLoading({ ...actionLoading, edit: true });
 
-    try {
-      const payload = {
-        name: selectedPatient.name,
-        email: selectedPatient.email,
-        phone: selectedPatient.phone,
-        address: selectedPatient.address,
-        gender: selectedPatient.gender,
-        status: selectedPatient.status,
-      };
+  try {
+    const formDataToSend = new FormData();
 
-      await axios.put(`${API_URL}/patient/${selectedPatient._id}`, payload);
+    // Append all fields
+    formDataToSend.append("name", selectedPatient.name);
+    formDataToSend.append("email", selectedPatient.email);
+    if (selectedPatient.phone) formDataToSend.append("phone", selectedPatient.phone);
+    if (selectedPatient.gender) formDataToSend.append("gender", selectedPatient.gender);
+    formDataToSend.append("status", selectedPatient.status);
+    if (selectedPatient.createdAt) formDataToSend.append("createdAt", selectedPatient.createdAt);
 
-      setShowEditModal(false);
-      await fetchPatients();
-
-      // ✅ SweetAlert Success
-      Swal.fire({
-        icon: 'success',
-        title: 'Updated!',
-        text: 'Patient details updated successfully.',
-        confirmButtonText: 'OK',
-        customClass: {
-          confirmButton: 'btn btn-success'
-        }
-      });
-
-    } catch (err) {
-      console.error("Update error:", err.response?.data || err.message);
-
-      let message = "Failed to update patient.";
-      if (err.response?.status === 400) message = "Invalid data. Please check all fields.";
-      if (err.response?.status === 404) message = "Patient not found. Refresh the page.";
-      if (err.response?.data?.message) message = err.response.data.message;
-
-      // ✅ SweetAlert Error
-      Swal.fire({
-        icon: 'error',
-        title: 'Update Failed',
-        text: message,
-        confirmButtonText: 'Try Again',
-        customClass: {
-          confirmButton: 'btn btn-danger'
-        }
-      });
-
-    } finally {
-      setActionLoading({ ...actionLoading, edit: false });
+    // Append new image if selected
+    if (newProfileImage) {
+      formDataToSend.append("profile", newProfileImage);
     }
-  };
+
+    await axios.put(`${API_URL}/patient/${selectedPatient._id}`, formDataToSend, {
+      headers: {
+        "Content-Type": "multipart/form-data",
+      },
+    });
+
+    setShowEditModal(false);
+    await fetchPatients();
+
+    Swal.fire({
+      icon: 'success',
+      title: 'Updated!',
+      text: 'Patient details updated successfully.',
+      confirmButtonText: 'OK',
+      customClass: {
+        confirmButton: 'btn btn-success'
+      }
+    });
+
+  } catch (err) {
+    console.error("Update error:", err.response?.data || err.message);
+
+    let message = "Failed to update patient.";
+    if (err.response?.status === 400) message = "Invalid data. Please check all fields.";
+    if (err.response?.status === 404) message = "Patient not found. Refresh the page.";
+    if (err.response?.data?.message) message = err.response.data.message;
+
+    Swal.fire({
+      icon: 'error',
+      title: 'Update Failed',
+      text: message,
+      confirmButtonText: 'Try Again',
+      customClass: {
+        confirmButton: 'btn btn-danger'
+      }
+    });
+
+  } finally {
+    setActionLoading({ ...actionLoading, edit: false });
+    setNewProfileImage(null);
+    setPreviewUrl("");
+  }
+};
 
   // ======================
   // RENDERING
@@ -235,9 +248,11 @@ const PatientManagement = () => {
             <div className="card-body">
               <div className="table-responsive">
                 <table className="table table-hover">
-                  <thead className="text-center">
+                <thead className="text-center align-middle">
                     <tr>
                       <th>User ID</th>
+            
+                      <th>Profile</th>
                       <th>Name</th>
                       <th>Email</th>
                       <th>Join Date</th>
@@ -248,7 +263,7 @@ const PatientManagement = () => {
                       <th>Actions</th>
                     </tr>
                   </thead>
-                  <tbody className="text-center">
+                  <tbody className="text-center align-middle">
                     {patients.length === 0 ? (
                       <tr>
                         <td colSpan="9" className="text-center py-4">
@@ -259,7 +274,27 @@ const PatientManagement = () => {
                       patients.map((patient, index) => (
                         <tr key={patient._id}>
                           <td>{index + 1}</td>
-                          <td>{patient.name}</td>
+                 
+              
+
+                          <td className="align-middle">
+  <div className="d-flex justify-content-center align-items-center" style={{ minHeight: '50px' }}>
+    {patient.profile ? (
+      <img
+        src={patient.profile}
+        alt="Profile"
+        className="rounded-circle"
+        style={{ width: "40px", height: "40px", objectFit: "cover" }}
+      />
+    ) : (
+      <i
+        className="fas fa-user-circle text-muted"
+        style={{ fontSize: "30px" }}
+      ></i>
+    )}
+  </div>
+</td>
+                      <td>{patient.name}</td>
                           <td>{patient.email}</td>
                           <td>{new Date(patient.createdAt).toLocaleDateString()}</td>
                           <td>{patient.age}</td>
@@ -347,21 +382,28 @@ const PatientManagement = () => {
             </div>
           ) : selectedPatient ? (
             <div className="row">
-              {/* Profile Picture Section */}
-              <div className="col-12 text-center mb-4">
-                {selectedPatient.profilePicture ? (
-                  <img
-                    src={selectedPatient.profilePicture}
-                    alt="Profile"
-                    className="img-fluid rounded-circle border"
-                    style={{ width: "120px", height: "120px", objectFit: "cover" }}
-                  />
-                ) : (
-                  <i className="fas fa-user-circle text-muted" style={{ fontSize: "80px" }}></i>
-                )}
-                <h5 className="mt-3">{selectedPatient.name}</h5>
-                <p className="text-muted">Patient #{selectedPatientIndex + 1}</p>
-              </div>
+          {/* Profile Picture Section */}
+<div className="col-12 text-center mb-4">
+  <div className="d-flex flex-column align-items-center justify-content-center" style={{ gap: '12px' }}>
+    {selectedPatient.profile ? (
+      <img
+        src={selectedPatient.profile}
+        alt="Profile"
+        className="img-fluid rounded-circle border"
+        style={{
+          width: "120px",
+          height: "120px",
+          objectFit: "cover",
+          boxShadow: "0 4px 8px rgba(0,0,0,0.1)"
+        }}
+      />
+    ) : (
+      <i className="fas fa-user-circle text-muted" style={{ fontSize: "80px" }}></i>
+    )}
+    <h5 className="mt-0 mb-0">{selectedPatient.name}</h5>
+    <p className="text-muted mb-0">Patient #{selectedPatientIndex + 1}</p>
+  </div>
+</div>
 
               {/* Patient Details - Vertical List */}
               <div className="col-12">
@@ -418,142 +460,218 @@ const PatientManagement = () => {
     </div>
   </div>
 )}
-      {/* ========== EDIT MODAL ========== */}
-      {showEditModal && (
-        <div className="modal show d-block" tabIndex="-1" style={{ backgroundColor: "rgba(0,0,0,0.5)" }}>
-          <div className="modal-dialog modal-lg">
-            <div className="modal-content">
-              <div className="modal-header">
-                <h5 className="modal-title">Edit Patient</h5>
-                <button
-                  type="button"
-                  className="btn-close"
-                  onClick={() => setShowEditModal(false)}
-                ></button>
+  {/* ========== EDIT MODAL ========== */}
+{showEditModal && (
+  <div className="modal show d-block" tabIndex="-1" style={{ backgroundColor: "rgba(0,0,0,0.5)" }}>
+    <div className="modal-dialog modal-lg">
+      <div className="modal-content">
+        <div className="modal-header">
+          <h5 className="modal-title">Edit Patient</h5>
+          <button
+            type="button"
+            className="btn-close"
+            onClick={() => {
+              setShowEditModal(false);
+              setNewProfileImage(null);
+              setPreviewUrl("");
+            }}
+          ></button>
+        </div>
+
+        {/* Profile Upload Section */}
+        <div className="text-center py-3 bg-light border-bottom position-relative">
+          <input
+            type="file"
+            id="profileUpload"
+            accept="image/*"
+            onChange={(e) => {
+              const file = e.target.files[0];
+              if (file) {
+                setNewProfileImage(file);
+                setPreviewUrl(URL.createObjectURL(file));
+              }
+            }}
+            style={{ display: "none" }}
+          />
+
+          <label
+            htmlFor="profileUpload"
+            style={{ cursor: "pointer" }}
+            title="Click to upload new profile picture"
+          >
+            {previewUrl ? (
+              <img
+                src={previewUrl}
+                alt="Profile Preview"
+                className="img-fluid rounded-circle border"
+                style={{
+                  width: "100px",
+                  height: "100px",
+                  objectFit: "cover",
+                  border: "3px solid #F95918",
+                  transition: "all 0.3s",
+                }}
+              />
+            ) : selectedPatient?.profile ? (
+              <img
+                src={selectedPatient.profile}
+                alt="Profile"
+                className="img-fluid rounded-circle border"
+                style={{
+                  width: "100px",
+                  height: "100px",
+                  objectFit: "cover",
+                  border: "3px solid #ddd",
+                }}
+              />
+            ) : (
+              <i
+                className="fas fa-user-circle text-muted"
+                style={{ fontSize: "80px", color: "#aaa" }}
+              ></i>
+            )}
+          </label>
+
+          <h6 className="mt-2 mb-0">{selectedPatient?.name}</h6>
+          <p className="text-muted small">
+            <i className="fas fa-info-circle me-1"></i>
+            Click image to upload new photo
+          </p>
+
+          {newProfileImage && (
+            <span className="badge bg-success mt-1">
+              <i className="fas fa-check-circle me-1"></i> New image selected
+            </span>
+          )}
+        </div>
+
+        <form onSubmit={handleEditSubmit}>
+          <div className="modal-body">
+            <div className="row">
+              <div className="col-md-6 mb-3">
+                <label className="form-label">Name</label>
+                <input
+                  type="text"
+                  className="form-control"
+                  value={selectedPatient?.name || ""}
+                  onChange={(e) =>
+                    setSelectedPatient({
+                      ...selectedPatient,
+                      name: e.target.value,
+                    })
+                  }
+                  required
+                />
               </div>
-              <form onSubmit={handleEditSubmit}>
-                <div className="modal-body">
-                  <div className="row">
-                    <div className="col-md-6 mb-3">
-                      <label className="form-label">Name</label>
-                      <input
-                        type="text"
-                        className="form-control"
-                        value={selectedPatient?.name || ""}
-                        onChange={(e) =>
-                          setSelectedPatient({
-                            ...selectedPatient,
-                            name: e.target.value,
-                          })
-                        }
-                        required
-                      />
-                    </div>
-                    <div className="col-md-6 mb-3">
-                      <label className="form-label">Email</label>
-                      <input
-                        type="email"
-                        className="form-control"
-                        value={selectedPatient?.email || ""}
-                        onChange={(e) =>
-                          setSelectedPatient({
-                            ...selectedPatient,
-                            email: e.target.value,
-                          })
-                        }
-                        required
-                      />
-                    </div>
-                    <div className="col-md-6 mb-3">
-                      <label className="form-label">Phone</label>
-                      <input
-                        type="tel"
-                        className="form-control"
-                        value={selectedPatient?.phone || ""}
-                        onChange={(e) =>
-                          setSelectedPatient({
-                            ...selectedPatient,
-                            phone: e.target.value,
-                          })
-                        }
-                      />
-                    </div>
-                    <div className="col-md-6 mb-3">
-                      <label className="form-label">Gender</label>
-                      <select
-                        className="form-select"
-                        value={selectedPatient?.gender || ""}
-                        onChange={(e) =>
-                          setSelectedPatient({
-                            ...selectedPatient,
-                            gender: e.target.value,
-                          })
-                        }
-                      >
-                        <option value="">Select Gender</option>
-                        <option value="Male">Male</option>
-                        <option value="Female">Female</option>
-                        <option value="Other">Other</option>
-                      </select>
-                    </div>
-                    <div className="col-md-6 mb-3">
-                      <label className="form-label">Status</label>
-                      <select
-                        className="form-select"
-                        value={selectedPatient?.status || "Active"}
-                        onChange={(e) =>
-                          setSelectedPatient({
-                            ...selectedPatient,
-                            status: e.target.value,
-                          })
-                        }
-                      >
-                        <option value="Active">Active</option>
-                        <option value="Inactive">Inactive</option>
-                      </select>
-                    </div>
-                    <div className="col-md-6 mb-3">
-                      <label className="form-label">Joining Date</label>
-                      <input
-                        type="date"
-                        className="form-control"
-                        value={selectedPatient?.createdAt ? selectedPatient.createdAt.split('T')[0] : ""}
-                        onChange={(e) =>
-                          setSelectedPatient({
-                            ...selectedPatient,
-                            createdAt: e.target.value,
-                          })
-                        }
-                        disabled={actionLoading.edit}
-                      />
-                    </div>
-                  </div>
-                </div>
-                <div className="modal-footer">
-                  <button
-                    type="button"
-                    className="btn btn-secondary"
-                    onClick={() => setShowEditModal(false)}
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    type="submit"
-                    className="btn btn-warning"
-                    disabled={actionLoading.edit}
-                  >
-                    {actionLoading.edit ? (
-                      <span className="spinner-border spinner-border-sm" />
-                    ) : (
-                      "Save Changes"
-                    )}
-                  </button>
-                </div>
-              </form>
+              <div className="col-md-6 mb-3">
+                <label className="form-label">Email</label>
+                <input
+                  type="email"
+                  className="form-control"
+                  value={selectedPatient?.email || ""}
+                  onChange={(e) =>
+                    setSelectedPatient({
+                      ...selectedPatient,
+                      email: e.target.value,
+                    })
+                  }
+                  required
+                />
+              </div>
+              <div className="col-md-6 mb-3">
+                <label className="form-label">Phone</label>
+                <input
+                  type="tel"
+                  className="form-control"
+                  value={selectedPatient?.phone || ""}
+                  onChange={(e) =>
+                    setSelectedPatient({
+                      ...selectedPatient,
+                      phone: e.target.value,
+                    })
+                  }
+                />
+              </div>
+              <div className="col-md-6 mb-3">
+                <label className="form-label">Gender</label>
+                <select
+                  className="form-select"
+                  value={selectedPatient?.gender || ""}
+                  onChange={(e) =>
+                    setSelectedPatient({
+                      ...selectedPatient,
+                      gender: e.target.value,
+                    })
+                  }
+                >
+                  <option value="">Select Gender</option>
+                  <option value="Male">Male</option>
+                  <option value="Female">Female</option>
+                  <option value="Other">Other</option>
+                </select>
+              </div>
+              <div className="col-md-6 mb-3">
+                <label className="form-label">Status</label>
+                <select
+                  className="form-select"
+                  value={selectedPatient?.status || "Active"}
+                  onChange={(e) =>
+                    setSelectedPatient({
+                      ...selectedPatient,
+                      status: e.target.value,
+                    })
+                  }
+                >
+                  <option value="Active">Active</option>
+                  <option value="Inactive">Inactive</option>
+                </select>
+              </div>
+              <div className="col-md-6 mb-3">
+                <label className="form-label">Joining Date</label>
+                <input
+                  type="date"
+                  className="form-control"
+                  value={selectedPatient?.createdAt ? selectedPatient.createdAt.split('T')[0] : ""}
+                  onChange={(e) =>
+                    setSelectedPatient({
+                      ...selectedPatient,
+                      createdAt: e.target.value,
+                    })
+                  }
+                  disabled={actionLoading.edit}
+                />
+              </div>
             </div>
           </div>
-        </div>
-      )}
+          <div className="modal-footer">
+            <button
+              type="button"
+              className="btn btn-secondary"
+              onClick={() => {
+                setShowEditModal(false);
+                setNewProfileImage(null);
+                setPreviewUrl("");
+              }}
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              className="btn btn-warning"
+              disabled={actionLoading.edit}
+            >
+              {actionLoading.edit ? (
+                <span className="spinner-border spinner-border-sm" />
+              ) : (
+                "Save Changes"
+              )}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+)}
 
       {/* ========== DELETE CONFIRMATION MODAL ========== */}
       {showDeleteModal && (
