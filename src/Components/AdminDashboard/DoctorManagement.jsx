@@ -137,8 +137,18 @@ const DoctorManagement = () => {
     setFormData({ ...formData, [name]: value });
   };
 
+  // 🔹 Unified status display function
   const getDisplayStatus = (isVerify) => {
-    return isVerify === true || isVerify === "true" ? "Active" : "Inactive";
+    // Handle both boolean and string values
+    if (isVerify === true || isVerify === "true" || isVerify === "1") {
+      return "Active";
+    } else if (isVerify === "0") {
+      return "Pending";
+    } else if (isVerify === "2") {
+      return "Rejected";
+    } else {
+      return "Inactive";
+    }
   };
 
   return (
@@ -166,12 +176,12 @@ const DoctorManagement = () => {
                     <th>Email</th>
                     <th>Gender</th>
                     <th>Specialty</th>
-                    <th>Licence</th>
+                    {/* <th>Licence</th> */}
                     <th>Experience</th>
-                    <th>Fee</th>
-                    <th>Available Days</th>
-                    <th>Opening</th>
-                    <th>Closing</th>
+                    {/* <th>Fee</th> */}
+                    {/* <th>Available Days</th> */}
+                    {/* <th>Opening</th> */}
+                    {/* <th>Closing</th> */}
                     <th>Status</th>
                     <th>Actions</th>
                   </tr>
@@ -199,17 +209,21 @@ const DoctorManagement = () => {
                       <td>{d.email}</td>
                       <td>{d.gender}</td>
                       <td>{d.specialty}</td>
-                      <td>{d.licenseNo}</td>
+                      {/* <td>{d.licenseNo}</td> */}
                       <td>{d.experience}</td>
-                      <td>${d.fee}</td>
-                      <td>{d.availableDay}</td>
-                      <td>{d.openingTime}</td>
-                      <td>{d.closingTime}</td>
+                      {/* <td>${d.fee}</td> */}
+                      {/* <td>{d.availableDay}</td> */}
+                      {/* <td>{d.openingTime}</td> */}
+                      {/* <td>{d.closingTime}</td> */}
                       <td>
                         <span
                           className={`badge px-3 py-2 rounded-pill fw-medium ${
                             getDisplayStatus(d.isVerify) === "Active"
                               ? "bg-success"
+                              : getDisplayStatus(d.isVerify) === "Pending"
+                              ? "bg-warning text-dark"
+                              : getDisplayStatus(d.isVerify) === "Rejected"
+                              ? "bg-danger"
                               : "bg-secondary text-white"
                           }`}
                           style={{
@@ -350,23 +364,27 @@ const DoctorManagement = () => {
                   onChange={handleInputChange}
                   placeholder="Closing Time"
                 />
+                {/* 🔹 Updated Status Select Dropdown */}
                 <select
                   className="form-control mb-2"
                   name="isVerify"
                   value={
-                    formData.isVerify === true || formData.isVerify === "true"
-                      ? "true"
-                      : "false"
+                    formData.isVerify === true || formData.isVerify === "true" || formData.isVerify === "1"
+                      ? "1"
+                      : formData.isVerify === "2"
+                      ? "2"
+                      : "0"
                   }
-                  onChange={(e) =>
+                  onChange={(e) => {
                     setFormData({
                       ...formData,
-                      isVerify: e.target.value === "true",
-                    })
-                  }
+                      isVerify: e.target.value,
+                    });
+                  }}
                 >
-                  <option value="true">Active</option>
-                  <option value="false">Inactive</option>
+                  <option value="0">Pending</option>
+                  <option value="1">Active</option>
+                  <option value="2">Rejected</option>
                 </select>
               </div>
               <div className="modal-footer">
@@ -388,87 +406,107 @@ const DoctorManagement = () => {
           </div>
         </div>
       )}
-
-      {/* 🔹 View Modal */}
-      {showViewModal && (
-        <div
-          className="modal fade show d-block"
-          style={{ backgroundColor: "rgba(0,0,0,0.5)" }}
-        >
-          <div className="modal-dialog modal-lg">
-            <div className="modal-content">
-              <div className="modal-header">
-                <h5>Doctor Details</h5>
-                <button
-                  type="button"
-                  className="btn-close"
-                  onClick={handleCloseViewModal}
-                ></button>
-              </div>
-              <div className="modal-body">
-                {selectedDoctorForView && (
-                  <>
-             <p><strong>User ID:</strong> #{selectedDoctorIndex + 1}</p>
-                    <p>
-                      <strong>Name:</strong> {selectedDoctorForView.name}
-                    </p>
-                    <p>
-                      <strong>Email:</strong> {selectedDoctorForView.email}
-                    </p>
-                    <p>
-                      <strong>Gender:</strong> {selectedDoctorForView.gender}
-                    </p>
-                    <p>
-                      <strong>Specialty:</strong>{" "}
-                      {selectedDoctorForView.specialty}
-                    </p>
-                    <p>
-                      <strong>Documents:</strong>{" "}
-                      {selectedDoctorForView.documents}
-                    </p>
-                    <p>
-                      <strong>Medical Licence:</strong>{" "}
-                      {selectedDoctorForView.licenseNo}
-                    </p>
-                    <p>
-                      <strong>Experience:</strong>{" "}
-                      {selectedDoctorForView.experience} yrs
-                    </p>
-                    <p>
-                      <strong>Consultation Fee:</strong> $
-                      {selectedDoctorForView.fee}
-                    </p>
-                    <p>
-                      <strong>Available Days:</strong>{" "}
-                      {selectedDoctorForView.availableDay}
-                    </p>
-                    <p>
-                      <strong>Opening Time:</strong>{" "}
-                      {selectedDoctorForView.openingTime}
-                    </p>
-                    <p>
-                      <strong>Closing Time:</strong>{" "}
-                      {selectedDoctorForView.closingTime}
-                    </p>
-                    <p>
-                      <strong>Status:</strong>{" "}
-                      {getDisplayStatus(selectedDoctorForView.isVerify)}
-                    </p>
-                  </>
+{/* 🔹 View Modal - Enhanced UI */}
+{showViewModal && (
+  <div
+    className="modal fade show d-block"
+    style={{ backgroundColor: "rgba(0,0,0,0.5)" }}
+  >
+    <div className="modal-dialog modal-lg">
+      <div className="modal-content">
+        <div className="modal-header">
+          <h5 className="modal-title">Doctor Profile</h5>
+          <button
+            type="button"
+            className="btn-close"
+            onClick={handleCloseViewModal}
+          ></button>
+        </div>
+        <div className="modal-body">
+          {selectedDoctorForView && (
+            <div className="row">
+              {/* Profile Picture */}
+              <div className="col-md-4 text-center mb-3">
+                {selectedDoctorForView.profilePicture ? (
+                  <img
+                    src={selectedDoctorForView.profile}
+                    alt="Profile"
+                    className="img-fluid rounded-circle border"
+                    style={{ width: "150px", height: "150px", objectFit: "cover" }}
+                  />
+                ) : (
+                  <i
+                    className="fas fa-user-circle text-muted"
+                    style={{ fontSize: "100px" }}
+                  ></i>
                 )}
+                <h5 className="mt-2">{selectedDoctorForView.name}</h5>
+                <p className="text-muted">{selectedDoctorForView.specialty}</p>
               </div>
-              <div className="modal-footer">
-                <button
-                  className="btn btn-secondary"
-                  onClick={handleCloseViewModal}
-                >
-                  Close
-                </button>
+
+              {/* Doctor Details */}
+              <div className="col-md-8">
+                <div className="card p-3 shadow-sm">
+                  <h6 className="text-muted">Basic Information</h6>
+                  <ul className="list-group list-group-flush">
+                    <li className="list-group-item">
+                      <strong>User ID:</strong> #{selectedDoctorIndex + 1}
+                    </li>
+                    <li className="list-group-item">
+                      <strong>Email:</strong> {selectedDoctorForView.email}
+                    </li>
+                    <li className="list-group-item">
+                      <strong>Gender:</strong> {selectedDoctorForView.gender}
+                    </li>
+                    <li className="list-group-item">
+                      <strong>Experience:</strong> {selectedDoctorForView.experience} years
+                    </li>
+                    <li className="list-group-item">
+                      <strong>License No:</strong> {selectedDoctorForView.licenseNo}
+                    </li>
+                    <li className="list-group-item">
+                      <strong>Consultation Fee:</strong> ${selectedDoctorForView.fee}
+                    </li>
+                    <li className="list-group-item">
+                      <strong>Available Days:</strong> {selectedDoctorForView.availableDay}
+                    </li>
+                    <li className="list-group-item">
+                      <strong>Timings:</strong> {selectedDoctorForView.openingTime} - {selectedDoctorForView.closingTime}
+                    </li>
+                    <li className="list-group-item">
+                      <strong>Status:</strong>
+                      <span
+                        className={`badge ms-2 px-3 py-1 rounded-pill fw-medium ${
+                          getDisplayStatus(selectedDoctorForView.isVerify) === "Active"
+                            ? "bg-success"
+                            : getDisplayStatus(selectedDoctorForView.isVerify) === "Pending"
+                            ? "bg-warning text-dark"
+                            : getDisplayStatus(selectedDoctorForView.isVerify) === "Rejected"
+                            ? "bg-danger"
+                            : "bg-secondary"
+                        }`}
+                      >
+                        {getDisplayStatus(selectedDoctorForView.isVerify)}
+                      </span>
+                    </li>
+                  </ul>
+                </div>
               </div>
             </div>
-          </div>
+          )}
         </div>
-      )}
+        <div className="modal-footer">
+          <button
+            className="btn btn-secondary"
+            onClick={handleCloseViewModal}
+          >
+            Close
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+)}
     </div>
   );
 };

@@ -448,20 +448,31 @@ const Signup = () => {
               <>
                 <hr className="my-4" />
                 <h6 className="fw-bold text-start mb-3">Doctor Details</h6>
-                <div className="mb-3 position-relative">
-                  <i
-                    className="bi bi-heart-pulse position-absolute top-50 start-0 translate-middle-y ms-3"
-                    style={{ color: "#FF6A00" }}
-                  ></i>
-                  <input
-                    type="text"
-                    className="form-control ps-5"
-                    placeholder="Specialty (e.g., Cardiologist)"
-                    value={specialty}
-                    onChange={(e) => setSpecialty(e.target.value)}
-                    required
-                  />
-                </div>
+              <div className="mb-3 text-start">
+  <label className="form-label">Specialty</label>
+  <select
+    className="form-select"
+    value={specialty}
+    onChange={(e) => setSpecialty(e.target.value)}
+    required
+  >
+    <option value="">Select Specialty</option>
+    <option value="Cardiologist">Cardiologist</option>
+    <option value="Nephrologist">Nephrologist</option>
+    <option value="Neurologist">Neurologist</option>
+    <option value="Dermatologist">Dermatologist</option>
+ 
+    <option value="Gynecologist">Gynecologist</option>
+    <option value="Oncologist">Oncologist</option>
+    <option value="Endocrinologist">Endocrinologist</option>
+    <option value="Gastroenterologist">Gastroenterologist</option>
+    <option value="Pulmonologist">Pulmonologist</option>
+    <option value="Rheumatologist">Rheumatologist</option>
+    <option value="Urologist">Urologist</option>
+    <option value="General Physician">General Physician</option>
+    <option value="Other">Other</option>
+  </select>
+</div>
                 <div className="mb-3 position-relative">
                   <i
                     className="bi bi-file-earmark-medical position-absolute top-50 start-0 translate-middle-y ms-3"

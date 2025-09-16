@@ -324,56 +324,100 @@ const PatientManagement = () => {
       </div>
 
       {/* ========== VIEW MODAL ========== */}
-      {showViewModal && (
-        <div className="modal show d-block" tabIndex="-1" style={{ backgroundColor: "rgba(0,0,0,0.5)" }}>
-          <div className="modal-dialog modal-lg">
-            <div className="modal-content">
-              <div className="modal-header">
-                <h5 className="modal-title">Patient Details</h5>
-                <button
-                  type="button"
-                  className="btn-close"
-                  onClick={() => setShowViewModal(false)}
-                ></button>
+{/* ========== VIEW MODAL - Vertical Layout ========== */}
+{showViewModal && (
+  <div className="modal show d-block" tabIndex="-1" style={{ backgroundColor: "rgba(0,0,0,0.5)" }}>
+    <div className="modal-dialog modal-lg">
+      <div className="modal-content">
+        <div className="modal-header">
+          <h5 className="modal-title">Patient Details</h5>
+          <button
+            type="button"
+            className="btn-close"
+            onClick={() => setShowViewModal(false)}
+          ></button>
+        </div>
+        <div className="modal-body">
+          {actionLoading.view ? (
+            <div className="text-center py-4">
+              <div className="spinner-border text-primary" role="status">
+                <span className="visually-hidden">Loading...</span>
               </div>
-              <div className="modal-body">
-                {selectedPatient ? (
+              <p className="mt-2">Loading patient details...</p>
+            </div>
+          ) : selectedPatient ? (
+            <div className="row">
+              {/* Profile Picture Section */}
+              <div className="col-12 text-center mb-4">
+                {selectedPatient.profilePicture ? (
+                  <img
+                    src={selectedPatient.profilePicture}
+                    alt="Profile"
+                    className="img-fluid rounded-circle border"
+                    style={{ width: "120px", height: "120px", objectFit: "cover" }}
+                  />
+                ) : (
+                  <i className="fas fa-user-circle text-muted" style={{ fontSize: "80px" }}></i>
+                )}
+                <h5 className="mt-3">{selectedPatient.name}</h5>
+                <p className="text-muted">Patient #{selectedPatientIndex + 1}</p>
+              </div>
+
+              {/* Patient Details - Vertical List */}
+              <div className="col-12">
+                <div className="card p-4 shadow-sm">
                   <div className="row">
-                    <div className="col-md-6">
+                    <div className="col-md-6 mb-3">
                       <p><strong>User ID:</strong> #{selectedPatientIndex + 1}</p>
+                    </div>
+                    <div className="col-md-6 mb-3">
                       <p><strong>Name:</strong> {selectedPatient.name}</p>
-                      <p><strong>Email:</strong> {selectedPatient.email}</p>
+                    </div>
+                    <div className="col-md-6 mb-3">
+                      <p><strong>Email:</strong> {selectedPatient.email || "-"}</p>
+                    </div>
+                    <div className="col-md-6 mb-3">
                       <p><strong>Phone:</strong> {selectedPatient.phone || "-"}</p>
+                    </div>
+                    <div className="col-md-6 mb-3">
                       <p><strong>Age:</strong> {selectedPatient.age || "-"}</p>
                     </div>
-                    <div className="col-md-6">
+                    <div className="col-md-6 mb-3">
                       <p><strong>Gender:</strong> {selectedPatient.gender || "-"}</p>
+                    </div>
+                    <div className="col-md-6 mb-3">
                       <p><strong>Status:</strong>
-                        <span className={`badge ms-2 ${getStatusClass(selectedPatient.status)}`}>
+                        <span className={`badge ms-2 px-3 py-1 rounded-pill ${getStatusClass(selectedPatient.status)}`}>
                           {selectedPatient.status}
                         </span>
                       </p>
-                      <p><strong>Joined:</strong> {new Date(selectedPatient.createdAt).toLocaleString()}</p>
+                    </div>
+                    <div className="col-md-6 mb-3">
+                      <p><strong>Joining Date:</strong> {new Date(selectedPatient.createdAt).toLocaleString()}</p>
                     </div>
                   </div>
-                ) : (
-                  <p>Loading...</p>
-                )}
-              </div>
-              <div className="modal-footer">
-                <button
-                  type="button"
-                  className="btn btn-secondary"
-                  onClick={() => setShowViewModal(false)}
-                >
-                  Close
-                </button>
+                </div>
               </div>
             </div>
-          </div>
+          ) : (
+            <div className="text-center py-4">
+              <p>Patient data not available</p>
+            </div>
+          )}
         </div>
-      )}
-
+        <div className="modal-footer">
+          <button
+            type="button"
+            className="btn btn-secondary"
+            onClick={() => setShowViewModal(false)}
+          >
+            Close
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+)}
       {/* ========== EDIT MODAL ========== */}
       {showEditModal && (
         <div className="modal show d-block" tabIndex="-1" style={{ backgroundColor: "rgba(0,0,0,0.5)" }}>
