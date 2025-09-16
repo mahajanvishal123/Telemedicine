@@ -46,6 +46,7 @@ import PatientManagement from "./Components/AdminDashboard/PatientManagement";
 import DoctorManagement from "./Components/AdminDashboard/DoctorManagement";
 import CaregiverProfile from "./Components/CaregiverDashboard/CaregiverProfile"
 import DoctorAvailability from "./Components/ProviderDoctor/DoctorAvailability"
+import AddCaregiver from "./Components/ProviderDoctor/AddCaregiver";
 
 function App() {
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
@@ -175,7 +176,8 @@ function App() {
                   path="/doctor/appointments"
                   element={<ProviderMyAppointments />}
                 />
-                 <Route path="/doctor/assign-caregiver" element={<AssignCaregiver />} />
+                <Route path="/doctor/add-caregiver" element={<AddCaregiver />}/>
+                <Route path="/doctor/assign-caregiver" element={<AssignCaregiver />} />
                 <Route path="/doctor/profile" element={<MyProfile />} />
                 <Route path="/doctor/calendar" element={<MyCalendar />} />
                 <Route path="/doctor/availabilityPlanner" element={<DoctorAvailability />} />
