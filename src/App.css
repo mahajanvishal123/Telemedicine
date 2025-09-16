@@ -116,3 +116,27 @@ html {
 html {
   scroll-behavior: smooth;
 }
+
+/* pagination css */
+/* Global Pagination Styling */
+.pagination .page-item .page-link {
+  color: #FF3100;
+  border: 1px solid #FF3100;
+  margin: 0 3px;
+}
+
+.pagination .page-item.active .page-link {
+  background-color: #FF3100;
+  color: #fff;
+  border: 1px solid #FF3100;
+}
+
+.pagination .page-item.disabled .page-link {
+  color: #ccc;
+  border: 1px solid #ddd;
+}
+
+.pagination .page-link:hover {
+  background-color: #FF3100;
+  color: #fff;
+}
