@@ -84,6 +84,8 @@ const Sidebar = ({ collapsed, setCollapsed }) => {
     { label: "Dashboard", path: "/caregiver/dashboard", icon: faTachometerAlt },
     { label: "My Clients", path: "/caregiver/clients", icon: faUsers },
     { label: "Visit Log", path: "/caregiver/visit-log", icon: faStethoscope },
+    { label: "My Profile", path: "/caregiver/profile", icon: faUser },
+    
   ];
 
   const adminMenuItems = [
