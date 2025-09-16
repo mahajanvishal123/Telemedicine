@@ -107,7 +107,6 @@ const Calendar = () => {
     setLoading(true);
     setApiError(null);
     try {
-      // You can send the doctorId via params (safer than string concat)
       const res = await axios.get(`${BASE_URL}/appointment`, {
         params: { doctorId: DOCTOR_ID },
       });
@@ -122,11 +121,7 @@ const Calendar = () => {
         .map(mapApiAppointmentToEvent)
         .filter((ev) => !!ev.start); // keep only valid dates
 
-      // If you also want to keep any local events already added, merge them smartly:
-      setEvents((prev) => {
-        const prevLocal = prev.filter((e) => !e.extendedProps?.raw); // previously added local meetings
-        return [...apiEvents, ...prevLocal];
-      });
+      setEvents(apiEvents);
     } catch (err) {
       console.error(err);
       setApiError(
@@ -141,7 +136,6 @@ const Calendar = () => {
 
   useEffect(() => {
     fetchAppointments();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // ---------- Calendar handlers ----------
@@ -158,25 +152,35 @@ const Calendar = () => {
     setDescription("");
   };
 
-  // Local add (no POST requested) – stays in state only
-  const handleSaveMeeting = () => {
+  // ✅ POST API call to save new appointment
+  const handleSaveMeeting = async () => {
     if (!title.trim()) {
       alert("Please enter a title for the meeting");
       return;
     }
 
-    const newEvent = {
-      id: Date.now().toString(),
+    const newAppointmentData = {
+      doctorId: DOCTOR_ID,
+      patientId: "68c2c39a59e57e85e5419996", // You can make this dynamic
+      appointmentDate: selectedDate,
+      appointmentTime: selectedTime,
+      reason: description,
       title: title.trim(),
-      start: selectedDate + (selectedTime ? "T" + selectedTime : ""),
-      extendedProps: {
-        description: description,
-        local: true,
-      },
+      status: "scheduled",
     };
 
-    setEvents((prev) => [...prev, newEvent]);
-    handleModalClose();
+    try {
+      const res = await axios.post(`${BASE_URL}/appointment`, newAppointmentData);
+
+      // On success, add the event to calendar
+      const newEvent = mapApiAppointmentToEvent(res.data.appointment);
+      setEvents((prev) => [...prev, newEvent]);
+
+      handleModalClose();
+    } catch (err) {
+      console.error("Failed to save appointment:", err);
+      alert("Failed to save appointment.");
+    }
   };
 
   const renderEventContent = (eventInfo) => (
@@ -239,7 +243,7 @@ const Calendar = () => {
         />
       </div>
 
-      {/* Booking Modal (local add only) */}
+      {/* Booking Modal (POST API now) */}
       {showModal && (
         <div className="modal show d-block" tabIndex="-1">
           <div className="modal-dialog">
