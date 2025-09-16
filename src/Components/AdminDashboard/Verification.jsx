@@ -291,7 +291,7 @@ const Verification = () => {
                           <td>{index + 1}</td>
                           <td>
                             <img
-                              src={(doctor.profile || '').trim() || 'https://cdn.pixabay.com/photo/2015/10/05/22/37/blank-profile-picture-973460_960_720.png  '}
+                              src={(doctor.profile || '').trim() || 'https://cdn.pixabay.com/photo/2015/10/05/22/37/blank-profile-picture-973460_960_720.png'}
                               alt="Profile"
                               className="img-fluid rounded-circle"
                               style={{ width: '50px', height: '50px' }}

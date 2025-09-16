@@ -243,8 +243,8 @@ const PatientManagement = () => {
                       <th>Join Date</th>
                       <th>Age</th>
                       <th>Gender</th>
-                      <th>Phone</th>
-                      <th>Status</th>
+                      {/* <th>Phone</th> */}
+                      {/* <th>Status</th> */}
                       <th>Actions</th>
                     </tr>
                   </thead>
@@ -264,12 +264,12 @@ const PatientManagement = () => {
                           <td>{new Date(patient.createdAt).toLocaleDateString()}</td>
                           <td>{patient.age}</td>
                           <td>{patient.gender || "-"}</td>
-                          <td>{patient.phone || "-"}</td>
-                          <td>
+                          {/* <td>{patient.phone || "-"}</td> */}
+                          {/* <td>
                             <span className={`badge ${getStatusClass(patient.status)}`}>
                               {patient.status}
                             </span>
-                          </td>
+                          </td> */}
                           <td>
                             <div className="btn-group" role="group">
                               <button
@@ -365,27 +365,27 @@ const PatientManagement = () => {
 
               {/* Patient Details - Vertical List */}
               <div className="col-12">
-                <div className="card p-4 shadow-sm">
+                <div className="card p-2 shadow-sm">
                   <div className="row">
-                    <div className="col-md-6 mb-3">
+                    <div className="col-md-6 ">
                       <p><strong>User ID:</strong> #{selectedPatientIndex + 1}</p>
                     </div>
-                    <div className="col-md-6 mb-3">
+                    <div className="col-md-6 ">
                       <p><strong>Name:</strong> {selectedPatient.name}</p>
                     </div>
-                    <div className="col-md-6 mb-3">
+                    <div className="col-md-6 ">
                       <p><strong>Email:</strong> {selectedPatient.email || "-"}</p>
                     </div>
-                    <div className="col-md-6 mb-3">
+                    <div className="col-md-6 ">
                       <p><strong>Phone:</strong> {selectedPatient.phone || "-"}</p>
                     </div>
-                    <div className="col-md-6 mb-3">
+                    <div className="col-md-6 ">
                       <p><strong>Age:</strong> {selectedPatient.age || "-"}</p>
                     </div>
-                    <div className="col-md-6 mb-3">
+                    <div className="col-md-6 ">
                       <p><strong>Gender:</strong> {selectedPatient.gender || "-"}</p>
                     </div>
-                    <div className="col-md-6 mb-3">
+                    <div className="col-md-6 ">
                       <p><strong>Status:</strong>
                         <span className={`badge ms-2 px-3 py-1 rounded-pill ${getStatusClass(selectedPatient.status)}`}>
                           {selectedPatient.status}

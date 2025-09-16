@@ -6,38 +6,39 @@ import axios from "axios";
 const Signup = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [role, setRole] = useState("patient");
-  const [fullName, setFullName] = useState(""); // 👈 Replaces firstName & lastName
+  const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [passwordMismatch, setPasswordMismatch] = useState(false);
-  const [timeError, setTimeError] = useState(""); // For time validation
+  const [timeError, setTimeError] = useState("");
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-  const [errorMessage, setErrorMessage] = useState(""); // 👈 NEW: For API errors
+  const [errorMessage, setErrorMessage] = useState("");
 
   // Doctor-specific fields
   const [specialty, setSpecialty] = useState("");
   const [licenseNo, setLicenseNo] = useState("");
   const [experience, setExperience] = useState("");
-  const [consultationFee, setConsultationFee] = useState(""); // 👈 NEW: Consultation Fee
+  const [consultationFee, setConsultationFee] = useState("");
   const [availableDays, setAvailableDays] = useState("Monday-Saturday");
   const [openingTime, setOpeningTime] = useState("10:00");
   const [closingTime, setClosingTime] = useState("18:00");
   const [documents, setDocuments] = useState(null);
 
-  // Patient-specific fields 👇
-  const [dob, setDob] = useState(""); // Date of Birth
-  const [age, setAge] = useState(""); // Age (can be auto-calculated or manual)
-  const [bloodGroup, setBloodGroup] = useState(""); // Blood Group
+  // Patient-specific fields
+  const [dob, setDob] = useState("");
+  const [age, setAge] = useState("");
+  const [bloodGroup, setBloodGroup] = useState("");
 
   // Profile Image & Gender (for both roles)
-  const [profileImage, setProfileImage] = useState(null);
+  const [profile, setProfileImage] = useState(null); // File object
+  const [previewUrl, setPreviewUrl] = useState(""); // For preview
   const [gender, setGender] = useState("");
 
   const navigate = useNavigate();
 
-  // Auto-calculate age when DOB changes (optional enhancement)
+  // Auto-calculate age when DOB changes
   const handleDobChange = (e) => {
     const selectedDob = e.target.value;
     setDob(selectedDob);
@@ -54,6 +55,27 @@ const Signup = () => {
       setAge("");
     }
   };
+
+  // Handle profile image change with preview
+  const handleProfileImageChange = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      setProfileImage(file);
+      setPreviewUrl(URL.createObjectURL(file)); // Show preview
+    } else {
+      setProfileImage(null);
+      setPreviewUrl("");
+    }
+  };
+
+  // Clear preview on unmount
+  React.useEffect(() => {
+    return () => {
+      if (previewUrl) {
+        URL.revokeObjectURL(previewUrl);
+      }
+    };
+  }, [previewUrl]);
 
   const handleSignup = async (e) => {
     e.preventDefault();
@@ -81,16 +103,15 @@ const Signup = () => {
     try {
       const formData = new FormData();
 
-      // Common fields for both roles
-    
+      // Common fields
       formData.append("name", fullName);
       formData.append("email", email);
-      formData.append("password",password);
+      formData.append("password", password);
       formData.append("gender", gender);
 
       // Profile image upload
-      if (profileImage) {
-        formData.append("profileImage", profileImage);
+      if (profile) {
+        formData.append("profile", profile);
       }
 
       // Doctor-specific fields
@@ -115,9 +136,8 @@ const Signup = () => {
         formData.append("bloodGroup", bloodGroup);
       }
 
-      // ✅ FINAL ENDPOINTS BASED ON ROLE
       const url = `${API_URL}/${role}`;
-      console.log("signup url", url);
+      console.log("Signup URL:", url);
 
       const response = await axios.post(url, formData, {
         headers: {
@@ -132,15 +152,11 @@ const Signup = () => {
       localStorage.setItem("role", role);
 
       // Redirect
-      if (role === "doctor") {
-        navigate("/login");
-      } else {
-        navigate("/login");
-      }
+      navigate("/login");
+
     } catch (error) {
       console.error("Signup failed:", error);
 
-      // Log full response for debugging
       if (error.response) {
         console.log("Server response data:", error.response.data);
         console.log("Server response status:", error.response.status);
@@ -402,6 +418,32 @@ const Signup = () => {
                     </div>
                   </div>
                 </div>
+
+                {/* Profile Picture - Common for both roles */}
+                <div className="mb-3 text-start">
+                  <label className="form-label">Profile Picture</label>
+                  <input
+                    type="file"
+                    className="form-control"
+                    accept="image/*"
+                    onChange={handleProfileImageChange}
+                  />
+                  {previewUrl && (
+                    <div className="mt-2">
+                      <img
+                        src={previewUrl}
+                        alt="Profile Preview"
+                        style={{
+                          width: "100px",
+                          height: "100px",
+                          borderRadius: "50%",
+                          objectFit: "cover",
+                          border: "2px solid #FF6A00",
+                        }}
+                      />
+                    </div>
+                  )}
+                </div>
               </>
             )}
 
@@ -411,14 +453,23 @@ const Signup = () => {
                 <hr className="my-4" />
                 <h6 className="fw-bold text-start mb-3">Patient Details</h6>
                 <div className="mb-3 text-start">
+                  <label className="form-label">Date of Birth</label>
+                  <input
+                    type="date"
+                    className="form-control"
+                    value={dob}
+                    onChange={handleDobChange}
+                    required
+                  />
+                </div>
+                <div className="mb-3 text-start">
                   <label className="form-label">Age</label>
                   <input
                     type="number"
                     className="form-control"
-                    placeholder="Auto-calculated or enter manually"
+                    placeholder="Auto-calculated from DOB"
                     value={age}
-                    onChange={(e) => setAge(e.target.value)}
-                    min="0"
+                    readOnly
                   />
                 </div>
                 <div className="mb-3 text-start">
@@ -448,30 +499,32 @@ const Signup = () => {
               <>
                 <hr className="my-4" />
                 <h6 className="fw-bold text-start mb-3">Doctor Details</h6>
-              <div className="mb-3 text-start">
-  <label className="form-label">Specialty</label>
-  <select
-    className="form-select"
-    value={specialty}
-    onChange={(e) => setSpecialty(e.target.value)}
-    required
-  >
-    <option value="">Select Specialty</option>
-    <option value="Cardiologist">Cardiologist</option>
-    <option value="Nephrologist">Nephrologist</option>
-    <option value="Neurologist">Neurologist</option>
-    <option value="Dermatologist">Dermatologist</option>
-    <option value="Gynecologist">Gynecologist</option>
-    <option value="Oncologist">Oncologist</option>
-    <option value="Endocrinologist">Endocrinologist</option>
-    <option value="Gastroenterologist">Gastroenterologist</option>
-    <option value="Pulmonologist">Pulmonologist</option>
-    <option value="Rheumatologist">Rheumatologist</option>
-    <option value="Urologist">Urologist</option>
-    <option value="General Physician">General Physician</option>
-    <option value="Other">Other</option>
-  </select>
-</div>
+
+                <div className="mb-3 text-start">
+                  <label className="form-label">Specialty</label>
+                  <select
+                    className="form-select"
+                    value={specialty}
+                    onChange={(e) => setSpecialty(e.target.value)}
+                    required
+                  >
+                    <option value="">Select Specialty</option>
+                    <option value="Cardiologist">Cardiologist</option>
+                    <option value="Nephrologist">Nephrologist</option>
+                    <option value="Neurologist">Neurologist</option>
+                    <option value="Dermatologist">Dermatologist</option>
+                    <option value="Gynecologist">Gynecologist</option>
+                    <option value="Oncologist">Oncologist</option>
+                    <option value="Endocrinologist">Endocrinologist</option>
+                    <option value="Gastroenterologist">Gastroenterologist</option>
+                    <option value="Pulmonologist">Pulmonologist</option>
+                    <option value="Rheumatologist">Rheumatologist</option>
+                    <option value="Urologist">Urologist</option>
+                    <option value="General Physician">General Physician</option>
+                    <option value="Other">Other</option>
+                  </select>
+                </div>
+
                 <div className="mb-3 position-relative">
                   <i
                     className="bi bi-file-earmark-medical position-absolute top-50 start-0 translate-middle-y ms-3"
@@ -486,6 +539,7 @@ const Signup = () => {
                     required
                   />
                 </div>
+
                 <div className="mb-3 position-relative">
                   <i
                     className="bi bi-mortarboard position-absolute top-50 start-0 translate-middle-y ms-3"
@@ -501,6 +555,7 @@ const Signup = () => {
                     min="0"
                   />
                 </div>
+
                 <div className="mb-3 position-relative">
                   <i
                     className="bi bi-currency-dollar position-absolute top-50 start-0 translate-middle-y ms-3"
@@ -516,6 +571,7 @@ const Signup = () => {
                     min="0"
                   />
                 </div>
+
                 <div className="mb-3 text-start">
                   <label className="form-label">Available Days</label>
                   <select
@@ -529,6 +585,7 @@ const Signup = () => {
                     <option value="Saturday-Sunday">Weekends Only</option>
                   </select>
                 </div>
+
                 <div className="mb-3 text-start">
                   <label className="form-label">Opening Time</label>
                   <input
@@ -539,6 +596,7 @@ const Signup = () => {
                     required
                   />
                 </div>
+
                 <div className="mb-3 text-start">
                   <label className="form-label">Closing Time</label>
                   <input
@@ -549,9 +607,11 @@ const Signup = () => {
                     required
                   />
                 </div>
+
                 {timeError && (
                   <p className="text-danger small mb-3">{timeError}</p>
                 )}
+
                 <div className="mb-3 text-start">
                   <label className="form-label">Upload Documents (License, Certificates)</label>
                   <input
