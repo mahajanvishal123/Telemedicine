@@ -52,13 +52,13 @@ const Verification = () => {
     fetchDoctors();
   }, []);
 
-  // Derived Stats
+  // Derived Stats - Updated for consistency
   const pendingDoctors = allDoctors.filter(
-    doctor => doctor.isVerify === "0" || doctor.isVerify === "false"
+    doctor => doctor.isVerify === "0" || doctor.isVerify === false || doctor.isVerify === "false"
   );
 
   const verifiedDoctors = allDoctors.filter(
-    doctor => doctor.isVerify === "1"
+    doctor => doctor.isVerify === "1" || doctor.isVerify === true || doctor.isVerify === "true"
   );
 
   const rejectedDoctors = allDoctors.filter(
@@ -228,7 +228,7 @@ const Verification = () => {
   return (
     <div className="">
       {/* Page Header */}
-      <div className="d-flex justify-content-between align-items-center mb-4">
+      <div className="d-flex justify-content-between align-items-center mb-2">
         <h3 className="dashboard-heading">Verification</h3>
       </div>
 
@@ -291,7 +291,7 @@ const Verification = () => {
                           <td>{index + 1}</td>
                           <td>
                             <img
-                              src={(doctor.profile || '').trim() || 'https://cdn.pixabay.com/photo/2015/10/05/22/37/blank-profile-picture-973460_960_720.png'}
+                              src={(doctor.profile || '').trim() || 'https://cdn.pixabay.com/photo/2015/10/05/22/37/blank-profile-picture-973460_960_720.png  '}
                               alt="Profile"
                               className="img-fluid rounded-circle"
                               style={{ width: '50px', height: '50px' }}

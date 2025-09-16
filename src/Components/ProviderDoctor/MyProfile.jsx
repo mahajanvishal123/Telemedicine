@@ -4,67 +4,92 @@ import API_URL from '../../Baseurl/Baseurl';
 
 const MyProfile = () => {
   const BASE_URL = API_URL;
-  const DOCTOR_ID = '68c2befc249f86eca552142d'; // <-- given id
 
+  // ---------- helpers ----------
+  const safeJSON = (txt) => { try { return JSON.parse(txt); } catch { return null; } };
+  const storedUser = safeJSON(localStorage.getItem('user')) || {};
+  const accessToken = localStorage.getItem('accessToken') || storedUser?.token || '';
+
+  const getDoctorIdFromToken = () => {
+    try {
+      const t = accessToken;
+      if (!t || t.split('.').length !== 3) return null;
+      const payload = JSON.parse(atob(t.split('.')[1]));
+      return payload?.id || payload?._id || payload?.userId || null;
+    } catch {
+      return null;
+    }
+  };
+
+  const loggedInDoctorId =
+    storedUser?.user?._id ||
+    storedUser?.doctor?._id ||
+    storedUser?._id ||
+    getDoctorIdFromToken() ||
+    null;
+
+  // fallback (dev only)
+  const DOCTOR_ID = loggedInDoctorId || '68c2befc249f86eca552142d';
+
+  // ---------- ui state ----------
   const [isAvailable, setIsAvailable] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState(false);
-
-  // preview ke liye (persist karta hai), lekin API submit me real File jayegi
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState(null);
   const [profileImage, setProfileImage] = useState(
     localStorage.getItem('profileImage') || 'https://via.placeholder.com/150'
   );
-  // actual file for API
   const [profileFile, setProfileFile] = useState(null);
-  const [documentFiles, setDocumentFiles] = useState([]); // multiple docs
-
+  const [documentFiles, setDocumentFiles] = useState([]);
+  const [existingDocumentUrl, setExistingDocumentUrl] = useState('');
   const fileInputRef = useRef(null);
   const documentInputRef = useRef(null);
 
+  // filled by GET
   const [profileData, setProfileData] = useState({
-    fullName: 'Dr. Sarah Johnson',         // -> API: name
-    email: 'sarah.johnson@example.com',     // -> API: email
-    phone: '+1 (555) 123-4567',             // (API me use nahi ho raha)
-    specialty: 'Cardiology',                // -> API: specialty
-    bio: 'Board-certified cardiologist with over 10 years of experience. Specializing in preventive cardiology and heart disease management.',
-    consultationFee: 150,
-
-    // ---- NEW fields (API required) ----
-    licenseNo: '21365498745',
-    experience: '5 Years ',                 // string form me jaata hai
-    availableDay: 'Mon - Fri',
-    openingTime: '10',
-    closingTime: '6',
-    gender: 'Male',                         // Male | Female | Other
-    password: 'doctor@123',                 // API expects in PUT payload too
+    fullName: '',
+    email: '',
+    phone: '',
+    specialty: '',
+    bio: '',
+    // IMPORTANT: keep raw fee from payload EXACTLY as-is (with symbols/commas)
+    consultationFee: '',
+    licenseNo: '',
+    experience: '',
+    availableDay: '',
+    openingTime: '',
+    closingTime: '',
+    gender: '',
+    password: '',
   });
 
-  const specialties = [
+  // make specialties dynamic so API value can be injected as an option
+  const [specialties, setSpecialties] = useState([
     'Cardiology','Dermatology','Neurology','Pediatrics',
     'Orthopedics','Psychiatry','Oncology','Endocrinology'
-  ];
+  ]);
 
+  // ---------- generic handlers ----------
   const handleInputChange = (e) => {
     const { name, value } = e.target;
     setProfileData((p) => ({ ...p, [name]: value }));
   };
 
-  // Profile image choose karna — preview + file state
   const handleImageUpload = (e) => {
     const file = e.target.files?.[0];
     if (file) {
-      setProfileFile(file); // API ke liye file
+      setProfileFile(file);
       const reader = new FileReader();
       reader.onload = (event) => {
         const imageDataUrl = event.target.result;
         setProfileImage(imageDataUrl);
-        localStorage.setItem('profileImage', imageDataUrl); // preview persistence
+        localStorage.setItem('profileImage', imageDataUrl);
       };
       reader.readAsDataURL(file);
     }
   };
 
-  // Documents choose karna (multiple)
   const handleDocumentsUpload = (e) => {
     const files = Array.from(e.target.files || []);
     setDocumentFiles(files);
@@ -72,441 +97,595 @@ const MyProfile = () => {
 
   const removeDocuments = () => {
     setDocumentFiles([]);
-    if (documentInputRef.current) {
-      documentInputRef.current.value = '';
+    if (documentInputRef.current) documentInputRef.current.value = '';
+  };
+
+  // ---------- fee utils ----------
+  // sanitize a raw fee (number or string like "₹1,200/-", "500 INR", " 600.50 ")
+  const extractNumericFee = (raw) => {
+    if (raw === null || raw === undefined) return '';
+    if (typeof raw === 'number' && isFinite(raw)) return String(raw);
+    const s = String(raw).trim();
+    // pick a number (with optional thousands commas & decimal)
+    const m = s.replace(/\s+/g, '').match(/-?\d{1,3}(?:,\d{3})*(?:\.\d+)?|-?\d+(?:\.\d+)?/);
+    if (!m) return '';
+    const cleaned = m[0].replace(/,/g, '');
+    return cleaned;
+  };
+
+  // ---------- mapping ----------
+  const apiToUi = (d) => {
+    // Never prefill password from API (security)
+    const safePassword = '';
+
+    // helper: dynamic key match by partial name
+    const findByKeyIncludes = (obj, keys) => {
+      for (const k of Object.keys(obj || {})) {
+        const lk = k.toLowerCase();
+        if (keys.some(s => lk.includes(s))) return obj[k];
+      }
+      return undefined;
+    };
+
+    // Try multiple possible field names for specialty
+    const specialtyValue =
+      d?.specialty ||
+      d?.specialization ||
+      d?.speciality ||
+      d?.field ||
+      d?.expertise ||
+      d?.department ||
+      findByKeyIncludes(d, ['special', 'dept', 'expert']) ||
+      '';
+
+    // Get RAW fee exactly as payload
+    const rawFeeCandidate =
+      d?.fee ?? d?.consultationFee ?? d?.charges ??
+      d?.consultFee ?? d?.consultation_fee ?? d?.amount ??
+      d?.price ?? findByKeyIncludes(d, ['fee','consult','charge','amount','price']);
+
+    const feeRaw = rawFeeCandidate === null || rawFeeCandidate === undefined
+      ? ''
+      : String(rawFeeCandidate); // <-- preserve EXACT payload display
+
+    console.log("Specialty from API:", specialtyValue);
+    console.log("Consultation Fee RAW from API:", feeRaw);
+
+    return {
+      fullName: d?.name || d?.fullName || '',
+      email: d?.email || '',
+      phone: d?.phone || '',
+      specialty: specialtyValue,
+      bio: d?.bio || d?.about || '',
+      licenseNo: d?.licenseNo || d?.licenseNumber || '',
+      experience: d?.experience ?? d?.yearsOfExperience ?? '',
+      availableDay: d?.availableDay ?? d?.availableDays ?? '',
+      openingTime: d?.openingTime != null ? String(d.openingTime) : '',
+      closingTime: d?.closingTime != null ? String(d.closingTime) : '',
+      gender: d?.gender || '',
+      consultationFee: feeRaw,    // <-- show EXACT as payload
+      password: safePassword,
+    };
+  };
+
+  const uiToFormData = () => {
+    const fd = new FormData();
+    fd.append('name', (profileData.fullName || '').trim());
+    fd.append('email', (profileData.email || '').trim());
+    fd.append('specialty', profileData.specialty || '');
+    fd.append('licenseNo', profileData.licenseNo || '');
+    fd.append('experience', profileData.experience || '');
+    fd.append('availableDay', profileData.availableDay || '');
+    fd.append('openingTime', profileData.openingTime || '');
+    fd.append('closingTime', profileData.closingTime || '');
+    fd.append('gender', profileData.gender || '');
+
+    // send numeric-only fee to backend (display remains raw)
+    const feeToSend = extractNumericFee(profileData.consultationFee);
+    fd.append('fee', feeToSend);
+
+    if ((profileData.password || '').trim()) {
+      fd.append('password', profileData.password || '');
+    }
+    if (profileFile) fd.append('profile', profileFile);
+    documentFiles.forEach((f) => fd.append('documents', f));
+    return fd;
+  };
+
+  const extractDoctor = (res) => {
+    let d = res?.data;
+    if (d?.data !== undefined) d = d.data;
+    if (d?.doctor !== undefined) d = d.doctor;
+    if (Array.isArray(d)) d = d[0];
+    return d;
+  };
+
+  // ---------- GET by logged-in id ----------
+  const fetchDoctor = async () => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      console.log("Fetching doctor with ID:", DOCTOR_ID);
+
+      const apiUrl = `${BASE_URL}/doctor?doctorId=${DOCTOR_ID}`;
+      console.log("API URL:", apiUrl);
+
+      const res = await axios.get(apiUrl, {
+        headers: {
+          Accept: 'application/json',
+          ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
+        },
+      });
+
+      console.log("Full API Response:", res.data);
+
+      const d = extractDoctor(res);
+      console.log("Extracted doctor object:", d);
+
+      if (!d || typeof d !== 'object') throw new Error('Doctor not found');
+
+      const mapped = apiToUi(d);
+      console.log("Mapped data:", mapped);
+
+      // ensure specialty option exists in dropdown
+      if (mapped.specialty && !specialties.includes(mapped.specialty)) {
+        setSpecialties(prev => [...new Set([...prev, mapped.specialty])]);
+      }
+
+      setProfileData((prev) => ({ ...prev, ...mapped }));
+
+      if (d?.profile) {
+        setProfileImage(d.profile);
+        localStorage.setItem('profileImage', d.profile);
+      }
+
+      setExistingDocumentUrl(
+        typeof d?.documents === 'string' && d.documents.trim() ? d.documents : ''
+      );
+      localStorage.setItem('profileData', JSON.stringify(mapped));
+    } catch (err) {
+      console.error('GET /doctor?doctorId=... failed:', err);
+      setError(
+        err?.response?.data?.message ||
+        err?.message ||
+        'Failed to load profile'
+      );
+    } finally {
+      setIsLoading(false);
     }
   };
 
-  // Submit -> PUT multipart/form-data
+  // ---------- PUT update ----------
   const handleSubmit = async (e) => {
     e.preventDefault();
     setIsSaving(true);
-
+    setError(null);
     try {
-      // local persistence (optional)
       localStorage.setItem('profileData', JSON.stringify(profileData));
       localStorage.setItem('isAvailable', isAvailable.toString());
+      const fd = uiToFormData();
 
-      // Build multipart form-data exactly as API expects
-      const fd = new FormData();
-      fd.append('name', (profileData.fullName || '').trim());
-      fd.append('email', (profileData.email || '').trim());
-      fd.append('specialty', profileData.specialty || '');
-      fd.append('licenseNo', profileData.licenseNo || '');
-      fd.append('experience', profileData.experience || '');
-      fd.append('availableDay', profileData.availableDay || '');
-      fd.append('openingTime', profileData.openingTime || '');
-      fd.append('closingTime', profileData.closingTime || '');
-      fd.append('gender', profileData.gender || '');
-      fd.append('password', profileData.password || '');
+      console.log("Updating doctor with ID:", DOCTOR_ID);
 
-      if (profileFile) {
-        fd.append('profile', profileFile); // file
-      }
+      const url = `${BASE_URL}/doctor/${DOCTOR_ID}`;
+      const res = await axios.put(url, fd, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+          ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
+        },
+      });
 
-      if (documentFiles.length) {
-        documentFiles.forEach((file) => {
-          // most node backends accept repeated key "documents"
-          fd.append('documents', file);
-        });
-      }
-
-      // Agar auth chahiye to yahan token header add karein
-      const res = await axios.put(
-        `${BASE_URL}/doctor/${DOCTOR_ID}`,
-        fd,
-        {
-          headers: {
-            'Content-Type': 'multipart/form-data',
-            // Authorization: `Bearer ${token}`,
-          },
-        }
-      );
-
-      // Success UI
       setSaveSuccess(true);
       setTimeout(() => setSaveSuccess(false), 3000);
 
-      // Optionally, response se profile URL aa raha ho to preview update kardein
-      const updated = res?.data?.appointment || res?.data?.data || res?.data;
-      const profileUrl = updated?.profile;
-      if (profileUrl) {
-        setProfileImage(profileUrl);
-        localStorage.setItem('profileImage', profileUrl);
+      const updated = extractDoctor(res) || res?.data;
+      if (updated?.profile) {
+        setProfileImage(updated.profile);
+        localStorage.setItem('profileImage', updated.profile);
+      }
+      if (typeof updated?.documents === 'string' && updated.documents.trim()) {
+        setExistingDocumentUrl(updated.documents);
       }
     } catch (err) {
-      console.error(err);
-      alert(
+      console.error('PUT /doctor update failed:', err);
+      const msg =
         err?.response?.data?.message ||
         err?.message ||
-        'Failed to update profile'
-      );
+        'Failed to update profile';
+      setError(msg);
+      alert(msg);
     } finally {
       setIsSaving(false);
     }
   };
 
-  // Load saved data on mount
+  // ---------- effects ----------
   useEffect(() => {
-    const savedProfileData = localStorage.getItem('profileData');
     const savedAvailability = localStorage.getItem('isAvailable');
-    if (savedProfileData) setProfileData(JSON.parse(savedProfileData));
     if (savedAvailability) setIsAvailable(savedAvailability === 'true');
-  }, []);
 
-  // Entrance animations
+    console.log("Doctor ID being used:", DOCTOR_ID);
+
+    fetchDoctor();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [DOCTOR_ID]);
+
   useEffect(() => {
-    const elements = document.querySelectorAll('.profile-section');
-    elements.forEach((el, index) => {
-      setTimeout(() => el.classList.add('animate-in'), 100 * index);
-    });
-  }, []);
+    const els = document.querySelectorAll('.profile-section');
+    els.forEach((el, i) => setTimeout(() => el.classList.add('animate-in'), 100 * i));
+  }, [isLoading]);
 
+  // ---------- ui ----------
   return (
-    <div className="">
-      <div className="">
-        <div className="">
-          {/* Header Section */}
+    <div className="container py-4">
+      <div className="row">
+        <div className="col-12">
           <div className="mb-4">
             <h1 className="dashboard-heading mb-2">My Profile</h1>
             <p className="text-muted mb-0">Manage your professional information and availability</p>
           </div>
-
           <div className="card shadow-sm border-0 overflow-hidden">
             <div className="card-header py-3">
               <h2 className="h5 mb-0">Professional Profile</h2>
             </div>
-
             <div className="card-body p-3 p-md-4">
-              <form onSubmit={handleSubmit}>
-                <div className="row">
-                  {/* Left Column - Form Fields */}
-                  <div className="col-md-7 order-2 order-md-1">
-                    <div className="profile-section">
-                      <div className="mb-3">
-                        <label htmlFor="fullName" className="form-label fw-semibold">Full Name</label>
-                        <input
-                          type="text"
-                          className="form-control"
-                          id="fullName"
-                          name="fullName"
-                          value={profileData.fullName}
-                          onChange={handleInputChange}
-                          placeholder="Enter your full name"
-                        />
-                      </div>
+              {isLoading ? (
+                <div className="d-flex align-items-center">
+                  <span className="spinner-border me-2" role="status" />
+                  <span>Loading profile...</span>
+                </div>
+              ) : (
+                <form onSubmit={handleSubmit}>
+                  {error && (
+                    <div className="alert alert-danger small" role="alert">
+                      {error}
                     </div>
-
-                    <div className="profile-section">
-                      <div className="mb-3">
-                        <label htmlFor="email" className="form-label fw-semibold">Email Address</label>
-                        <input
-                          type="email"
-                          className="form-control"
-                          id="email"
-                          name="email"
-                          value={profileData.email}
-                          onChange={handleInputChange}
-                          placeholder="Enter your email address"
-                        />
-                      </div>
-                    </div>
-
-                    <div className="profile-section">
-                      <div className="mb-3">
-                        <label htmlFor="phone" className="form-label fw-semibold">Phone Number</label>
-                        <input
-                          type="tel"
-                          className="form-control"
-                          id="phone"
-                          name="phone"
-                          value={profileData.phone}
-                          onChange={handleInputChange}
-                          placeholder="Enter your phone number"
-                        />
-                      </div>
-                    </div>
-
-                    <div className="profile-section">
-                      <div className="row">
-                        <div className="col-md-6 mb-3">
-                          <label htmlFor="specialty" className="form-label fw-semibold">Specialty</label>
-                          <select
-                            className="form-select"
-                            id="specialty"
-                            name="specialty"
-                            value={profileData.specialty}
-                            onChange={handleInputChange}
-                          >
-                            {specialties.map((spec, index) => (
-                              <option key={index} value={spec}>{spec}</option>
-                            ))}
-                          </select>
-                        </div>
-                        <div className="col-md-6 mb-3">
-                          <label htmlFor="licenseNo" className="form-label fw-semibold">License No.</label>
+                  )}
+                  <div className="row">
+                    {/* Left Column */}
+                    <div className="col-md-7 order-2 order-md-1">
+                      <div className="profile-section">
+                        <div className="mb-3">
+                          <label htmlFor="fullName" className="form-label fw-semibold">Full Name</label>
                           <input
                             type="text"
                             className="form-control"
-                            id="licenseNo"
-                            name="licenseNo"
-                            value={profileData.licenseNo}
+                            id="fullName"
+                            name="fullName"
+                            value={profileData.fullName}
                             onChange={handleInputChange}
-                            placeholder="123456789"
+                            placeholder="Enter your full name"
                           />
                         </div>
                       </div>
-                    </div>
 
-                    <div className="profile-section">
-                      <div className="row">
-                        <div className="col-md-6 mb-3">
-                          <label htmlFor="experience" className="form-label fw-semibold">Experience</label>
+                      <div className="profile-section">
+                        <div className="mb-3">
+                          <label htmlFor="email" className="form-label fw-semibold">Email Address</label>
                           <input
-                            type="text"
+                            type="email"
                             className="form-control"
-                            id="experience"
-                            name="experience"
-                            value={profileData.experience}
+                            id="email"
+                            name="email"
+                            value={profileData.email}
                             onChange={handleInputChange}
-                            placeholder="e.g. 5 Years "
-                          />
-                        </div>
-                        <div className="col-md-6 mb-3">
-                          <label htmlFor="gender" className="form-label fw-semibold">Gender</label>
-                          <select
-                            className="form-select"
-                            id="gender"
-                            name="gender"
-                            value={profileData.gender}
-                            onChange={handleInputChange}
-                          >
-                            <option value="">-- Select --</option>
-                            <option value="Male">Male</option>
-                            <option value="Female">Female</option>
-                            <option value="Other">Other</option>
-                          </select>
-                        </div>
-                      </div>
-                    </div>
-
-                    <div className="profile-section">
-                      <div className="row">
-                        <div className="col-md-4 mb-3">
-                          <label htmlFor="availableDay" className="form-label fw-semibold">Available Days</label>
-                          <input
-                            type="text"
-                            className="form-control"
-                            id="availableDay"
-                            name="availableDay"
-                            value={profileData.availableDay}
-                            onChange={handleInputChange}
-                            placeholder="Mon - Fri"
-                          />
-                        </div>
-                        <div className="col-md-4 mb-3">
-                          <label htmlFor="openingTime" className="form-label fw-semibold">Opening Time</label>
-                          <input
-                            type="text"
-                            className="form-control"
-                            id="openingTime"
-                            name="openingTime"
-                            value={profileData.openingTime}
-                            onChange={handleInputChange}
-                            placeholder="10"
-                          />
-                        </div>
-                        <div className="col-md-4 mb-3">
-                          <label htmlFor="closingTime" className="form-label fw-semibold">Closing Time</label>
-                          <input
-                            type="text"
-                            className="form-control"
-                            id="closingTime"
-                            name="closingTime"
-                            value={profileData.closingTime}
-                            onChange={handleInputChange}
-                            placeholder="6"
+                            placeholder="Enter your email address"
                           />
                         </div>
                       </div>
-                    </div>
 
-                    <div className="profile-section">
-                      <div className="row">
-                        <div className="col-md-6 mb-3">
-                          <label htmlFor="consultationFee" className="form-label fw-semibold">Consultation Fee ($)</label>
+                      <div className="profile-section">
+                        <div className="mb-3">
+                          <label htmlFor="phone" className="form-label fw-semibold">Phone Number</label>
                           <input
-                            type="number"
+                            type="tel"
                             className="form-control"
-                            id="consultationFee"
-                            name="consultationFee"
-                            value={profileData.consultationFee}
+                            id="phone"
+                            name="phone"
+                            value={profileData.phone}
                             onChange={handleInputChange}
-                            placeholder="Set your consultation fee"
-                          />
-                        </div>
-                        <div className="col-md-6 mb-3">
-                          <label htmlFor="password" className="form-label fw-semibold">Password</label>
-                          <input
-                            type="password"
-                            className="form-control"
-                            id="password"
-                            name="password"
-                            value={profileData.password}
-                            onChange={handleInputChange}
-                            placeholder="Update password"
+                            placeholder="Enter your phone number"
                           />
                         </div>
                       </div>
-                    </div>
 
-                    <div className="profile-section">
-                      <div className="mb-3">
-                        <label htmlFor="bio" className="form-label fw-semibold">Bio</label>
-                        <textarea
-                          className="form-control"
-                          id="bio"
-                          name="bio"
-                          rows="4"
-                          value={profileData.bio}
-                          onChange={handleInputChange}
-                          placeholder="Tell patients about your background and expertise"
-                        ></textarea>
-                      </div>
-                    </div>
-
-                    <div className="profile-section">
-                      <div className="mb-3">
-                        <label className="form-label fw-semibold">Documents (Certificates, Licenses etc.)</label>
-                        <input
-                          type="file"
-                          className="form-control"
-                          multiple
-                          onChange={handleDocumentsUpload}
-                          ref={documentInputRef}
-                        />
-                        {documentFiles.length > 0 && (
-                          <div className="mt-2">
-                            <ul className="list-group">
-                              {documentFiles.map((f, idx) => (
-                                <li key={idx} className="list-group-item d-flex justify-content-between align-items-center">
-                                  <span className="small">{f.name}</span>
-                                  <button type="button" className="btn btn-sm btn-outline-danger" onClick={removeDocuments}>
-                                    Clear
-                                  </button>
-                                </li>
+                      <div className="profile-section">
+                        <div className="row">
+                          <div className="col-md-6 mb-3">
+                            <label htmlFor="specialty" className="form-label fw-semibold">Specialty</label>
+                            <select
+                              className="form-select"
+                              id="specialty"
+                              name="specialty"
+                              value={profileData.specialty}
+                              onChange={handleInputChange}
+                            >
+                              <option value="">-- Select Specialty --</option>
+                              {specialties.map((spec, index) => (
+                                <option key={index} value={spec}>{spec}</option>
                               ))}
-                            </ul>
+                            </select>
                           </div>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Right Column - Profile Picture & Availability */}
-                  <div className="col-md-5 order-1 order-md-2">
-                    <div className="profile-section">
-                      <div className="text-center mb-3">
-                        <div className="position-relative d-inline-block">
-                          <div className="profile-img-container">
-                            <img
-                              src={profileImage}
-                              className="rounded-circle img-thumbnail profile-img"
-                              alt="Profile"
-                              style={{ width: '150px', height: '150px', objectFit: 'cover' }}
+                          <div className="col-md-6 mb-3">
+                            <label htmlFor="licenseNo" className="form-label fw-semibold">License No.</label>
+                            <input
+                              type="text"
+                              className="form-control"
+                              id="licenseNo"
+                              name="licenseNo"
+                              value={profileData.licenseNo}
+                              onChange={handleInputChange}
+                              placeholder="e.g. 5678"
                             />
-                            <div className="profile-overlay rounded-circle">
-                              <label htmlFor="profileUpload" className="profile-upload-btn">
-                                <i className="fas fa-camera"></i>
-                                <input
-                                  type="file"
-                                  id="profileUpload"
-                                  ref={fileInputRef}
-                                  className="d-none"
-                                  accept="image/*"
-                                  onChange={handleImageUpload}
-                                />
-                              </label>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="profile-section">
+                        <div className="row">
+                          <div className="col-md-6 mb-3">
+                            <label htmlFor="experience" className="form-label fw-semibold">Experience</label>
+                            <input
+                              type="text"
+                              className="form-control"
+                              id="experience"
+                              name="experience"
+                              value={profileData.experience}
+                              onChange={handleInputChange}
+                              placeholder="e.g. 25"
+                            />
+                          </div>
+                          <div className="col-md-6 mb-3">
+                            <label htmlFor="gender" className="form-label fw-semibold">Gender</label>
+                            <select
+                              className="form-select"
+                              id="gender"
+                              name="gender"
+                              value={profileData.gender}
+                              onChange={handleInputChange}
+                            >
+                              <option value="">-- Select --</option>
+                              <option value="Male">Male</option>
+                              <option value="Female">Female</option>
+                              <option value="Other">Other</option>
+                            </select>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="profile-section">
+                        <div className="row">
+                          <div className="col-md-4 mb-3">
+                            <label htmlFor="availableDay" className="form-label fw-semibold">Available Days</label>
+                            <input
+                              type="text"
+                              className="form-control"
+                              id="availableDay"
+                              name="availableDay"
+                              value={profileData.availableDay}
+                              onChange={handleInputChange}
+                              placeholder="Mon - Fri"
+                            />
+                          </div>
+                          <div className="col-md-4 mb-3">
+                            <label htmlFor="openingTime" className="form-label fw-semibold">Opening Time</label>
+                            <input
+                              type="text"
+                              className="form-control"
+                              id="openingTime"
+                              name="openingTime"
+                              value={profileData.openingTime}
+                              onChange={handleInputChange}
+                              placeholder="10:00"
+                            />
+                          </div>
+                          <div className="col-md-4 mb-3">
+                            <label htmlFor="closingTime" className="form-label fw-semibold">Closing Time</label>
+                            <input
+                              type="text"
+                              className="form-control"
+                              id="closingTime"
+                              name="closingTime"
+                              value={profileData.closingTime}
+                              onChange={handleInputChange}
+                              placeholder="18:00"
+                            />
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="profile-section">
+                        <div className="row">
+                          <div className="col-md-6 mb-3">
+                            <label htmlFor="consultationFee" className="form-label fw-semibold">Consultation Fee</label>
+                            <input
+                              // SHOW EXACT PAYLOAD VALUE (no cleaning in UI)
+                              type="text"
+                              className="form-control"
+                              id="consultationFee"
+                              name="consultationFee"
+                              value={profileData.consultationFee}
+                              onChange={(e) => {
+                                setProfileData((p) => ({ ...p, consultationFee: e.target.value }));
+                              }}
+                              placeholder="e.g. ₹1,000/- or 600.50"
+                            />
+                            <div className="form-text">
+                              Display shows payload as-is. On save, we’ll send the numeric value to the server.
                             </div>
                           </div>
-                          <div className="mt-2">
-                            <p className="mb-1 fw-semibold small">Profile Picture</p>
-                            <button
-                              type="button"
-                              className="btn btn-outline-primary btn-sm"
-                              onClick={() => fileInputRef.current?.click()}
-                            >
-                              Upload New Photo
-                            </button>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-
-                    <div className="profile-section">
-                      <div className="availability-container p-3 rounded-3 shadow-sm mb-3">
-                        <div className="d-flex justify-content-between align-items-center">
-                          <div>
-                            <h5 className="fw-bold mb-1 small">Availability Status</h5>
-                            <p className="text-muted small mb-0">
-                              {isAvailable ? 'Available for consultations' : 'Not available for consultations'}
-                            </p>
-                          </div>
-                          <div className="form-check form-switch">
+                          <div className="col-md-6 mb-3">
+                            <label htmlFor="password" className="form-label fw-semibold">Password</label>
                             <input
-                              className="form-check-input"
-                              type="checkbox"
-                              role="switch"
-                              id="availabilityToggle"
-                              checked={isAvailable}
-                              onChange={() => setIsAvailable(!isAvailable)}
-                              style={{
-                                backgroundColor: isAvailable ? '#F95918' : '#ccc',
-                                borderColor: '#F95918',
-                                width: '2.5rem',
-                                height: '1.25rem'
-                              }}
+                              type="password"
+                              className="form-control"
+                              id="password"
+                              name="password"
+                              value={profileData.password}
+                              onChange={handleInputChange}
+                              placeholder="Update password"
                             />
+                            <div className="form-text">
+                              For security, your current password isn’t fetched. Enter a new one to update.
+                            </div>
                           </div>
                         </div>
+                      </div>
 
-                        <div className={`status-indicator mt-2 ${isAvailable ? 'available' : 'unavailable'}`}>
-                          <span className="status-dot"></span>
-                          <span className="status-text small">
-                            {isAvailable ? 'Available' : 'Not Available'}
-                          </span>
+                      <div className="profile-section">
+                        <div className="mb-3">
+                          <label htmlFor="bio" className="form-label fw-semibold">Bio</label>
+                          <textarea
+                            className="form-control"
+                            id="bio"
+                            name="bio"
+                            rows="4"
+                            value={profileData.bio}
+                            onChange={handleInputChange}
+                            placeholder="Tell patients about your background and expertise"
+                          ></textarea>
+                        </div>
+                      </div>
+
+                      <div className="profile-section">
+                        <div className="mb-3">
+                          <label className="form-label fw-semibold">Documents (Certificates, Licenses etc.)</label>
+                          <input
+                            type="file"
+                            className="form-control"
+                            multiple
+                            onChange={handleDocumentsUpload}
+                            ref={documentInputRef}
+                          />
+                          {existingDocumentUrl && documentFiles.length === 0 && (
+                            <div className="mt-2 small">
+                              <span className="text-muted me-2">Current document:</span>
+                              <a href={existingDocumentUrl} target="_blank" rel="noreferrer">
+                                {existingDocumentUrl}
+                              </a>
+                            </div>
+                          )}
+                          {documentFiles.length > 0 && (
+                            <div className="mt-2">
+                              <ul className="list-group">
+                                {documentFiles.map((f, idx) => (
+                                  <li key={idx} className="list-group-item d-flex justify-content-between align-items-center">
+                                    <span className="small">{f.name}</span>
+                                    <button type="button" className="btn btn-sm btn-outline-danger" onClick={removeDocuments}>
+                                      Clear
+                                    </button>
+                                  </li>
+                                ))}
+                              </ul>
+                            </div>
+                          )}
                         </div>
                       </div>
                     </div>
 
-                    <div className="profile-section">
-                      <div className="d-grid mt-3 mb-3">
-                        <button
-                          type="submit"
-                          className="btn text-white py-2 fw-bold save-btn"
-                          disabled={isSaving}
-                        >
-                          {isSaving ? (
-                            <>
-                              <span className="spinner-border spinner-border-sm me-2" role="status"></span>
-                              Saving...
-                            </>
-                          ) : (
-                            'Save Changes'
-                          )}
-                        </button>
-
-                        {saveSuccess && (
-                          <div className="alert alert-success mt-2 d-flex align-items-center small py-2" role="alert">
-                            <i className="fas fa-check-circle me-2"></i>
-                            Profile updated successfully!
+                    {/* Right Column */}
+                    <div className="col-md-5 order-1 order-md-2">
+                      <div className="profile-section">
+                        <div className="text-center mb-3">
+                          <div className="position-relative d-inline-block">
+                            <div className="profile-img-container">
+                              <img
+                                src={profileImage}
+                                className="rounded-circle img-thumbnail profile-img"
+                                alt="Profile"
+                                style={{ width: '150px', height: '150px', objectFit: 'cover' }}
+                              />
+                              <div className="profile-overlay rounded-circle">
+                                <label htmlFor="profileUpload" className="profile-upload-btn">
+                                  <i className="fas fa-camera"></i>
+                                  <input
+                                    type="file"
+                                    id="profileUpload"
+                                    ref={fileInputRef}
+                                    className="d-none"
+                                    accept="image/*"
+                                    onChange={handleImageUpload}
+                                  />
+                                </label>
+                              </div>
+                            </div>
+                            <div className="mt-2">
+                              <p className="mb-1 fw-semibold small">Profile Picture</p>
+                              <button
+                                type="button"
+                                className="btn btn-outline-primary btn-sm"
+                                onClick={() => fileInputRef.current?.click()}
+                              >
+                                Upload New Photo
+                              </button>
+                            </div>
                           </div>
-                        )}
+                        </div>
+                      </div>
+
+                      <div className="profile-section">
+                        <div className="availability-container p-3 rounded-3 shadow-sm mb-3">
+                          <div className="d-flex justify-content-between align-items-center">
+                            <div>
+                              <h5 className="fw-bold mb-1 small">Availability Status</h5>
+                              <p className="text-muted small mb-0">
+                                {isAvailable ? 'Available for consultations' : 'Not available for consultations'}
+                              </p>
+                            </div>
+                            <div className="form-check form-switch">
+                              <input
+                                className="form-check-input"
+                                type="checkbox"
+                                role="switch"
+                                id="availabilityToggle"
+                                checked={isAvailable}
+                                onChange={() => setIsAvailable(!isAvailable)}
+                                style={{
+                                  backgroundColor: isAvailable ? '#F95918' : '#ccc',
+                                  borderColor: '#F95918',
+                                  width: '2.5rem',
+                                  height: '1.25rem'
+                                }}
+                              />
+                            </div>
+                          </div>
+                          <div className={`status-indicator mt-2 ${isAvailable ? 'available' : 'unavailable'}`}>
+                            <span className="status-dot"></span>
+                            <span className="status-text small">
+                              {isAvailable ? 'Available' : 'Not Available'}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="profile-section">
+                        <div className="d-grid mt-3 mb-3">
+                          <button
+                            type="submit"
+                            className="btn text-white py-2 fw-bold save-btn"
+                            disabled={isSaving}
+                          >
+                            {isSaving ? (
+                              <>
+                                <span className="spinner-border spinner-border-sm me-2" role="status"></span>
+                                Saving...
+                              </>
+                            ) : (
+                              'Save Changes'
+                            )}
+                          </button>
+                          {saveSuccess && (
+                            <div className="alert alert-success mt-2 d-flex align-items-center small py-2" role="alert">
+                              <i className="fas fa-check-circle me-2"></i>
+                              Profile updated successfully!
+                            </div>
+                          )}
+                        </div>
                       </div>
                     </div>
                   </div>
-                </div>
-              </form>
+                </form>
+              )}
             </div>
           </div>
         </div>

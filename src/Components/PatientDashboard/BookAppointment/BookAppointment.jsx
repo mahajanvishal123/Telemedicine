@@ -7,7 +7,7 @@ import axios from "axios";
 
 
 const specialties = [
-  { name: "Cardiology", desc: "Heart and cardiovascular care", count: 12 },
+  { name: "Cardiology", desc: "Heart and cardiovascular care", count: 10 },
   { name: "Neurology", desc: "Brain and nervous system", count: 8 },
   { name: "Dermatology", desc: "Skin and hair care", count: 6 },
   { name: "Orthopedic", desc: "Bone and joint care", count: 10 },

@@ -1,31 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
+import axios from 'axios';
+import API_URL from "../../Baseurl/Baseurl";
 
 const ProviderDashboard = () => {
   const [currentTime, setCurrentTime] = useState(new Date());
-  const [nextAppointment, setNextAppointment] = useState({
-    patientName: 'Sarah Johnson',
-    time: '10:30 AM',
-    type: 'Follow-up Consultation',
-    status: 'Confirmed'
-  });
-
-  const [todayStats, setTodayStats] = useState({
-    appointments: 8,
-    completed: 3,
-    pending: 5,
-    earnings: 420
-  });
-
-  const [weeklyEarnings, setWeeklyEarnings] = useState([
-    { day: 'Mon', earnings: 380 },
-    { day: 'Tue', earnings: 520 },
-    { day: 'Wed', earnings: 460 },
-    { day: 'Thu', earnings: 610 },
-    { day: 'Fri', earnings: 550 },
-    { day: 'Sat', earnings: 320 },
-    { day: 'Sun', earnings: 180 }
-  ]);
+  const [dashboardData, setDashboardData] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
   // New state for export and details functionality
   const [showEarningsDetails, setShowEarningsDetails] = useState(false);
@@ -64,6 +46,27 @@ const ProviderDashboard = () => {
     }
   };
 
+  // Fetch dashboard data
+  useEffect(() => {
+    const fetchDashboardData = async () => {
+      try {
+        const response = await axios.get(`${API_URL}/dashboard`);
+        
+        if (response.data.success) {
+          setDashboardData(response.data.data);
+        } else {
+          setError('Failed to fetch dashboard data');
+        }
+      } catch (err) {
+        setError('Error fetching  ' + err.message);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchDashboardData();
+  }, []);
+
   // Update time every minute
   useEffect(() => {
     const timer = setInterval(() => {
@@ -90,32 +93,10 @@ const ProviderDashboard = () => {
     return date.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' });
   };
 
-  // Check if it's time for the next appointment (within 15 minutes)
-  const isAppointmentTime = () => {
-    if (!nextAppointment.time) return false;
-
-    const now = currentTime;
-    const [time, modifier] = nextAppointment.time.split(' ');
-    let [hours, minutes] = time.split(':').map(Number);
-
-    if (modifier === 'PM' && hours < 12) hours += 12;
-    if (modifier === 'AM' && hours === 12) hours = 0;
-
-    const appointmentTime = new Date(now);
-    appointmentTime.setHours(hours, minutes, 0, 0);
-
-    const diffMs = appointmentTime - now;
-    const diffMins = Math.round(diffMs / 60000);
-
-    return diffMins >= 0 && diffMins <= 15;
-  };
-
   // Handle export functionality
   const handleExport = (format) => {
     // In a real application, this would generate and download a file
     console.log(`Exporting earnings data in ${format} format`);
-
-    // Simulate export process
     alert(`Earnings data exported as ${format.toUpperCase()} successfully!`);
   };
 
@@ -124,28 +105,30 @@ const ProviderDashboard = () => {
     setShowEarningsDetails(!showEarningsDetails);
   };
 
-  // Handle start call button click
-  const handleStartCall = () => {
-    // In a real application, this would initiate a video call
-    alert(`Starting call with ${nextAppointment.patientName}`);
-  };
+  if (loading) {
+    return (
+      <div className="d-flex justify-content-center align-items-center" style={{ height: '100vh' }}>
+        <div className="spinner-border text-primary" role="status">
+          <span className="visually-hidden">Loading...</span>
+        </div>
+      </div>
+    );
+  }
 
-  // Handle profile dropdown actions
-  const handleProfileAction = (action) => {
-    switch (action) {
-      case 'profile':
-        alert('Navigating to profile page');
-        break;
-      case 'settings':
-        alert('Navigating to settings page');
-        break;
-      case 'logout':
-        alert('Logging out...');
-        break;
-      default:
-        break;
-    }
-  };
+  if (error) {
+    return (
+      <div className="alert alert-danger text-center" role="alert">
+        {error}
+      </div>
+    );
+  }
+
+  // Use API data or fallback values
+  const totalDoctors = dashboardData?.totalDoctors || 17;
+  const totalPatients = dashboardData?.totalPatients || 9;
+  const totalCaregivers = dashboardData?.totalCaregivers || 2;
+  const totalUsers = dashboardData?.totalUsers || 28;
+  const recentSignups = dashboardData?.recentSignups || [];
 
   return (
     <div className="">
@@ -167,7 +150,6 @@ const ProviderDashboard = () => {
         </div>
 
         {/* Quick Stats */}
-        {/* Quick Stats */}
         <motion.div
           className="row"
           variants={containerVariants}
@@ -177,29 +159,29 @@ const ProviderDashboard = () => {
           {[
             {
               icon: "fas fa-user-injured",
-              value: "142",
+              value: totalPatients,
               label: "Total Patients",
               color: "#3498db",
               bg: "rgba(52, 152, 219, 0.15)"
             },
             {
-              icon: "fas fa-calendar-check",
-              value: "28",
-              label: "Appointments This Week",
+              icon: "fas fa-user-md",
+              value: totalDoctors,
+              label: "Total Doctors",
               color: "#2ecc71",
               bg: "rgba(46, 204, 113, 0.15)"
             },
             {
-              icon: "fas fa-star",
-              value: "4.8",
-              label: "Average Rating",
+              icon: "fas fa-user-friends",
+              value: totalCaregivers,
+              label: "Total Caregivers",
               color: "#f1c40f",
               bg: "rgba(241, 196, 15, 0.15)"
             },
             {
-              icon: "fas fa-clock",
-              value: "12 min",
-              label: "Average Wait Time",
+              icon: "fas fa-users",
+              value: totalUsers,
+              label: "Total Users",
               color: "#e67e22",
               bg: "rgba(230, 126, 34, 0.15)"
             }
@@ -241,146 +223,70 @@ const ProviderDashboard = () => {
             </motion.div>
           ))}
         </motion.div>
-
-
-
       </motion.div>
 
-
-      {/* Welcome Message & Next Appointment */}
-      <motion.div
+      {/* Recent Signups */}
+      <div
         className="row mb-4"
         variants={containerVariants}
         initial="hidden"
         animate="visible"
       >
-        <motion.div className="col-lg-8 mb-4 mb-lg-0" variants={itemVariants}>
-          <motion.div
-            className="card shadow-sm h-100 border-0"
+        <div className="col-12" variants={itemVariants}>
+          <div
+            className="card  h-100 border-0"
             whileHover={cardHover}
           >
             <div className="card-header">
-              <h5 className="mb-0">Welcome back, Dr. Smith!</h5>
+              <h5 className="mb-0">Recent Signups</h5>
             </div>
             <div className="card-body">
-              <p>You have <strong>{todayStats.appointments} appointments</strong> scheduled for today.
-                {todayStats.completed > 0 && ` ${todayStats.completed} have been completed`}
-                {todayStats.pending > 0 && ` and ${todayStats.pending} are upcoming.`}</p>
-
-              <div className="mt-4">
-                <h6 className="text-muted">NEXT APPOINTMENT</h6>
-                <motion.div
-                  className="d-flex align-items-center mt-3 p-3 rounded"
-                  style={{ backgroundColor: '#FFF5EF' }}
-                  initial={{ opacity: 0, x: -20 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  transition={{ delay: 0.5 }}
-                >
-                  <div className="flex-grow-1">
-                    <h5 className="mb-1">{nextAppointment.patientName}</h5>
-                    <p className="mb-1">{nextAppointment.type}</p>
-                    <span className={`badge ${nextAppointment.status === 'Confirmed' ? 'bg-success' : 'bg-warning'}`}>
-                      {nextAppointment.status}
-                    </span>
-                  </div>
-                  <div className="text-end">
-                    <h4 className="mb-0" style={{ color: '#F95918' }}>{nextAppointment.time}</h4>
-                    <small className="text-muted">Today</small>
-                  </div>
-                </motion.div>
+              <div className="table-responsive">
+                <table className="table table-hover">
+                  <thead>
+                    <tr>
+                      <th>Name</th>
+                      <th>Role</th>
+                      <th>Signup Date</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {recentSignups.map((user) => (
+                      <tr key={user._id}>
+                        <td>{user.name}</td>
+                        <td>
+                          <span className={`badge ${
+                            user.role === 'Doctor' ? 'bg-primary' :
+                            user.role === 'Patient' ? 'bg-success' : 'bg-info'
+                          }`}>
+                            {user.role}
+                          </span>
+                        </td>
+                        <td>{new Date(user.createdAt).toLocaleDateString()}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
               </div>
             </div>
-          </motion.div>
-        </motion.div>
-
-        <motion.div className="col-lg-4" variants={itemVariants}>
-          <motion.div
-            className="card shadow-sm h-100 border-0"
-            whileHover={cardHover}
-          >
-            <div className="card-header">
-              <h5 className="mb-0">Today's Summary</h5>
-            </div>
-            <div className="card-body">
-              <div className="row text-center">
-                <motion.div
-                  className="col-6 mb-3"
-                  whileHover={{ scale: 1.05 }}
-                  transition={{ type: "spring", stiffness: 300 }}
-                >
-                  <div className="p-3 rounded" style={{ backgroundColor: '#E8F4FF' }}>
-                    <h3 className="mb-0" style={{ color: '#F95918' }}>{todayStats.appointments}</h3>
-                    <small>Total Appointments</small>
-                  </div>
-                </motion.div>
-                <motion.div
-                  className="col-6 mb-3"
-                  whileHover={{ scale: 1.05 }}
-                  transition={{ type: "spring", stiffness: 300 }}
-                >
-                  <div className="p-3 rounded" style={{ backgroundColor: '#E8F4FF' }}>
-                    <h3 className="mb-0" style={{ color: '#F95918' }}>${todayStats.earnings}</h3>
-                    <small>Earnings</small>
-                  </div>
-                </motion.div>
-                <motion.div
-                  className="col-6"
-                  whileHover={{ scale: 1.05 }}
-                  transition={{ type: "spring", stiffness: 300 }}
-                >
-                  <div className="p-3 rounded" style={{ backgroundColor: '#E8F4FF' }}>
-                    <h3 className="mb-0" style={{ color: '#F95918' }}>{todayStats.completed}</h3>
-                    <small>Completed</small>
-                  </div>
-                </motion.div>
-                <motion.div
-                  className="col-6"
-                  whileHover={{ scale: 1.05 }}
-                  transition={{ type: "spring", stiffness: 300 }}
-                >
-                  <div className="p-3 rounded" style={{ backgroundColor: '#E8F4FF' }}>
-                    <h3 className="mb-0" style={{ color: '#F95918' }}>{todayStats.pending}</h3>
-                    <small>Upcoming</small>
-                  </div>
-                </motion.div>
-              </div>
-
-              {isAppointmentTime() && (
-                <motion.div
-                  className="mt-4 text-center"
-                  initial={{ opacity: 0, scale: 0.8 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  transition={{ type: "spring", stiffness: 200 }}
-                >
-                  <button
-                    className="btn btn-lg w-100"
-                    style={{ backgroundColor: '#F95918', color: 'white' }}
-                    onClick={handleStartCall}
-                  >
-                    <i className="fas fa-phone me-2"></i>Start Call Now
-                  </button>
-                  <small className="text-muted">Next appointment is starting soon</small>
-                </motion.div>
-              )}
-            </div>
-          </motion.div>
-        </motion.div>
-      </motion.div>
+          </div>
+        </div>
+      </div>
 
       {/* Earnings Overview */}
       <motion.div
         className="row mb-4"
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.3, duration: 0.5 }}
+        // transition={{ delay: 0.3, duration: 0.5 }}
       >
-        <div className="col-12">
+        <div className="col-12 mt-3">
           <motion.div
-            className="card shadow-sm border-0"
+            className="card shadow-sm border-0 "
             whileHover={cardHover}
             style={{ position: "relative", overflow: "visible" }}
           >
-            <div className="card-header d-flex flex-column flex-sm-row justify-content-between align-items-start align-items-sm-center">
+            <div className="card-header d-flex flex-column flex-sm-row justify-content-between align-items-start align-items-sm-center ">
               <h5 className="mb-2 mb-sm-0">Earnings Overview (This Week)</h5>
               <div>
                 <span className="badge bg-light text-dark">Total: $3,020</span>
@@ -463,33 +369,36 @@ const ProviderDashboard = () => {
                           className="d-flex align-items-end h-100"
                           style={{ gap: "12px" }}
                         >
-                          {weeklyEarnings.map((day, index) => (
-                            <motion.div
-                              key={index}
-                              className="d-flex flex-column align-items-center"
-                              style={{ flex: 1 }}
-                              initial={{ height: 0 }}
-                              animate={{ height: `${(day.earnings / 700) * 100}%` }}
-                              transition={{
-                                delay: index * 0.1 + 0.5,
-                                duration: 0.8,
-                                type: "spring",
-                              }}
-                            >
+                          {[380, 520, 460, 610, 550, 320, 180].map((earnings, index) => {
+                            const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+                            return (
                               <motion.div
-                                className="rounded"
-                                style={{
-                                  width: "100%",
-                                  height: "100%",
-                                  backgroundColor: "#F95918",
-                                  minHeight: "10px",
+                                key={index}
+                                className="d-flex flex-column align-items-center"
+                                style={{ flex: 1 }}
+                                initial={{ height: 0 }}
+                                animate={{ height: `${(earnings / 700) * 100}%` }}
+                                transition={{
+                                  delay: index * 0.1 + 0.5,
+                                  duration: 0.8,
+                                  type: "spring",
                                 }}
-                                whileHover={{ backgroundColor: "#e14a12" }}
-                              ></motion.div>
-                              <small className="mt-2">{day.day}</small>
-                              <small className="fw-bold">${day.earnings}</small>
-                            </motion.div>
-                          ))}
+                              >
+                                <motion.div
+                                  className="rounded"
+                                  style={{
+                                    width: "100%",
+                                    height: "100%",
+                                    backgroundColor: "#F95918",
+                                    minHeight: "10px",
+                                  }}
+                                  whileHover={{ backgroundColor: "#e14a12" }}
+                                ></motion.div>
+                                <small className="mt-2">{days[index]}</small>
+                                <small className="fw-bold">${earnings}</small>
+                              </motion.div>
+                            );
+                          })}
                         </div>
                       </div>
                     </div>
@@ -550,7 +459,7 @@ const ProviderDashboard = () => {
                   </div>
 
                   {/* Buttons */}
-                 <div className="mt-4 d-flex flex-column flex-md-row justify-content-center align-items-center gap-2 text-center">
+                  <div className="mt-4 d-flex flex-column flex-md-row justify-content-center align-items-center gap-2 text-center">
                     <div className="dropdown d-inline-block me-2">
                       <button
                         className="btn btn-outline-secondary dropdown-toggle"
@@ -558,8 +467,6 @@ const ProviderDashboard = () => {
                         id="exportDropdown"
                         data-bs-toggle="dropdown"
                         aria-expanded="false"
-                        whileHover={{ scale: 1.05 }}
-                        whileTap={{ scale: 0.95 }}
                       >
                         <i className="fas fa-download me-2"></i>Export
                       </button>
@@ -594,8 +501,6 @@ const ProviderDashboard = () => {
                       className="btn"
                       style={{ backgroundColor: "#F95918", color: "white" }}
                       onClick={toggleEarningsDetails}
-                      whileHover={{ scale: 1.05 }}
-                      whileTap={{ scale: 0.95 }}
                     >
                       <i className="fas fa-chart-line me-2"></i>Details
                     </button>
@@ -605,7 +510,6 @@ const ProviderDashboard = () => {
             </div>
           </motion.div>
         </div>
-
       </motion.div>
     </div>
   );
