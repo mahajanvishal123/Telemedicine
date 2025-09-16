@@ -183,11 +183,41 @@ const Calendar = () => {
     }
   };
 
-  const renderEventContent = (eventInfo) => (
-    <div className="event-content">
-      <b>{eventInfo.timeText}</b> <i>{eventInfo.event.title}</i>
-    </div>
-  );
+  // ✅ IMPROVED: eventRender for better layout, color, tooltip
+  const renderEventContent = (eventInfo) => {
+    const extendedProps = eventInfo.event.extendedProps;
+    const status = extendedProps.status || "Scheduled";
+    const patient = extendedProps.patient || "Patient";
+    const description = extendedProps.description || "";
+
+    // Color mapping
+    let bgColor = "bg-light";
+    if (status === "Completed") bgColor = "bg-success-subtle";
+    else if (status === "Cancelled") bgColor = "bg-danger-subtle";
+    else if (status === "Pending") bgColor = "bg-warning-subtle";
+    else if (status === "Scheduled") bgColor = "bg-primary-subtle";
+
+    // Full tooltip
+    const tooltip = `${eventInfo.event.title}\n${description}`;
+
+    return (
+      <div
+        className={`fc-event fc-event-draggable ${bgColor} p-1 rounded text-truncate d-flex align-items-center`}
+        title={tooltip}
+        style={{ minHeight: "36px", fontSize: "0.8rem" }}
+      >
+        <span className="fw-bold me-1" style={{ fontSize: "0.85rem" }}>
+          {eventInfo.timeText}
+        </span>
+        <span className="text-secondary me-1" style={{ fontSize: "0.75rem" }}>
+          {patient}
+        </span>
+        <span className="ms-auto badge bg-secondary" style={{ fontSize: "0.7rem" }}>
+          {status}
+        </span>
+      </div>
+    );
+  };
 
   return (
     <div>
@@ -234,8 +264,8 @@ const Calendar = () => {
             right: "dayGridMonth,timeGridWeek,timeGridDay,listWeek",
           }}
           events={events}
-          eventContent={renderEventContent}
-          height="auto"
+          eventContent={renderEventContent} // ✅ Improved rendering
+          height="700px" // ✅ Fixed height to avoid squishing
           dateClick={handleDateClick}
           selectable={true}
           weekends={true}

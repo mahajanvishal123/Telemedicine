@@ -1,319 +1,11 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Container, Row, Col, Card, Button, Badge, Form } from "react-bootstrap";
 import { FaUserMd, FaStar, FaCheckCircle, FaCalendarAlt, FaChevronRight, FaChevronLeft } from "react-icons/fa";
 import "./BookAppointment.css";
 import Base_Url from "../../../Baseurl/Baseurl";
 import axios from "axios";
 
-
-const specialties = [
-  { name: "Cardiology", desc: "Heart and cardiovascular care", count: 10 },
-  { name: "Neurology", desc: "Brain and nervous system", count: 8 },
-  { name: "Dermatology", desc: "Skin and hair care", count: 6 },
-  { name: "Orthopedic", desc: "Bone and joint care", count: 10 },
-  { name: "Pediatrics", desc: "Children healthcare", count: 8 },
-  { name: "Gynecology", desc: "Women health specialist", count: 7 },
-  { name: "Psychiatry", desc: "Mental health care", count: 5 },
-  { name: "Ophthalmology", desc: "Eye care specialist", count: 4 },
-  { name: "Dentistry", desc: "Dental and oral care", count: 6 },
-  { name: "General Medicine", desc: "General health consultation", count: 9 },
-];
-
-const doctors = [
-  // Cardiology
-  {
-    name: "Dr. Sarah Johnson",
-    specialty: "Cardiology",
-    university: "Harvard Medical School",
-    rating: 4.9,
-    experience: "15+ years",
-    patients: "2.5k+ patients",
-    price: "$150",
-    languages: "English, Spanish",
-    status: "Available Today",
-    nextAvailable: "Today 2:30 PM",
-    video: true,
-  },
-  {
-    name: "Dr. Michael Chen",
-    specialty: "Cardiology",
-    university: "Johns Hopkins University",
-    rating: 4.8,
-    experience: "12+ years",
-    patients: "1.8k+ patients",
-    price: "$180",
-    languages: "English, Mandarin",
-    status: "Available Today",
-    nextAvailable: "Tomorrow 10:00 AM",
-    video: true,
-  },
-  // Neurology
-  {
-    name: "Dr. Emily Rodriguez",
-    specialty: "Neurology",
-    university: "Mayo Clinic College",
-    rating: 4.9,
-    experience: "18+ years",
-    patients: "3.2k+ patients",
-    price: "$200",
-    languages: "English, Spanish",
-    status: "Available Today",
-    nextAvailable: "Today 3:00 PM",
-    video: true,
-  },
-  {
-    name: "Dr. James Wilson",
-    specialty: "Neurology",
-    university: "Stanford Medical School",
-    rating: 4.7,
-    experience: "14+ years",
-    patients: "2.1k+ patients",
-    price: "$190",
-    languages: "English",
-    status: "Available Tomorrow",
-    nextAvailable: "Tomorrow 9:30 AM",
-    video: true,
-  },
-  // Dermatology
-  {
-    name: "Dr. Lisa Thompson",
-    specialty: "Dermatology",
-    university: "UCLA Medical School",
-    rating: 4.8,
-    experience: "11+ years",
-    patients: "1.9k+ patients",
-    price: "$140",
-    languages: "English, French",
-    status: "Available Today",
-    nextAvailable: "Today 4:15 PM",
-    video: true,
-  },
-  {
-    name: "Dr. David Kim",
-    specialty: "Dermatology",
-    university: "NYU School of Medicine",
-    rating: 4.6,
-    experience: "9+ years",
-    patients: "1.5k+ patients",
-    price: "$130",
-    languages: "English, Korean",
-    status: "Available Today",
-    nextAvailable: "Today 1:45 PM",
-    video: true,
-  },
-  // Orthopedic
-  {
-    name: "Dr. Robert Martinez",
-    specialty: "Orthopedic",
-    university: "University of Pennsylvania",
-    rating: 4.9,
-    experience: "20+ years",
-    patients: "4.1k+ patients",
-    price: "$220",
-    languages: "English, Spanish",
-    status: "Available Today",
-    nextAvailable: "Today 11:00 AM",
-    video: true,
-  },
-  {
-    name: "Dr. Jennifer Lee",
-    specialty: "Orthopedic",
-    university: "Duke University Medical",
-    rating: 4.7,
-    experience: "13+ years",
-    patients: "2.3k+ patients",
-    price: "$195",
-    languages: "English",
-    status: "Available Tomorrow",
-    nextAvailable: "Tomorrow 2:00 PM",
-    video: true,
-  },
-  // Pediatrics
-  {
-    name: "Dr. Amanda Foster",
-    specialty: "Pediatrics",
-    university: "Boston Children's Hospital",
-    rating: 4.9,
-    experience: "16+ years",
-    patients: "3.8k+ patients",
-    price: "$120",
-    languages: "English, Italian",
-    status: "Available Today",
-    nextAvailable: "Today 10:30 AM",
-    video: true,
-  },
-  {
-    name: "Dr. Christopher Brown",
-    specialty: "Pediatrics",
-    university: "Children's Hospital Philadelphia",
-    rating: 4.8,
-    experience: "12+ years",
-    patients: "2.7k+ patients",
-    price: "$110",
-    languages: "English, Spanish",
-    status: "Available Today",
-    nextAvailable: "Today 3:30 PM",
-    video: true,
-  },
-  // Gynecology
-  {
-    name: "Dr. Maria Garcia",
-    specialty: "Gynecology",
-    university: "Baylor College of Medicine",
-    rating: 4.8,
-    experience: "14+ years",
-    patients: "2.8k+ patients",
-    price: "$160",
-    languages: "English, Spanish, Portuguese",
-    status: "Available Today",
-    nextAvailable: "Today 2:00 PM",
-    video: true,
-  },
-  {
-    name: "Dr. Rachel Green",
-    specialty: "Gynecology",
-    university: "Emory University School",
-    rating: 4.7,
-    experience: "10+ years",
-    patients: "1.6k+ patients",
-    price: "$145",
-    languages: "English",
-    status: "Available Tomorrow",
-    nextAvailable: "Tomorrow 11:30 AM",
-    video: true,
-  },
-  // Psychiatry
-  {
-    name: "Dr. Daniel Adams",
-    specialty: "Psychiatry",
-    university: "Yale School of Medicine",
-    rating: 4.9,
-    experience: "17+ years",
-    patients: "2.4k+ patients",
-    price: "$180",
-    languages: "English, German",
-    status: "Available Today",
-    nextAvailable: "Today 5:00 PM",
-    video: true,
-  },
-  {
-    name: "Dr. Sophie Turner",
-    specialty: "Psychiatry",
-    university: "Columbia University Medical",
-    rating: 4.6,
-    experience: "8+ years",
-    patients: "1.2k+ patients",
-    price: "$165",
-    languages: "English, French",
-    status: "Available Today",
-    nextAvailable: "Today 6:30 PM",
-    video: true,
-  },
-  // Ophthalmology
-  {
-    name: "Dr. Kevin Wong",
-    specialty: "Ophthalmology",
-    university: "University of Michigan",
-    rating: 4.8,
-    experience: "15+ years",
-    patients: "2.9k+ patients",
-    price: "$170",
-    languages: "English, Cantonese",
-    status: "Available Today",
-    nextAvailable: "Today 1:00 PM",
-    video: true,
-  },
-  {
-    name: "Dr. Patricia Davis",
-    specialty: "Ophthalmology",
-    university: "Northwestern University",
-    rating: 4.7,
-    experience: "11+ years",
-    patients: "1.8k+ patients",
-    price: "$155",
-    languages: "English",
-    status: "Available Tomorrow",
-    nextAvailable: "Tomorrow 10:45 AM",
-    video: true,
-  },
-  // Dentistry
-  {
-    name: "Dr. Mark Johnson",
-    specialty: "Dentistry",
-    university: "University of Southern California",
-    rating: 4.8,
-    experience: "13+ years",
-    patients: "3.5k+ patients",
-    price: "$125",
-    languages: "English, Spanish",
-    status: "Available Today",
-    nextAvailable: "Today 9:15 AM",
-    video: true,
-  },
-  {
-    name: "Dr. Anna Petrov",
-    specialty: "Dentistry",
-    university: "Tufts University School",
-    rating: 4.9,
-    experience: "19+ years",
-    patients: "4.2k+ patients",
-    price: "$135",
-    languages: "English, Russian",
-    status: "Available Today",
-    nextAvailable: "Today 4:00 PM",
-    video: true,
-  },
-  // General Medicine
-  {
-    name: "Dr. Thomas Clark",
-    specialty: "General Medicine",
-    university: "University of Washington",
-    rating: 4.7,
-    experience: "16+ years",
-    patients: "3.1k+ patients",
-    price: "$100",
-    languages: "English",
-    status: "Available Today",
-    nextAvailable: "Today 12:00 PM",
-    video: true,
-  },
-  {
-    name: "Dr. Helen Martinez",
-    specialty: "General Medicine",
-    university: "University of California SF",
-    rating: 4.8,
-    experience: "12+ years",
-    patients: "2.5k+ patients",
-    price: "$95",
-    languages: "English, Spanish",
-    status: "Available Today",
-    nextAvailable: "Today 2:45 PM",
-    video: true,
-  },
-];
-
-const dates = [
-  { date: "Tue, Sep 2", label: "Today" },
-  { date: "Wed, Sep 3", label: "Wednesday" },
-  { date: "Thu, Sep 4", label: "Thursday" },
-  { date: "Fri, Sep 5", label: "Friday" },
-  { date: "Sat, Sep 6", label: "Saturday" },
-  { date: "Sun, Sep 7", label: "Sunday" },
-  { date: "Mon, Sep 8", label: "Monday" },
-  { date: "Tue, Sep 9", label: "Tuesday" },
-  { date: "Wed, Sep 10", label: "Wednesday" },
-  { date: "Thu, Sep 11", label: "Thursday" },
-  { date: "Fri, Sep 12", label: "Friday" },
-  { date: "Sat, Sep 13", label: "Saturday" },
-  { date: "Sun, Sep 14", label: "Sunday" },
-  { date: "Mon, Sep 15", label: "Monday" },
-];
-
-const timeSlots = {
-  Morning: ["9:00 AM", "9:30 AM", "10:00 AM", "10:30 AM", "11:00 AM", "11:30 AM"],
-  Afternoon: ["2:00 PM", "2:30 PM", "3:00 PM", "3:30 PM", "4:00 PM", "4:30 PM", "5:00 PM", "5:30 PM"],
-  Evening: ["6:00 PM", "6:30 PM", "7:00 PM", "7:30 PM", "8:00 PM"],
-};
+// ❌ REMOVED STATIC DATES & TIME SLOTS — NO LONGER USED
 
 const steps = [
   { label: "Select Specialty", icon: <FaUserMd /> },
@@ -326,21 +18,157 @@ export default function BookAppointment() {
   const [step, setStep] = useState(0);
   const [selectedSpecialty, setSelectedSpecialty] = useState(null);
   const [selectedDoctor, setSelectedDoctor] = useState(null);
-  const [selectedDate, setSelectedDate] = useState(dates[0].date);
-  const [selectedTime, setSelectedTime] = useState("");
+  // ❌ Removed: selectedDate, selectedTime
+  const [selectedSlot, setSelectedSlot] = useState(null); // ✅ New: holds full slot object
   const [notes, setNotes] = useState("");
+  const [specialties, setSpecialties] = useState([]);
+  const [doctors, setDoctors] = useState([]);
+  const [loadingSpecialties, setLoadingSpecialties] = useState(true);
+  const [loadingDoctors, setLoadingDoctors] = useState(false);
+  const [loadingSlots, setLoadingSlots] = useState(false); // ✅ New
+  const [slots, setSlots] = useState({}); // ✅ New: grouped by date string
+  const [error, setError] = useState(null);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [showPaymentModal, setShowPaymentModal] = useState(false);
+  const [paymentProcessing, setPaymentProcessing] = useState(false);
+  const [paymentSuccess, setPaymentSuccess] = useState(false);
+  const [appointmentData, setAppointmentData] = useState(null);
+  // ✅ FETCH SPECIALTIES — STEP 1
+  useEffect(() => {
+    const fetchSpecialties = async () => {
+      try {
+        const response = await axios.get(`${Base_Url}/doctor/specialist`);
+        const apiData = response.data;
 
-  const filteredDoctors = doctors.filter(
-    (doc) => !selectedSpecialty || doc.specialty === selectedSpecialty
+        const transformed = apiData.map(item => {
+          let name = item.specialty
+            .replace("logist", "logy")
+            .replace("Neurologists", "Neurology")
+            .replace("Gastroenterologist", "Gastroenterology")
+            .replace("Nephrologist", "Nephrology")
+            .replace("Rheumatologist", "Rheumatology")
+            .replace("Pulmonologist", "Pulmonology")
+            .replace("Oncologist", "Oncology");
+
+          return {
+            name,
+            count: item.doctorCount,
+          };
+        });
+
+        setSpecialties(transformed);
+      } catch (err) {
+        console.error("Failed to fetch specialties:", err);
+        setError("Failed to load specialties.");
+      } finally {
+        setLoadingSpecialties(false);
+      }
+    };
+
+    fetchSpecialties();
+  }, []);
+
+  // ✅ FETCH DOCTORS — STEP 2
+  useEffect(() => {
+    if (!selectedSpecialty || step !== 1) return;
+
+    const fetchDoctors = async () => {
+      setLoadingDoctors(true);
+      setError(null);
+
+      try {
+        let apiSpecialty = selectedSpecialty
+          .replace("logy", "logist")
+          .replace("Neurology", "Neurologist")
+          .replace("Gastroenterology", "Gastroenterologist")
+          .replace("Nephrology", "Nephrologist")
+          .replace("Rheumatology", "Rheumatologist")
+          .replace("Pulmonology", "Pulmonologist")
+          .replace("Oncology", "Oncologist");
+
+        const response = await axios.get(`${Base_Url}/doctor/specialist/doctordata/${apiSpecialty}`);
+
+        const { doctors: apiDoctors } = response.data;
+
+        const transformedDoctors = apiDoctors.map(doc => ({
+          _id: doc._id,
+          name: doc.name,
+          profile: doc.profile,
+          experience: doc.experience,
+          openingTime: doc.openingTime,
+          closingTime: doc.closingTime,
+          gender: doc.gender,
+          licenseNo: doc.licenseNo,
+          specialty: doc.specialty,
+          fee: doc.fee, // ✅ Include fee for Step 4
+        }));
+
+        setDoctors(transformedDoctors);
+      } catch (err) {
+        console.error("Failed to fetch doctors:", err);
+        setError("Failed to load doctors. Please try again.");
+        setDoctors([]);
+      } finally {
+        setLoadingDoctors(false);
+      }
+    };
+
+    fetchDoctors();
+  }, [selectedSpecialty, step]);
+
+  // ✅ FETCH SLOTS — STEP 3 (when doctor selected)
+  useEffect(() => {
+    if (step !== 2 || !selectedDoctor?._id) return;
+
+    const fetchSlots = async () => {
+      setLoadingSlots(true);
+      setError(null);
+
+      try {
+        const response = await axios.get(`${Base_Url}/slot`, {
+          params: { doctorId: selectedDoctor._id }
+        });
+
+        // Filter only available slots
+        const availableSlots = response.data.filter(slot => !slot.isBooked);
+
+        // Group by date (string for key)
+        const grouped = availableSlots.reduce((acc, slot) => {
+          const dateStr = new Date(slot.date).toDateString();
+          if (!acc[dateStr]) acc[dateStr] = [];
+          acc[dateStr].push(slot);
+          return acc;
+        }, {});
+
+        setSlots(grouped);
+      } catch (err) {
+        console.error("Failed to fetch slots:", err);
+        setError("Failed to load available slots.");
+        setSlots({});
+      } finally {
+        setLoadingSlots(false);
+      }
+    };
+
+    fetchSlots();
+  }, [step, selectedDoctor]);
+
+  // Filter specialties based on search
+  const filteredSpecialties = specialties.filter(spec =>
+    spec.name.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   function handleBack() {
     if (step > 0) setStep(step - 1);
   }
   function handleNext() {
+    if (step === steps.length - 1) {
+      // Final Step: Open Payment Modal
+      setShowPaymentModal(true);
+      return;
+    }
     if (step < steps.length - 1) setStep(step + 1);
   }
-
   return (
     <div className="">
       <div>
@@ -377,30 +205,51 @@ export default function BookAppointment() {
               placeholder="Search specialties..."
               className="mb-4 book-search"
               style={{ maxWidth: 400 }}
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
             />
-            <Row>
-              {specialties.map((spec) => (
-                <Col xs={12} md={4} lg={3} className="mb-3" key={spec.name}>
-                  <Card
-                    className={`book-specialty-card ${selectedSpecialty === spec.name ? "selected" : ""}`}
-                    onClick={() => setSelectedSpecialty(spec.name)}
-                  >
-                    <Card.Body>
-                      <div className="d-flex align-items-center mb-2">
-                        <div className="book-specialty-icon">
-                          <FaUserMd color="#fff" />
-                        </div>
-                        <div className="ms-auto text-end">
-                          <span className="fw-bold" style={{ color: "#FF6A00" }}>{spec.count} doctors available</span>
-                        </div>
-                      </div>
-                      <div className="fw-bold">{spec.name}</div>
-                      <div className="text-muted" style={{ fontSize: "0.95em" }}>{spec.desc}</div>
-                    </Card.Body>
-                  </Card>
-                </Col>
-              ))}
-            </Row>
+
+            {loadingSpecialties ? (
+              <div className="text-center py-4">
+                <div className="spinner-border text-primary" role="status">
+                  <span className="visually-hidden">Loading...</span>
+                </div>
+                <div className="mt-2">Loading specialties...</div>
+              </div>
+            ) : error ? (
+              <div className="alert alert-danger text-center">{error}</div>
+            ) : (
+              <Row>
+                {filteredSpecialties.length > 0 ? (
+                  filteredSpecialties.map((spec) => (
+                    <Col xs={12} md={4} lg={3} className="mb-3" key={spec.name}>
+                      <Card
+                        className={`book-specialty-card ${selectedSpecialty === spec.name ? "selected" : ""}`}
+                        onClick={() => setSelectedSpecialty(spec.name)}
+                      >
+                        <Card.Body>
+                          <div className="d-flex align-items-center mb-2">
+                            <div className="book-specialty-icon">
+                              <FaUserMd color="#fff" />
+                            </div>
+                            <div className="ms-auto text-end">
+                              <span className="fw-bold" style={{ color: "#FF6A00" }}>
+                                {spec.count} doctors available
+                              </span>
+                            </div>
+                          </div>
+                          <div className="fw-bold">{spec.name}</div>
+                        </Card.Body>
+                      </Card>
+                    </Col>
+                  ))
+                ) : (
+                  <div className="text-center w-100 py-4 text-muted">
+                    No specialties found matching "{searchTerm}"
+                  </div>
+                )}
+              </Row>
+            )}
           </>
         )}
 
@@ -408,180 +257,337 @@ export default function BookAppointment() {
         {step === 1 && (
           <>
             <h4 className="mb-3 mt-4 fw-bold">Available Doctors</h4>
-            <div className="mb-2 text-muted">{selectedSpecialty} Specialists Ready To Help You</div>
-            <div className="d-flex gap-2 mb-3">
-              <span className="fw-bold">Sort by:</span>
-              <Button size="sm" style={{ background: "#FF6A00", border: "none" }}>Rating</Button>
-              <Button size="sm" variant="outline-secondary" style={{ color: "#FF6A00", borderColor: "#FF6A00" }}>Fee</Button>
-              <Button size="sm" variant="outline-secondary" style={{ color: "#FF6A00", borderColor: "#FF6A00" }}>Experience</Button>
-            </div>
-            {filteredDoctors.map((doc) => (
-              <Card
-                key={doc.name}
-                className={`book-doctor-card mb-3 ${selectedDoctor && selectedDoctor.name === doc.name ? "selected" : ""}`}
-                onClick={() => setSelectedDoctor(doc)}
-              >
-                <Card.Body>
-                  <Row>
-                    <Col xs={2} className="d-flex align-items-center justify-content-center">
-                      <div className="book-doctor-avatar">
-                        <FaUserMd size={28} color="#fff" />
-                        <span className="book-doctor-status" />
-                      </div>
-                    </Col>
-                    <Col xs={7}>
-                      <div className="fw-bold">{doc.name}</div>
-                      <div className="text-muted">{doc.university}</div>
-                      <div className="d-flex align-items-center gap-2 mt-1 mb-1">
-                        <FaStar color="#FFD700" />
-                        <span className="fw-bold">{doc.rating}</span>
-                        <span className="text-muted">· {doc.experience}</span>
-                        <span className="text-muted">· {doc.patients}</span>
-                      </div>
-                      <div>
-                        <Badge style={{ background: "#4caf50" }}>Available Today</Badge>
-                        <span className="ms-2 text-muted">Video consultation available</span>
-                      </div>
-                    </Col>
-                    <Col xs={3} className="text-end">
-                      <div className="fw-bold" style={{ color: "#FF6A00" }}>{doc.price}</div>
-                      <div className="text-muted" style={{ fontSize: "0.9em" }}>consultation fee</div>
-                    </Col>
-                  </Row>
-                </Card.Body>
-              </Card>
-            ))}
+            {selectedSpecialty && (
+              <div className="mb-2 text-muted">{selectedSpecialty} Specialists</div>
+            )}
+
+            {loadingDoctors ? (
+              <div className="text-center py-4">
+                <div className="spinner-border text-primary" role="status">
+                  <span className="visually-hidden">Loading...</span>
+                </div>
+                <div className="mt-2">Loading doctors...</div>
+              </div>
+            ) : error ? (
+              <div className="alert alert-warning text-center">{error}</div>
+            ) : doctors.length > 0 ? (
+              doctors.map((doc) => (
+                <Card
+                  key={doc._id}
+                  className={`book-doctor-card mb-3 ${selectedDoctor && selectedDoctor._id === doc._id ? "selected" : ""}`}
+                  onClick={() => setSelectedDoctor(doc)}
+                >
+                  <Card.Body>
+                    <Row>
+                      {/* Profile Image or Icon */}
+                      <Col xs={2} className="d-flex align-items-center justify-content-center">
+                        <div className="book-doctor-avatar" style={{ position: 'relative', width: '50px', height: '50px' }}>
+                          {doc.profile && doc.profile.trim() !== "" ? (
+                            <img
+                              src={doc.profile}
+                              alt={doc.name}
+                              style={{
+                                width: '100%',
+                                height: '100%',
+                                borderRadius: '50%',
+                                objectFit: 'cover',
+                                border: '2px solid #FF6A00'
+                              }}
+                              onError={(e) => {
+                                e.target.style.display = 'none';
+                                e.target.nextSibling.style.display = 'flex';
+                              }}
+                            />
+                          ) : null}
+                          {!doc.profile || doc.profile.trim() === "" ? (
+                            <div
+                              style={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                width: '100%',
+                                height: '100%',
+                                borderRadius: '50%',
+                                background: '#FF6A00',
+                              }}
+                            >
+                              <FaUserMd size={28} color="#fff" />
+                            </div>
+                          ) : (
+                            <div
+                              style={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                width: '100%',
+                                height: '100%',
+                                borderRadius: '50%',
+                                background: '#FF6A00',
+                                position: 'absolute',
+                                top: 0,
+                                left: 0,
+                              }}
+                            >
+                              <FaUserMd size={28} color="#fff" />
+                            </div>
+                          )}
+                          <span className="book-doctor-status" />
+                        </div>
+                      </Col>
+
+                      {/* Doctor Info */}
+                      <Col xs={7}>
+                        <div className="fw-bold">{doc.name}</div>
+                        {doc.experience && (
+                          <div className="text-muted">
+                            <strong>Experience:</strong> {doc.experience}+ years
+                          </div>
+                        )}
+                        {(doc.openingTime || doc.closingTime) && (
+                          <div className="text-muted">
+                            <strong>Available:</strong> {doc.openingTime || "—"} to {doc.closingTime || "—"}
+                          </div>
+                        )}
+                        {doc.gender && (
+                          <div className="text-muted small">
+                            <strong>Gender:</strong> {doc.gender}
+                            {doc.licenseNo && <> • <strong>License:</strong> {doc.licenseNo}</>}
+                          </div>
+                        )}
+                      </Col>
+
+                      {/* Fee Display */}
+                      <Col xs={3} className="text-end d-flex flex-column justify-content-center">
+                        {doc.fee ? (
+                          <>
+                            <div className="text-muted small">Consultation Fee</div>
+                            <div className="fw-bold" style={{ color: "#FF6A00" }}>${doc.fee}</div>
+                          </>
+                        ) : (
+                          <>
+                            <div className="text-muted small">Consultation</div>
+                            <div className="fw-bold text-muted">Fee not specified</div>
+                          </>
+                        )}
+                      </Col>
+                    </Row>
+                  </Card.Body>
+                </Card>
+              ))
+            ) : (
+              <div className="alert alert-info text-center">No doctors available for this specialty.</div>
+            )}
           </>
         )}
 
-        {/* Step 3: Select Date & Time */}
-        {step === 2 && (
+        {/* Step 3: Select Date & Time — DYNAMIC FROM API */}
+        {step === 2 && selectedDoctor && (
           <>
             <h4 className="mb-3 mt-4 fw-bold">Select Date & Time</h4>
             <Card className="mb-4">
               <Card.Body className="d-flex align-items-center">
-                <div className="book-doctor-avatar">
-                  <FaUserMd size={28} color="#fff" />
+                <div className="book-doctor-avatar" style={{ position: 'relative', width: '50px', height: '50px' }}>
+                  {selectedDoctor.profile && selectedDoctor.profile.trim() !== "" ? (
+                    <img
+                      src={selectedDoctor.profile}
+                      alt={selectedDoctor.name}
+                      style={{
+                        width: '100%',
+                        height: '100%',
+                        borderRadius: '50%',
+                        objectFit: 'cover',
+                        border: '2px solid #FF6A00'
+                      }}
+                    />
+                  ) : (
+                    <div
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        width: '100%',
+                        height: '100%',
+                        borderRadius: '50%',
+                        background: '#FF6A00',
+                      }}
+                    >
+                      <FaUserMd size={28} color="#fff" />
+                    </div>
+                  )}
                 </div>
                 <div className="ms-3">
                   <div className="fw-bold">{selectedDoctor.name}</div>
-                  <div className="text-muted">{selectedDoctor.university}</div>
-                  <div>
-                    <FaStar color="#FFD700" /> <span className="fw-bold">{selectedDoctor.rating}</span>
-                    <span className="text-muted ms-2">{selectedDoctor.experience}</span>
-                  </div>
-                </div>
-                <div className="ms-auto text-end">
-                  <div className="fw-bold" style={{ color: "#FF6A00" }}>{selectedDoctor.price}</div>
-                  <div className="text-muted" style={{ fontSize: "0.9em" }}>consultation fee</div>
+                  {selectedDoctor.experience && (
+                    <div className="text-muted">{selectedDoctor.experience}+ years</div>
+                  )}
                 </div>
               </Card.Body>
             </Card>
-            <div className="fw-bold mb-2">Select Date</div>
-            <div className="d-flex flex-wrap gap-2 mb-4">
-              {dates.map((d) => (
-                <Button
-                  key={d.date}
-                  variant={selectedDate === d.date ? "primary" : "outline-secondary"}
-                  style={{
-                    background: selectedDate === d.date ? "#FF6A00" : "#fff",
-                    color: selectedDate === d.date ? "#fff" : "#333",
-                    borderColor: "#FF6A00",
-                    minWidth: 110,
-                  }}
-                  onClick={() => setSelectedDate(d.date)}
-                >
-                  <div className="fw-bold">{d.date.split(",")[1]}</div>
-                  <div style={{ fontSize: "0.85em" }}>{d.label}</div>
-                </Button>
-              ))}
-            </div>
-            <div className="fw-bold mb-2">Available Time Slots</div>
-            {Object.entries(timeSlots).map(([period, slots]) => (
-              <div key={period} className="mb-2">
-                <div className="mb-1" style={{ color: "#FF6A00", fontWeight: 500 }}>{period}</div>
-                <div className="d-flex flex-wrap gap-2">
-                  {slots.map((slot) => (
-                    <Button
-                      key={slot}
-                      variant={selectedTime === slot ? "primary" : "outline-secondary"}
-                      style={{
-                        background: selectedTime === slot ? "#FF6A00" : "#fff",
-                        color: selectedTime === slot ? "#fff" : "#333",
-                        borderColor: "#FF6A00",
-                        minWidth: 90,
-                      }}
-                      onClick={() => setSelectedTime(slot)}
-                    >
-                      {slot}
-                    </Button>
-                  ))}
+
+            {loadingSlots ? (
+              <div className="text-center py-4">
+                <div className="spinner-border text-primary" role="status">
+                  <span className="visually-hidden">Loading...</span>
                 </div>
+                <div className="mt-2">Loading available slots...</div>
               </div>
-            ))}
-            <Card className="mt-4">
-              <Card.Body>
-                <div className="fw-bold mb-2" style={{ color: "#4caf50" }}>Appointment Summary</div>
-                <Row>
-                  <Col>Date</Col>
-                  <Col>Time</Col>
-                  <Col>Duration</Col>
-                </Row>
-                <Row>
-                  <Col>{selectedDate}</Col>
-                  <Col>{selectedTime}</Col>
-                  <Col>30 minutes</Col>
-                </Row>
-              </Card.Body>
-            </Card>
+            ) : error ? (
+              <div className="alert alert-warning text-center">{error}</div>
+            ) : Object.keys(slots).length > 0 ? (
+              Object.entries(slots).map(([dateStr, daySlots]) => {
+                const dateObj = new Date(daySlots[0].date);
+                const options = { weekday: 'long', day: 'numeric', month: 'short' };
+                const formattedDate = dateObj.toLocaleDateString('en-US', options);
+                const isToday = dateObj.toDateString() === new Date().toDateString();
+
+                return (
+                  <div key={dateStr} className="mb-4">
+                    <div className="fw-bold mb-2" style={{ color: "#FF6A00" }}>
+                      {formattedDate} {isToday && "(Today)"}
+                    </div>
+                    <div className="d-flex flex-wrap gap-2">
+                      {daySlots.map((slot) => (
+                        <Button
+                          key={slot._id}
+                          variant={selectedSlot?._id === slot._id ? "primary" : "outline-secondary"}
+                          style={{
+                            background: selectedSlot?._id === slot._id ? "#FF6A00" : "#fff",
+                            color: selectedSlot?._id === slot._id ? "#fff" : "#333",
+                            borderColor: "#FF6A00",
+                            minWidth: 90,
+                          }}
+                          onClick={() => setSelectedSlot(slot)}
+                        >
+                          {slot.startTime}
+                        </Button>
+                      ))}
+                    </div>
+                  </div>
+                );
+              })
+            ) : (
+              <div className="alert alert-info text-center">No available slots for this doctor.</div>
+            )}
+
+            {/* Appointment Summary */}
+            {selectedSlot && (
+              <Card className="mt-4">
+                <Card.Body>
+                  <div className="fw-bold mb-2" style={{ color: "#4caf50" }}>Appointment Summary</div>
+                  <Row>
+                    <Col>Date</Col>
+                    <Col>Time</Col>
+                    <Col>Duration</Col>
+                  </Row>
+                  <Row>
+                    <Col>
+                      {new Date(selectedSlot.date).toLocaleDateString('en-US', {
+                        weekday: 'short',
+                        month: 'short',
+                        day: 'numeric'
+                      })}
+                    </Col>
+                    <Col>{selectedSlot.startTime}</Col>
+                    <Col>
+                      {(() => {
+                        const start = new Date(`1970-01-01T${selectedSlot.startTime.replace(' ', '').toLowerCase()}`);
+                        const end = new Date(`1970-01-01T${selectedSlot.endTime.replace(' ', '').toLowerCase()}`);
+                        const diff = (end - start) / (1000 * 60); // in minutes
+                        return `${diff} minutes`;
+                      })()}
+                    </Col>
+                  </Row>
+                </Card.Body>
+              </Card>
+            )}
           </>
         )}
 
         {/* Step 4: Confirm & Pay */}
-        {step === 3 && (
+        {step === 3 && selectedDoctor && selectedSlot && (
           <>
             <h4 className="mb-3 mt-4 fw-bold">Confirm & Pay</h4>
-            <div className="mb-2 text-muted">Review your appointment details and complete payment</div>
+            <div className="mb-2 text-muted">Review your appointment details</div>
             <Card className="mb-4">
               <Card.Body>
                 <div className="fw-bold mb-2" style={{ color: "#FF6A00" }}>Appointment Details</div>
                 <Row>
                   <Col xs={2}>
-                    <div className="book-doctor-avatar">
-                      <FaUserMd size={28} color="#fff" />
+                    <div className="book-doctor-avatar" style={{ position: 'relative', width: '50px', height: '50px' }}>
+                      {selectedDoctor.profile && selectedDoctor.profile.trim() !== "" ? (
+                        <img
+                          src={selectedDoctor.profile}
+                          alt={selectedDoctor.name}
+                          style={{
+                            width: '100%',
+                            height: '100%',
+                            borderRadius: '50%',
+                            objectFit: 'cover',
+                            border: '2px solid #FF6A00'
+                          }}
+                        />
+                      ) : (
+                        <div
+                          style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            width: '100%',
+                            height: '100%',
+                            borderRadius: '50%',
+                            background: '#FF6A00',
+                          }}
+                        >
+                          <FaUserMd size={28} color="#fff" />
+                        </div>
+                      )}
                     </div>
                   </Col>
                   <Col xs={6}>
                     <div className="fw-bold">{selectedDoctor.name}</div>
-                    <div className="text-muted">{selectedDoctor.university}</div>
-                    <div className="d-flex align-items-center gap-2 mt-1 mb-1">
-                      <FaStar color="#FFD700" />
-                      <span className="fw-bold">{selectedDoctor.rating}</span>
-                      <span className="text-muted">· {selectedDoctor.experience}</span>
-                    </div>
+                    {selectedDoctor.experience && (
+                      <div className="text-muted">{selectedDoctor.experience}+ years experience</div>
+                    )}
+                    {selectedDoctor.gender && (
+                      <div className="text-muted">Gender: {selectedDoctor.gender}</div>
+                    )}
                   </Col>
                   <Col xs={4} className="text-end">
-                    <div className="fw-bold" style={{ color: "#FF6A00" }}>{selectedDoctor.price}</div>
-                    <div className="text-muted" style={{ fontSize: "0.9em" }}>consultation fee</div>
+                    {selectedDoctor.fee ? (
+                      <>
+                        <div className="text-muted small">Consultation Fee</div>
+                        <div className="fw-bold" style={{ color: "#FF6A00" }}>${selectedDoctor.fee}</div>
+                      </>
+                    ) : (
+                      <div className="text-muted">Fee not specified</div>
+                    )}
                   </Col>
                 </Row>
+
                 <Row className="mt-3">
                   <Col>
                     <div>Date</div>
-                    <div className="fw-bold">{selectedDate}</div>
+                    <div className="fw-bold">
+                      {new Date(selectedSlot.date).toLocaleDateString('en-US', {
+                        weekday: 'long',
+                        year: 'numeric',
+                        month: 'long',
+                        day: 'numeric'
+                      })}
+                    </div>
                   </Col>
                   <Col>
                     <div>Time</div>
-                    <div className="fw-bold">{selectedTime}</div>
+                    <div className="fw-bold">{selectedSlot.startTime}</div>
                   </Col>
                   <Col>
                     <div>Type</div>
                     <div className="fw-bold" style={{ color: "#4caf50" }}>Video Call</div>
-                    <div className="text-success" style={{ fontSize: "0.85em" }}>Online consultation</div>
                   </Col>
                 </Row>
               </Card.Body>
             </Card>
+
             <Card className="mb-4">
               <Card.Body>
                 <div className="fw-bold mb-2" style={{ color: "#FF6A00" }}>Additional Notes (Optional)</div>
@@ -596,12 +602,15 @@ export default function BookAppointment() {
                 <div className="text-muted mt-1" style={{ fontSize: "0.85em" }}>{notes.length}/500 characters</div>
               </Card.Body>
             </Card>
+
             <Card>
               <Card.Body>
                 <div className="fw-bold mb-2" style={{ color: "#FF6A00" }}>Payment Summary</div>
                 <Row>
                   <Col>Consultation Fee</Col>
-                  <Col className="text-end">{selectedDoctor.price}</Col>
+                  <Col className="text-end">
+                    {selectedDoctor.fee ? `$${selectedDoctor.fee}` : "Not specified"}
+                  </Col>
                 </Row>
                 <Row>
                   <Col>Service Fee</Col>
@@ -610,7 +619,9 @@ export default function BookAppointment() {
                 <hr />
                 <Row>
                   <Col className="fw-bold">Total Amount</Col>
-                  <Col className="fw-bold text-end" style={{ color: "#FF6A00" }}>${parseInt(selectedDoctor.price.replace("$", "")) + 25}</Col>
+                  <Col className="fw-bold text-end" style={{ color: "#FF6A00" }}>
+                    {selectedDoctor.fee ? `$${parseInt(selectedDoctor.fee) + 25}` : "$25"}
+                  </Col>
                 </Row>
               </Card.Body>
             </Card>
@@ -632,7 +643,7 @@ export default function BookAppointment() {
             disabled={
               (step === 0 && !selectedSpecialty) ||
               (step === 1 && !selectedDoctor) ||
-              (step === 2 && !selectedTime)
+              (step === 2 && !selectedSlot) // ✅ Updated
             }
           >
             {step === steps.length - 1 ? "Finish" : "Next"} <FaChevronRight />
@@ -654,7 +665,3 @@ function Header({ step }) {
     </div>
   );
 }
-
-
-
-
