@@ -5,7 +5,7 @@ import API_URL from "../../Baseurl/Baseurl";
 const Caregiver = () => {
   // ====== CONFIG ======
   const BASE_URL = API_URL;
-  const DEFAULT_PROFILE_PICTURE = "https://via.placeholder.com/150"; // Default profile picture
+  const DEFAULT_PROFILE_PICTURE = "https://via.placeholder.com/150";
   
   // Caregivers from API
   const [caregivers, setCaregivers] = useState([]);
@@ -50,7 +50,8 @@ const Caregiver = () => {
       mobile: trim(api.mobile) || "",
       address: trim(api.address) || "",
       skills: trim(api.skills) || "",
-      profilePicture: trim(api.profile) || DEFAULT_PROFILE_PICTURE, // Use default if no profile
+      // Use default profile picture if no profile exists
+      profilePicture: trim(api.profile) ? trim(api.profile) : DEFAULT_PROFILE_PICTURE,
       dateOfBirth: trim(api.dob) || "",
       gender: trim(api.gender) || "",
       bloodGroup: trim(api.bloodGroup) || "",
@@ -96,9 +97,11 @@ const Caregiver = () => {
   };
   
   // Handle image loading error
+  
   const handleImageError = (e) => {
-    e.currentTarget.src = DEFAULT_PROFILE_PICTURE;
-  };
+  // Set fallback to a clean user icon
+  e.currentTarget.src = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='40' height='40' viewBox='0 0 24 24' fill='none' stroke='%236c757d' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2'%3E%3C/path%3E%3Ccircle cx='12' cy='7' r='4'%3E%3C/circle%3E%3C/svg%3E";
+};
   
   return (
     <div className="">
@@ -129,6 +132,7 @@ const Caregiver = () => {
                   <thead>
                     <tr>
                       <th>ID</th>
+                      <th>Photo</th> {/* New Photo Column */}
                       <th>Name</th>
                       <th>Email</th>
                       <th>Gender</th>
@@ -142,24 +146,22 @@ const Caregiver = () => {
                   <tbody>
                     {caregivers.length === 0 ? (
                       <tr>
-                        <td colSpan={9} className="text-center text-muted">No caregivers found.</td>
+                        <td colSpan={10} className="text-center text-muted">No caregivers found.</td>
                       </tr>
                     ) : (
                       caregivers.map((caregiver, index) => (
                         <tr key={caregiver.id}>
                           <td>{index + 1}</td>
-                          <td>
-                            <div className="d-flex align-items-center">
-                              <img
-                                src={caregiver.profilePicture}
-                                alt={caregiver.name || "caregiver"}
-                                className="rounded-circle me-2"
-                                style={{ width: "30px", height: "30px", objectFit: "cover" }}
-                                onError={handleImageError}
-                              />
-                              <div className="fw-bold">{caregiver.name}</div>
-                            </div>
+                          <td className="text-center"> {/* New Photo Column */}
+                            <img
+                              src={caregiver.profilePicture}
+                              alt={caregiver.name || "caregiver"}
+                              className="rounded-circle"
+                              style={{ width: "40px", height: "40px", objectFit: "cover" }}
+                              onError={handleImageError}
+                            />
                           </td>
+                          <td>{caregiver.name}</td> {/* Name without image */}
                           <td>{caregiver.email}</td>
                           <td>{caregiver.gender}</td>
                           <td>{caregiver.role}</td>

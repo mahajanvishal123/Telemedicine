@@ -6,7 +6,11 @@ import API_URL from "../../Baseurl/Baseurl";
 const AssignCaregiver = () => {
   const BASE_URL = API_URL;
 
+<<<<<<< HEAD
   // ---------- Resolve current userId (NO TOKEN) ----------
+=======
+  // ---- auth helpers ----
+>>>>>>> dc217746551ed7b3e1c7761eb5e7649887fbd8af
   const safeJSON = (txt) => { try { return JSON.parse(txt); } catch { return null; } };
   const pickId = (obj) => {
     if (!obj || typeof obj !== "object") return null;
@@ -67,11 +71,8 @@ const AssignCaregiver = () => {
   const [assignmentDate, setAssignmentDate] = useState("");
   const [showModal, setShowModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
-  const [showDeleteModal, setShowDeleteModal] = useState(false);
-  const [showAddCaregiverModal, setShowAddCaregiverModal] = useState(false);
-  const [showViewModal, setShowViewModal] = useState(false);
-  const [selectedAssignment, setSelectedAssignment] = useState(null);
   const [editingAssignment, setEditingAssignment] = useState(null);
+<<<<<<< HEAD
   const [viewingAssignment, setViewingAssignment] = useState(null);
 
   // New caregiver (POST)
@@ -111,6 +112,8 @@ const AssignCaregiver = () => {
   const [updateError, setUpdateError] = useState(null);
 
   // Assign states
+=======
+>>>>>>> dc217746551ed7b3e1c7761eb5e7649887fbd8af
   const [assignSubmitting, setAssignSubmitting] = useState(false);
   const [assignError, setAssignError] = useState(null);
 
@@ -121,6 +124,7 @@ const AssignCaregiver = () => {
     setAssignmentDate("");
     setAssignError(null);
   };
+<<<<<<< HEAD
   const resetNewCaregiverForm = () => {
     setNewCaregiver({
       name: "",
@@ -146,6 +150,23 @@ const AssignCaregiver = () => {
   const getStatusClass = (status) => (status === "Active" ? "bg-success" : "bg-secondary");
   const getPatientDetails = (patientId) => patients.find(p => String(p.id) === String(patientId));
   const getCaregiverDetails = (caregiverId) => caregivers.find(c => String(c.id) === String(caregiverId));
+=======
+
+  const getStatusClass = (status) => {
+    switch (status) {
+      case "Active": return "bg-success";
+      case "Inactive": return "bg-secondary";
+      default: return "bg-secondary";
+    }
+  };
+
+  const getPatientDetails = (patientId) =>
+    patients.find(p => String(p.id) === String(patientId));
+
+  const getCaregiverDetails = (caregiverId) =>
+    caregivers.find(c => String(c.id) === String(caregiverId));
+
+>>>>>>> dc217746551ed7b3e1c7761eb5e7649887fbd8af
   const getPatientNameFromApiId = (pid) => {
     const p = patients.find(p => String(p.id) === String(pid));
     return p?.name || (pid ? `#${pid}` : "-");
@@ -160,12 +181,6 @@ const AssignCaregiver = () => {
       const m = String(e).match(/(\d+)/);
       return m ? Number(m[1]) : 0;
     })();
-
-    const docs = [];
-    if (api.certificate && String(api.certificate).length > 0) {
-      const fileName = String(api.certificate).split("/").pop() || "Certificate";
-      docs.push({ name: fileName, url: api.certificate });
-    }
 
     return {
       id: api._id,
@@ -182,8 +197,6 @@ const AssignCaregiver = () => {
       dateOfBirth: trim(api.dob) || "",
       gender: trim(api.gender) || "",
       bloodGroup: trim(api.bloodGroup) || "",
-      password: "********",
-      documents: docs,
       patientId: trim(api.patientId) || "",
       age: api.age || "",
       role: api.role || "caregiver",
@@ -238,7 +251,10 @@ const AssignCaregiver = () => {
 
   // PUT /caregiver/:id (assign patient) — BY ID
   const putAssignCaregiver = async (caregiverId, patientId, dateISO) => {
+<<<<<<< HEAD
     if (!userId) throw new Error("User ID missing.");
+=======
+>>>>>>> dc217746551ed7b3e1c7761eb5e7649887fbd8af
     const payload = {
       patientId: String(patientId),
       dateAssigned: dateISO,
@@ -249,6 +265,10 @@ const AssignCaregiver = () => {
       payload,
       { params: { userId } }
     );
+<<<<<<< HEAD
+=======
+
+>>>>>>> dc217746551ed7b3e1c7761eb5e7649887fbd8af
     const updatedApi =
       res?.data?.caregiver ||
       res?.data?.data ||
@@ -306,6 +326,7 @@ const AssignCaregiver = () => {
     }
   };
 
+<<<<<<< HEAD
   // Delete caregiver (BY ID)
   const deleteCaregiverFromApi = async (caregiverId) => {
     if (!userId) throw new Error("User ID missing.");
@@ -356,6 +377,9 @@ const AssignCaregiver = () => {
   };
 
   // Edit Assignment
+=======
+  // ===== Edit Assignment (open modal filled)
+>>>>>>> dc217746551ed7b3e1c7761eb5e7649887fbd8af
   const handleEdit = (assignment) => {
     setEditingAssignment(assignment);
     setSelectedPatient(assignment.patientId?.toString?.() || "");
@@ -394,6 +418,7 @@ const AssignCaregiver = () => {
     }
   };
 
+<<<<<<< HEAD
   // New Caregiver form handlers
   const handleNewCaregiverChange = (e) => {
     const { name, value } = e.target;
@@ -635,6 +660,16 @@ const AssignCaregiver = () => {
     } finally {
       setSubmitting(false);
     }
+=======
+  const toggleStatus = (assignmentId) => {
+    setAssignments(prev =>
+      prev.map(assignment =>
+        assignment.id === assignmentId
+          ? { ...assignment, status: assignment.status === "Active" ? "Inactive" : "Active" }
+          : assignment
+      )
+    );
+>>>>>>> dc217746551ed7b3e1c7761eb5e7649887fbd8af
   };
 
   return (
@@ -646,9 +681,12 @@ const AssignCaregiver = () => {
           <button className="btn btn-outline-secondary" onClick={() => setShowModal(true)} disabled={!userId}>
             + Assign Existing
           </button>
+<<<<<<< HEAD
           <button className="btn text-white" style={{ backgroundColor: "#F95918" }} onClick={() => setShowAddCaregiverModal(true)} disabled={!userId}>
             + Add Caregiver & Assign
           </button>
+=======
+>>>>>>> dc217746551ed7b3e1c7761eb5e7649887fbd8af
         </div>
       </div>
 
@@ -693,7 +731,6 @@ const AssignCaregiver = () => {
                     ) : (
                       assignments.map((assignment) => {
                         const caregiver = getCaregiverDetails(assignment.caregiverId);
-                        const isDeletingThis = String(deletingCaregiverId) === String(assignment.caregiverId);
                         return (
                           <tr key={assignment.id}>
                             <td>#{assignment.id}</td>
@@ -714,9 +751,6 @@ const AssignCaregiver = () => {
                             </td>
                             <td>
                               <div className="d-flex gap-2">
-                                <button className="btn btn-sm btn-outline-primary" onClick={() => setShowViewModal(true) || setViewingAssignment(assignment)} title="View">
-                                  <i className="fas fa-eye"></i>
-                                </button>
                                 <button className="btn btn-sm" onClick={() => handleEdit(assignment)} style={{ color: "#F95918" }} title="Edit">
                                   <i className="fas fa-edit"></i>
                                 </button>
@@ -726,18 +760,6 @@ const AssignCaregiver = () => {
                                   title={assignment.status === "Active" ? "Deactivate" : "Activate"}
                                 >
                                   {assignment.status === "Active" ? <i className="fas fa-user-slash"></i> : <i className="fas fa-user-check"></i>}
-                                </button>
-                                <button
-                                  className="btn btn-sm btn-outline-danger"
-                                  onClick={() => handleDelete(assignment)}
-                                  title="Delete caregiver"
-                                  disabled={isDeletingThis}
-                                >
-                                  {isDeletingThis ? (
-                                    <span className="spinner-border spinner-border-sm" />
-                                  ) : (
-                                    <i className="fas fa-trash"></i>
-                                  )}
                                 </button>
                               </div>
                             </td>
@@ -854,6 +876,7 @@ const AssignCaregiver = () => {
           </div>
         </div>
       )}
+<<<<<<< HEAD
 
       {/* Delete Confirmation Modal */}
       {showDeleteModal && (
@@ -1163,6 +1186,8 @@ const AssignCaregiver = () => {
           </div>
         </div>
       )}
+=======
+>>>>>>> dc217746551ed7b3e1c7761eb5e7649887fbd8af
     </div>
   );
 };
