@@ -461,7 +461,6 @@ const Signup = () => {
     <option value="Nephrologist">Nephrologist</option>
     <option value="Neurologist">Neurologist</option>
     <option value="Dermatologist">Dermatologist</option>
- 
     <option value="Gynecologist">Gynecologist</option>
     <option value="Oncologist">Oncologist</option>
     <option value="Endocrinologist">Endocrinologist</option>
