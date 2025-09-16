@@ -44,6 +44,7 @@ import DoctorViewProfile from "./Components/CaregiverDashboard/DoctorViewProfile
 import MyCaregiver from "./Components/PatientDashboard/MyCaregiver.jsx/MyCaregiver";
 import PatientManagement from "./Components/AdminDashboard/PatientManagement";
 import DoctorManagement from "./Components/AdminDashboard/DoctorManagement";
+import CaregiverProfile from "./Components/CaregiverDashboard/CaregiverProfile"
 
 function App() {
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
@@ -118,6 +119,7 @@ function App() {
                 <Route path="/caregiver/dashboard" element={<Dashboard />} />
                 <Route path="/caregiver/clients" element={<Clients />} />
                 <Route path="/caregiver/visit-log" element={<Visitlog />} />
+                <Route path="/caregiver/profile" element={<CaregiverProfile />} />
                 <Route path="/admin/dashboard" element={<Dashobard />} />
                 <Route
                   path="/admin/user-management"

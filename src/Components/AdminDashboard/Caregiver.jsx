@@ -106,6 +106,7 @@ const Caregiver = () => {
     setCaregiversError(null);
     try {
       const res = await axios.get(`${BASE_URL}/caregiver`);
+      console.log(res.data);
       const raw = Array.isArray(res?.data)
         ? res.data
         : (Array.isArray(res?.data?.data) ? res.data.data : []);
@@ -183,7 +184,7 @@ const Caregiver = () => {
                       <th>Patient</th>
                       <th>Caregiver</th>
                       <th>Assigned By (Doctor)</th>
-                      <th>Photo</th>
+                      {/* <th>Photo</th> */}
                       <th>Date Assigned</th>
                       <th>Status</th>
                       <th>Actions</th>
@@ -211,33 +212,23 @@ const Caregiver = () => {
                             </td>
                             <td>
                               <div className="d-flex align-items-center">
-                                <img
-                                  src={caregiver?.profilePicture || "https://via.placeholder.com/40"}
-                                  alt={caregiver?.name || "caregiver"}
-                                  className="rounded-circle me-2"
-                                  style={{ width: "30px", height: "30px", objectFit: "cover" }}
-                                  onError={(e) => { e.currentTarget.src = "https://via.placeholder.com/40"; }}
-                                />
+                          
                                 <div>
                                   <div className="fw-bold">{assignment.caregiverName}</div>
-                                  <div className="text-muted small">ID: {assignment.caregiverId}</div>
+                                  {/* <div className="text-muted small">ID: {assignment.caregiverId}</div> */}
                                 </div>
                               </div>
                             </td>
                             <td>
                               <div className="d-flex align-items-center">
-                                <div className="avatar avatar-sm me-2">
-                                  <span className="avatar-title rounded-circle bg-primary text-white">
-                                    {assignment.doctorName?.charAt(0) || 'D'}
-                                  </span>
-                                </div>
+                           
                                 <div>
                                   <div className="fw-bold">{assignment.doctorName}</div>
-                                  <div className="text-muted small">ID: {assignment.doctorId}</div>
+                                  {/* <div className="text-muted small">ID: {assignment.doctorId}</div> */}
                                 </div>
                               </div>
                             </td>
-                            <td>
+                            {/* <td>
                               <img
                                 src={caregiver?.profilePicture || "https://via.placeholder.com/40"}
                                 alt={caregiver?.name || "caregiver"}
@@ -245,7 +236,7 @@ const Caregiver = () => {
                                 style={{ width: "40px", height: "40px", objectFit: "cover" }}
                                 onError={(e) => { e.currentTarget.src = "https://via.placeholder.com/40"; }}
                               />
-                            </td>
+                            </td> */}
                             <td>{assignment.dateAssigned || "-"}</td>
                             <td>
                               <span className={`badge ${getStatusClass(assignment.status)}`}>{assignment.status}</span>

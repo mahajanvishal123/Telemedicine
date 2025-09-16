@@ -21,17 +21,18 @@ const Appointments = () => {
   const [selectedAppointment, setSelectedAppointment] = useState(null);
   const [rescheduleDate, setRescheduleDate] = useState('');
   const [rescheduleTime, setRescheduleTime] = useState('');
+  
 
   // Fetch appointments on mount
   useEffect(() => {
     const fetchAppointments = async () => {
       try {
         const response = await axios.get(`${Base_Url}/appointment/`);
-        if (!Array.isArray(response.data)) {
+        if (!Array.isArray(response?.data?.appointments)) {
           throw new Error("Invalid response format");
         }
 
-        const transformedAppointments = response.data.map(app => ({
+        const transformedAppointments = response?.data?.appointments?.map(app => ({
           id: app._id,
           patientName: app.patientId?.name || 'Unknown',
           patientEmail: app.patientId?.email || '',
