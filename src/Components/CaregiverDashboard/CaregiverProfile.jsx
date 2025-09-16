@@ -110,6 +110,33 @@ const CaregiverProfile = () => {
     return d && typeof d === 'object' ? d : null;
   };
 
+  const mapAndSetByDoc = (doc, id) => {
+    // if API wrapped it, unwrap again
+    const d = Array.isArray(doc) ? doc.find(x => x?._id === id) : doc;
+    if (!d || typeof d !== 'object') throw new Error('Invalid caregiver payload');
+
+    const mapped = {
+      _id: d?._id || id,
+      name: trimStr(d?.name) || '',
+      email: trimStr(d?.email) || '',
+      // Never prefill hashed password into form
+      password: (typeof d?.password === 'string' && d.password.startsWith('$')) ? '' : (trimStr(d?.password) || ''),
+      gender: trimStr(d?.gender) || '',
+      profile: trimStr(d?.profile) || '',
+      age: trimStr(d?.age) || '', // keep age separate
+      dob: normalizeDobForInput(d?.dob),
+      certificate: trimStr(d?.certificate) || '',
+      bloodGroup: trimStr(d?.bloodGroup) || ''
+    };
+
+    setCaregiver(mapped);
+    if (mapped.profile) setProfileImage(mapped.profile);
+
+    // sync cache to the correct logged-in caregiver
+    localStorage.setItem('caregiverId', mapped._id);
+    localStorage.setItem('caregiverProfile', JSON.stringify(mapped));
+  };
+
   // ---------- GET by ID ----------
   const fetchCaregiver = async () => {
     const CAREGIVER_ID = resolveCaregiverId();
@@ -132,7 +159,6 @@ const CaregiverProfile = () => {
       // 1) /caregiver/:id
       try {
         const res1 = await axios.get(`${BASE_URL}/caregiver/${CAREGIVER_ID}`, { headers });
-        
         const d1 = pickFromAnyShapeById(res1, CAREGIVER_ID) || res1?.data;
         if (d1 && (d1._id || d1?.data || d1?.caregiver)) {
           mapAndSetByDoc((Array.isArray(d1) ? pickFromAnyShapeById({ data: d1 }, CAREGIVER_ID) : d1), CAREGIVER_ID);
@@ -154,37 +180,139 @@ const CaregiverProfile = () => {
     }
   };
 
-  const mapAndSetByDoc = (doc, id) => {
-    // if API wrapped it, unwrap again
-    const d = Array.isArray(doc) ? doc.find(x => x?._id === id) : doc;
-    if (!d || typeof d !== 'object') throw new Error('Invalid caregiver payload');
-
-    const mapped = {
-      _id: d?._id || id,
-      name: trimStr(d?.name) || '',
-      email: trimStr(d?.email) || '',
-      // Never prefill hashed password into form
-      password: (typeof d?.password === 'string' && d.password.startsWith('$')) ? '' : (trimStr(d?.password) || ''),
-      gender: trimStr(d?.gender) || '',
-      profile: trimStr(d?.profile) || '',
-      age: trimStr(d?.age) || '', // keep age separate (don't mix with "experience")
-      dob: normalizeDobForInput(d?.dob),
-      certificate: trimStr(d?.certificate) || '',
-      bloodGroup: trimStr(d?.bloodGroup) || ''
-    };
-
-    setCaregiver(mapped);
-    if (mapped.profile) setProfileImage(mapped.profile);
-
-    // sync cache to the correct logged-in caregiver
-    localStorage.setItem('caregiverId', mapped._id);
-    localStorage.setItem('caregiverProfile', JSON.stringify(mapped));
-  };
-
   useEffect(() => {
     fetchCaregiver();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // ---------- Submit (PUT by ID) ----------
+  // Util: convert dataURL to Blob for multipart
+  const dataURLtoBlob = (dataurl) => {
+    try {
+      const arr = dataurl.split(',');
+      const mime = arr[0].match(/:(.*?);/)[1];
+      const bstr = atob(arr[1]);
+      let n = bstr.length;
+      const u8arr = new Uint8Array(n);
+      while (n--) u8arr[n] = bstr.charCodeAt(n);
+      return new Blob([u8arr], { type: mime });
+    } catch {
+      return null;
+    }
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setIsSaving(true);
+    setSaveSuccess(false);
+
+    // resolve target id: prefer state._id, else resolver
+    const targetId = caregiver._id || resolveCaregiverId();
+    if (!targetId) {
+      setIsSaving(false);
+      setSaveSuccess(false);
+      setShowToast(true);
+      setTimeout(() => setShowToast(false), 3000);
+      console.error('No caregiver ID available for PUT');
+      return;
+    }
+
+    const url = `${BASE_URL}/caregiver/${targetId}`;
+
+    const headersBase = {
+      ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
+    };
+
+    // Decide payload type:
+    // - If there is a file (certificate) or profile is a base64 image, use multipart/form-data.
+    // - Else send JSON.
+    const isDataUrlProfile = (profileImage || caregiver.profile || '').startsWith('data:');
+    const useMultipart = !!certificateFile || isDataUrlProfile;
+
+    try {
+      let res;
+
+      if (useMultipart) {
+        const form = new FormData();
+        // Primitive fields
+        form.append('name', caregiver.name || '');
+        form.append('email', caregiver.email || '');
+        if (caregiver.password && caregiver.password.trim() !== '') {
+          form.append('password', caregiver.password.trim());
+        }
+        form.append('gender', caregiver.gender || '');
+        form.append('age', caregiver.age || '');
+        form.append('dob', caregiver.dob || '');
+        form.append('bloodGroup', caregiver.bloodGroup || '');
+
+        // Profile: if dataURL, send as file; else send as string/URL
+        if (isDataUrlProfile) {
+          const blob = dataURLtoBlob(profileImage || caregiver.profile);
+          if (blob) form.append('profile', blob, 'profile.jpg');
+        } else if (caregiver.profile) {
+          form.append('profile', caregiver.profile);
+        }
+
+        // Certificate file (if chosen)
+        if (certificateFile) {
+          form.append('certificate', certificateFile, certificateFile.name);
+        } else if (caregiver.certificate) {
+          // keep existing string value if backend expects it
+          form.append('certificate', caregiver.certificate);
+        }
+
+        res = await axios.put(url, form, {
+          headers: {
+            ...headersBase,
+            'Content-Type': 'multipart/form-data',
+          },
+        });
+      } else {
+        // JSON payload
+        const payload = {
+          name: caregiver.name || '',
+          email: caregiver.email || '',
+          gender: caregiver.gender || '',
+          age: caregiver.age || '',
+          dob: caregiver.dob || '',
+          bloodGroup: caregiver.bloodGroup || '',
+          certificate: caregiver.certificate || '',
+          profile: caregiver.profile || '',
+          ...(caregiver.password && caregiver.password.trim() !== '' ? { password: caregiver.password.trim() } : {}),
+        };
+
+        res = await axios.put(url, payload, {
+          headers: {
+            ...headersBase,
+            'Content-Type': 'application/json',
+            Accept: 'application/json',
+          },
+        });
+      }
+
+      // Success UI
+      const updatedDoc = pickFromAnyShapeById(res, targetId) || res?.data || {};
+      try {
+        mapAndSetByDoc(updatedDoc, targetId);
+      } catch {
+        // If server doesn't echo doc, at least keep current state
+      }
+
+      setIsSaving(false);
+      setSaveSuccess(true);
+      setShowToast(true);
+      setTimeout(() => {
+        setShowToast(false);
+        setSaveSuccess(false);
+      }, 2500);
+    } catch (err) {
+      console.error('PUT caregiver (by id) failed:', err);
+      setIsSaving(false);
+      setSaveSuccess(false);
+      setShowToast(true);
+      setTimeout(() => setShowToast(false), 3500);
+    }
+  };
 
   // ---------- handlers ----------
   const handleInputChange = (e) => {
@@ -210,23 +338,6 @@ const CaregiverProfile = () => {
       setCertificateFile(file);
       setCaregiver(prev => ({ ...prev, certificate: file.name })); // show file name
     }
-  };
-
-  const handleSubmit = (e) => {
-    e.preventDefault();
-    setIsSaving(true);
-
-    // TODO: replace with PUT/PATCH
-    setTimeout(() => {
-      console.log("Saving caregiver profile:", caregiver);
-      setIsSaving(false);
-      setSaveSuccess(true);
-      setShowToast(true);
-      setTimeout(() => {
-        setShowToast(false);
-        setSaveSuccess(false);
-      }, 3000);
-    }, 1200);
   };
 
   const triggerProfileUpload = () => profileInputRef.current?.click();
