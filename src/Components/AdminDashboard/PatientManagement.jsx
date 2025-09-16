@@ -382,21 +382,28 @@ const handleEditSubmit = async (e) => {
             </div>
           ) : selectedPatient ? (
             <div className="row">
-              {/* Profile Picture Section */}
-              <div className="col-12 text-center mb-4">
-              {selectedPatient.profile ? (
-  <img
-    src={selectedPatient.profile}
-    alt="Profile"
-    className="img-fluid rounded-circle border"
-    style={{ width: "120px", height: "120px", objectFit: "cover" }}
-  />
-) : (
-  <i className="fas fa-user-circle text-muted" style={{ fontSize: "80px" }}></i>
-)}
-                <h5 className="mt-3">{selectedPatient.name}</h5>
-                <p className="text-muted">Patient #{selectedPatientIndex + 1}</p>
-              </div>
+          {/* Profile Picture Section */}
+<div className="col-12 text-center mb-4">
+  <div className="d-flex flex-column align-items-center justify-content-center" style={{ gap: '12px' }}>
+    {selectedPatient.profile ? (
+      <img
+        src={selectedPatient.profile}
+        alt="Profile"
+        className="img-fluid rounded-circle border"
+        style={{
+          width: "120px",
+          height: "120px",
+          objectFit: "cover",
+          boxShadow: "0 4px 8px rgba(0,0,0,0.1)"
+        }}
+      />
+    ) : (
+      <i className="fas fa-user-circle text-muted" style={{ fontSize: "80px" }}></i>
+    )}
+    <h5 className="mt-0 mb-0">{selectedPatient.name}</h5>
+    <p className="text-muted mb-0">Patient #{selectedPatientIndex + 1}</p>
+  </div>
+</div>
 
               {/* Patient Details - Vertical List */}
               <div className="col-12">
