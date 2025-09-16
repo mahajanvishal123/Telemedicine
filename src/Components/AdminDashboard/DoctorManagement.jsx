@@ -69,36 +69,63 @@ const handleEdit = (doctor) => {
 };
 
   // 🟠 Save Edited Doctor (PUT API)
-  const handleSave = async () => {
-    if (selectedUser) {
-      try {
-        await axios.put(`${API_URL}/doctor/${selectedUser._id}`, formData);
-        setDoctors((prev) =>
-          prev.map((d) =>
-            d._id === selectedUser._id ? { ...d, ...formData } : d
-          )
-        );
-        window.Swal.fire({
-          title: "Success!",
-          text: "Doctor updated successfully!",
-          icon: "success",
-          confirmButtonText: "OK",
-          timer: 3000,
-          timerProgressBar: true,
-        });
-      } catch (error) {
-        console.error("Error updating doctor:", error);
-        window.Swal.fire({
-          title: "Error!",
-          text: "Failed to update doctor",
-          icon: "error",
-          confirmButtonText: "OK",
-        });
-      } finally {
-        handleCloseModal();
+// 🟠 Save Edited Doctor (PUT API with image support)
+const handleSave = async () => {
+  if (selectedUser) {
+    try {
+      const formDataToSend = new FormData();
+
+      // Append all text fields from formData (except profile URL)
+      Object.keys(formData).forEach((key) => {
+        if (key !== "profile") {
+          formDataToSend.append(key, formData[key]);
+        }
+      });
+
+      // Append new image if selected
+      if (newProfileImage) {
+        formDataToSend.append("profile", newProfileImage);
       }
+
+      // Send as FormData
+      await axios.put(`${API_URL}/doctor/${selectedUser._id}`, formDataToSend, {
+        headers: {
+          "Content-Type": "multipart/form-data",
+        },
+      });
+
+      // Update local state with new image URL if uploaded
+      const updatedDoctor = {
+        ...selectedUser,
+        ...formData,
+        profile: newProfileImage ? URL.createObjectURL(newProfileImage) : selectedUser.profile,
+      };
+
+      setDoctors((prev) =>
+        prev.map((d) => (d._id === selectedUser._id ? updatedDoctor : d))
+      );
+
+      window.Swal.fire({
+        title: "Success!",
+        text: "Doctor updated successfully!",
+        icon: "success",
+        confirmButtonText: "OK",
+        timer: 3000,
+        timerProgressBar: true,
+      });
+    } catch (error) {
+      console.error("Error updating doctor:", error);
+      window.Swal.fire({
+        title: "Error!",
+        text: "Failed to update doctor",
+        icon: "error",
+        confirmButtonText: "OK",
+      });
+    } finally {
+      handleCloseModal();
     }
-  };
+  }
+};
 
   // 🟠 Delete Doctor (DELETE API)
   const handleDelete = async (doctorId) => {

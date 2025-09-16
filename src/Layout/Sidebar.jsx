@@ -76,6 +76,7 @@ const Sidebar = ({ collapsed, setCollapsed }) => {
     { label: "Dashboard", path: "/doctor/dashboard", icon: faTachometerAlt },
     { label: "My Calendar", path: "/doctor/calendar", icon: faCalendarAlt },
     { label: "My Appointments", path: "/doctor/appointments", icon: faClipboardList },
+    { label: "Add Caregiver", path: "/doctor/add-caregiver", icon: faStethoscope},
     { label: "Assign Caregiver", path: "/doctor/assign-caregiver", icon: faDedent },
     { label: "Availability Planner", path: "/doctor/availabilityPlanner", icon: faCalendarAlt },
     { label: "My Profile", path: "/doctor/profile", icon: faUser },

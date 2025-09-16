@@ -5,63 +5,33 @@ import API_URL from "../../Baseurl/Baseurl";
 const Caregiver = () => {
   // ====== CONFIG ======
   const BASE_URL = API_URL;
-  
-  // Patients (static)
-  const [patients] = useState([
-    { id: 1, name: "John Doe", email: "john@example.com", joinDate: "2023-09-15", status: "Active", phone: "555-1234", address: "123 Main St" },
-    { id: 2, name: "Jane Smith", email: "jane@example.com", joinDate: "2023-10-05", status: "Inactive", phone: "555-5678", address: "456 Oak Ave" },
-    { id: 3, name: "Robert Johnson", email: "robert@example.com", joinDate: "2023-08-20", status: "Active", phone: "555-9012", address: "789 Elm St" },
-    { id: 4, name: "Emily Davis", email: "emily@example.com", joinDate: "2023-11-01", status: "Active", phone: "555-3456", address: "321 Pine Rd" },
-  ]);
-  
-  // Doctors (static)
-  const [doctors] = useState([
-    { id: 1, name: "Dr. Smith", specialty: "Cardiologist" },
-    { id: 2, name: "Dr. Johnson", specialty: "Neurologist" },
-    { id: 3, name: "Dr. Williams", specialty: "Pediatrician" },
-    { id: 4, name: "Dr. Brown", specialty: "Orthopedic" },
-  ]);
-  
+  const DEFAULT_PROFILE_PICTURE = "https://via.placeholder.com/150";
+
   // Caregivers from API
   const [caregivers, setCaregivers] = useState([]);
   const [loadingCaregivers, setLoadingCaregivers] = useState(false);
   const [caregiversError, setCaregiversError] = useState(null);
-  
-  // Assignments (UI me dikhne wale rows — ab yahi table me API data bhi render hoga)
-  const [assignments, setAssignments] = useState([]);
-  
+
   // UI state for view only
   const [showViewModal, setShowViewModal] = useState(false);
-  const [viewingAssignment, setViewingAssignment] = useState(null);
-  
+  const [viewingCaregiver, setViewingCaregiver] = useState(null);
+
+  // 🔹 Pagination states
+  const [currentPage, setCurrentPage] = useState(1);
+  const [rowsPerPage, setRowsPerPage] = useState(8); // Default 8
+
   // ===== Helpers =====
   const getStatusClass = (status) => {
     switch (status) {
-      case "Active": return "bg-success";
-      case "Inactive": return "bg-secondary";
-      default: return "bg-secondary";
+      case "Active":
+        return "bg-success";
+      case "Inactive":
+        return "bg-secondary";
+      default:
+        return "bg-secondary";
     }
   };
-  
-  const getPatientDetails = (patientId) =>
-    patients.find(p => String(p.id) === String(patientId));
-  
-  const getCaregiverDetails = (caregiverId) =>
-    caregivers.find(c => String(c.id) === String(caregiverId));
-    
-  const getDoctorDetails = (doctorId) =>
-    doctors.find(d => String(d.id) === String(doctorId));
-    
-  const getPatientNameFromApiId = (pid) => {
-    const p = patients.find(p => String(p.id) === String(pid));
-    return p?.name || (pid ? `#${pid}` : "-");
-  };
-  
-  const getDoctorNameFromApiId = (did) => {
-    const d = doctors.find(d => String(d.id) === String(did));
-    return d?.name || (did ? `Dr. #${did}` : "-");
-  };
-  
+
   // ===== Map API caregiver -> local caregiver object
   const mapApiCaregiver = (api) => {
     const trim = (v) => (typeof v === "string" ? v.trim() : v);
@@ -71,11 +41,13 @@ const Caregiver = () => {
       const m = String(e).match(/(\d+)/);
       return m ? Number(m[1]) : 0;
     })();
+
     const docs = [];
     if (api.certificate && String(api.certificate).length > 0) {
       const fileName = String(api.certificate).split("/").pop() || "Certificate";
       docs.push({ name: fileName, url: api.certificate });
     }
+
     return {
       id: api._id,
       name: trim(api.name) || "",
@@ -87,282 +59,327 @@ const Caregiver = () => {
       mobile: trim(api.mobile) || "",
       address: trim(api.address) || "",
       skills: trim(api.skills) || "",
-      profilePicture: trim(api.profile) || "https://via.placeholder.com/80",
+      profilePicture: trim(api.profile) ? trim(api.profile) : DEFAULT_PROFILE_PICTURE,
       dateOfBirth: trim(api.dob) || "",
       gender: trim(api.gender) || "",
       bloodGroup: trim(api.bloodGroup) || "",
       password: "********",
       documents: docs,
-      patientId: trim(api.patientId) || "",
-      doctorId: trim(api.doctorId) || "",  // Added doctorId
       age: api.age || "",
       role: api.role || "caregiver",
     };
   };
-  
-  // ===== GET /caregiver and seed Assignments table
+
+  // ===== GET /caregiver
   const fetchCaregivers = async () => {
     setLoadingCaregivers(true);
     setCaregiversError(null);
     try {
       const res = await axios.get(`${BASE_URL}/caregiver`);
-      console.log(res.data);
       const raw = Array.isArray(res?.data)
         ? res.data
-        : (Array.isArray(res?.data?.data) ? res.data.data : []);
+        : Array.isArray(res?.data?.data)
+        ? res.data.data
+        : [];
       const mapped = raw.map(mapApiCaregiver);
       setCaregivers(mapped);
-      
-      setAssignments(prev => {
-        if (prev.length > 0) return prev;
-        const seeded = mapped.map((c, idx) => ({
-          id: c.id || (Date.now() + idx),
-          patientId: c.patientId || "",
-          patientName: getPatientNameFromApiId(c.patientId),
-          caregiverId: c.id,
-          caregiverName: c.name,
-          doctorId: c.doctorId || (idx % 4) + 1,  // Assign a doctor if not provided
-          doctorName: getDoctorNameFromApiId(c.doctorId || (idx % 4) + 1),
-          dateAssigned: c.joinDate || new Date().toISOString().slice(0, 10),
-          status: c.status || "Active",
-        }));
-        return seeded;
-      });
     } catch (err) {
       console.error("Failed to fetch caregivers:", err);
       setCaregiversError(
-        err?.response?.data?.message ||
-        err?.message ||
-        "Failed to fetch caregivers"
+        err?.response?.data?.message || err?.message || "Failed to fetch caregivers"
       );
     } finally {
       setLoadingCaregivers(false);
     }
   };
-  
+
   useEffect(() => {
     fetchCaregivers();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
-  
-  // View Assignment Handler
-  const handleView = (assignment) => {
-    setViewingAssignment(assignment);
+
+  // View Caregiver Handler
+  const handleView = (caregiver) => {
+    setViewingCaregiver(caregiver);
     setShowViewModal(true);
   };
-  
+
+  // Handle image loading error
+  const handleImageError = (e) => {
+    e.currentTarget.src =
+      "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='40' height='40' viewBox='0 0 24 24' fill='none' stroke='%236c757d' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2'%3E%3C/path%3E%3Ccircle cx='12' cy='7' r='4'%3E%3C/circle%3E%3C/svg%3E";
+  };
+
+  // 🔹 Pagination Logic
+  const indexOfLastRow = currentPage * rowsPerPage;
+  const indexOfFirstRow = indexOfLastRow - rowsPerPage;
+  const currentRows =
+    rowsPerPage === "All"
+      ? caregivers
+      : caregivers.slice(indexOfFirstRow, indexOfLastRow);
+  const totalPages =
+    rowsPerPage === "All" ? 1 : Math.ceil(caregivers.length / rowsPerPage);
+
+  const paginate = (pageNumber) => setCurrentPage(pageNumber);
+
   return (
     <div className="">
       {/* Header */}
       <div className="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center gap-3 mb-4">
-        <h3 className="dashboard-heading">Caregiver Assignments</h3>
-        <div className="text-muted">
-          Showing which doctor assigned which caregiver to which patient
+        <h3 className="dashboard-heading">Caregivers List</h3>
+        <div className="text-muted">Showing all caregivers from the system</div>
+      </div>
+
+      {/* Entries dropdown */}
+      <div className="d-flex justify-content-between align-items-center mb-2">
+        <div>
+          <label className="me-2">Show</label>
+          <select
+            className="form-select d-inline-block w-auto"
+            value={rowsPerPage}
+            onChange={(e) => {
+              setRowsPerPage(e.target.value === "All" ? "All" : parseInt(e.target.value));
+              setCurrentPage(1); // reset to page 1
+            }}
+          >
+            <option value="5">5</option>
+            <option value="8">8</option>
+            <option value="10">10</option>
+            <option value="25">25</option>
+            <option value="All">All</option>
+          </select>
+          <span className="ms-2">entries</span>
         </div>
       </div>
-      
+
       {/* Caregivers fetch state */}
       {loadingCaregivers && <div className="alert alert-info">Loading caregivers…</div>}
       {caregiversError && (
         <div className="alert alert-danger d-flex justify-content-between align-items-center">
           <span>{caregiversError}</span>
-          <button className="btn btn-sm btn-outline-light" onClick={fetchCaregivers}>Retry</button>
+          <button className="btn btn-sm btn-outline-light" onClick={fetchCaregivers}>
+            Retry
+          </button>
         </div>
       )}
-      
-      {/* Assignments Table */}
-      <div className="row">
-        <div className="col-12">
-          <div className="card shadow">
-            <div className="card-body">
-              <div className="table-responsive">
-                <table className="table table-hover">
-                  <thead>
-                    <tr>
-                       <th>ID</th>
-                      <th>Assignment ID</th>
-                      <th>Patient</th>
-                      <th>Caregiver</th>
-                      <th>Assigned By (Doctor)</th>
-                      {/* <th>Photo</th> */}
-                      <th>Date Assigned</th>
-                      <th>Status</th>
-                      <th>Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {assignments.length === 0 ? (
+
+      {/* Caregivers Table — with Pagination */}
+      {!loadingCaregivers && !caregiversError && (
+        <div className="row">
+          <div className="col-12">
+            <div className="card shadow">
+              <div className="card-body">
+                <div className="table-responsive">
+                  <table className="table table-hover">
+                    <thead>
                       <tr>
-                        <td colSpan={8} className="text-center text-muted">No assignments yet.</td>
+                        <th>ID</th>
+                        <th>Photo</th>
+                        <th>Name</th>
+                        <th>Email</th>
+                        <th>Gender</th>
+                        <th>Role</th>
+                        <th>Experience</th>
+                        <th>Address</th>
+                        <th>Status</th>
+                        <th>Actions</th>
                       </tr>
-                    ) : (
-                      assignments.map((assignment, index) => {
-                        const caregiver = getCaregiverDetails(assignment.caregiverId);
-                        return (
-                          <tr key={assignment.id}>
-                                <td>{index+1}</td>
-                            <td>#{assignment.id}</td>
-                            <td>
-                              <div className="d-flex align-items-center">
-                                <div className="ms-2">
-                                  <div className="fw-bold">{assignment.patientName || getPatientNameFromApiId(assignment.patientId)}</div>
-                                  <div className="text-muted small">ID: {assignment.patientId}</div>
-                                </div>
-                              </div>
-                            </td>
-                            <td>
-                              <div className="d-flex align-items-center">
-                          
-                                <div>
-                                  <div className="fw-bold">{assignment.caregiverName}</div>
-                                  {/* <div className="text-muted small">ID: {assignment.caregiverId}</div> */}
-                                </div>
-                              </div>
-                            </td>
-                            <td>
-                              <div className="d-flex align-items-center">
-                           
-                                <div>
-                                  <div className="fw-bold">{assignment.doctorName}</div>
-                                  {/* <div className="text-muted small">ID: {assignment.doctorId}</div> */}
-                                </div>
-                              </div>
-                            </td>
-                            {/* <td>
+                    </thead>
+                    <tbody>
+                      {currentRows.length === 0 ? (
+                        <tr>
+                          <td colSpan={10} className="text-center text-muted">
+                            No caregivers found.
+                          </td>
+                        </tr>
+                      ) : (
+                        currentRows.map((caregiver, index) => (
+                          <tr key={caregiver.id}>
+                            <td>{(currentPage - 1) * rowsPerPage + index + 1}</td>
+                            <td className="text-center">
                               <img
-                                src={caregiver?.profilePicture || "https://via.placeholder.com/40"}
-                                alt={caregiver?.name || "caregiver"}
+                                src={caregiver.profilePicture}
+                                alt={caregiver.name || "caregiver"}
                                 className="rounded-circle"
                                 style={{ width: "40px", height: "40px", objectFit: "cover" }}
-                                onError={(e) => { e.currentTarget.src = "https://via.placeholder.com/40"; }}
+                                onError={handleImageError}
                               />
-                            </td> */}
-                            <td>{assignment.dateAssigned || "-"}</td>
+                            </td>
+                            <td>{caregiver.name}</td>
+                            <td>{caregiver.email}</td>
+                            <td>{caregiver.gender}</td>
+                            <td>{caregiver.role}</td>
+                            <td>{caregiver.yearsExperience} years</td>
+                            <td>{caregiver.address}</td>
                             <td>
-                              <span className={`badge ${getStatusClass(assignment.status)}`}>{assignment.status}</span>
+                              <span className={`badge ${getStatusClass(caregiver.status)}`}>
+                                {caregiver.status}
+                              </span>
                             </td>
                             <td>
-                              <button className="btn btn-sm btn-outline-primary" onClick={() => handleView(assignment)} title="View">
+                              <button
+                                className="btn btn-sm btn-outline-primary"
+                                onClick={() => handleView(caregiver)}
+                                title="View"
+                              >
                                 <i className="fas fa-eye"></i>
                               </button>
                             </td>
                           </tr>
-                        );
-                      })
-                    )}
-                  </tbody>
-                </table>
+                        ))
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+                <div className="text-muted small">Caregivers loaded: {caregivers.length}</div>
               </div>
-              <div className="text-muted small">Caregivers loaded: {caregivers.length}</div>
             </div>
           </div>
         </div>
-      </div>
- 
-      {/* View Assignment Modal */}
-      {showViewModal && viewingAssignment && (
-        <div className="modal fade show d-block" style={{ backgroundColor: "rgba(0,0,0,0.5)" }}>
-          <div className="modal-dialog modal-lg">
+      )}
+
+      {/* 🔹 Pagination Controls */}
+      {rowsPerPage !== "All" && totalPages > 1 && (
+        <nav className="d-flex justify-content-end mt-3">
+          <ul className="pagination">
+            <li className={`page-item ${currentPage === 1 ? "disabled" : ""}`}>
+              <button className="page-link" onClick={() => paginate(currentPage - 1)}>
+                Prev
+              </button>
+            </li>
+            {[...Array(totalPages)].map((_, i) => (
+              <li key={i} className={`page-item ${currentPage === i + 1 ? "active" : ""}`}>
+                <button className="page-link" onClick={() => paginate(i + 1)}>
+                  {i + 1}
+                </button>
+              </li>
+            ))}
+            <li className={`page-item ${currentPage === totalPages ? "disabled" : ""}`}>
+              <button className="page-link" onClick={() => paginate(currentPage + 1)}>
+                Next
+              </button>
+            </li>
+          </ul>
+        </nav>
+      )}
+
+      {/* View Caregiver Modal */}
+      {showViewModal && viewingCaregiver && (
+        <div
+          className="modal fade show d-block"
+          style={{ backgroundColor: "rgba(0,0,0,0.5)" }}
+          onClick={() => setShowViewModal(false)}
+        >
+          <div className="modal-dialog modal-lg" onClick={(e) => e.stopPropagation()}>
             <div className="modal-content">
               <div className="modal-header">
-                <h5 className="modal-title">Assignment Details</h5>
-                <button type="button" className="btn-close" onClick={() => setShowViewModal(false)} />
+                <h5 className="modal-title">Caregiver Details</h5>
+                <button
+                  type="button"
+                  className="btn-close"
+                  onClick={() => setShowViewModal(false)}
+                />
               </div>
               <div className="modal-body">
                 <div className="row">
                   <div className="col-md-4">
-                    <h6 className="mb-3">Patient Information</h6>
-                    {(() => {
-                      const patient = getPatientDetails(viewingAssignment.patientId);
-                      return patient ? (
-                        <div className="card mb-3">
-                          <div className="card-body">
-                            <p><strong>Name:</strong> {patient.name}</p>
-                            <p><strong>Email:</strong> {patient.email}</p>
-                            <p><strong>Phone:</strong> {patient.phone}</p>
-                            <p><strong>Address:</strong> {patient.address}</p>
-                            <p><strong>Join Date:</strong> {patient.joinDate}</p>
-                            <p><strong>Status:</strong>
-                              <span className={`badge ${getStatusClass(patient.status)} ms-2`}>{patient.status}</span>
+                    <div className="text-center mb-3">
+                      <img
+                        src={viewingCaregiver.profilePicture}
+                        alt={viewingCaregiver.name}
+                        className="rounded-circle img-fluid"
+                        style={{ width: "150px", height: "150px", objectFit: "cover" }}
+                        onError={handleImageError}
+                      />
+                    </div>
+                    <h4 className="text-center">{viewingCaregiver.name}</h4>
+                    <p className="text-center text-muted">{viewingCaregiver.role}</p>
+                  </div>
+                  <div className="col-md-8">
+                    <div className="card mb-3">
+                      <div className="card-body">
+                        <h5 className="card-title">Personal Information</h5>
+                        <div className="row">
+                          <div className="col-sm-6">
+                            <p>
+                              <strong>Email:</strong> {viewingCaregiver.email}
+                            </p>
+                            <p>
+                              <strong>Phone:</strong> {viewingCaregiver.mobile}
+                            </p>
+                            <p>
+                              <strong>Gender:</strong> {viewingCaregiver.gender}
+                            </p>
+                            <p>
+                              <strong>Date of Birth:</strong> {viewingCaregiver.dateOfBirth}
+                            </p>
+                          </div>
+                          <div className="col-sm-6">
+                            <p>
+                              <strong>Blood Group:</strong> {viewingCaregiver.bloodGroup}
+                            </p>
+                            <p>
+                              <strong>Age:</strong> {viewingCaregiver.age}
+                            </p>
+                            <p>
+                              <strong>Join Date:</strong> {viewingCaregiver.joinDate}
+                            </p>
+                            <p>
+                              <strong>Status:</strong>{" "}
+                              <span
+                                className={`badge ${getStatusClass(
+                                  viewingCaregiver.status
+                                )} ms-2`}
+                              >
+                                {viewingCaregiver.status}
+                              </span>
                             </p>
                           </div>
                         </div>
-                      ) : (
-                        <div className="text-muted">Patient: {getPatientNameFromApiId(viewingAssignment.patientId)}</div>
-                      );
-                    })()}
-                  </div>
-                  <div className="col-md-4">
-                    <h6 className="mb-3">Caregiver Information</h6>
-                    {(() => {
-                      const caregiver = getCaregiverDetails(viewingAssignment.caregiverId);
-                      return caregiver ? (
-                        <div className="card mb-3">
-                          <div className="card-body">
-                            <div className="d-flex align-items-center mb-3">
-                              <img
-                                src={caregiver.profilePicture || "https://via.placeholder.com/80"}
-                                alt={caregiver.name}
-                                className="rounded-circle me-3"
-                                style={{ width: "80px", height: "80px", objectFit: "cover" }}
-                                onError={(e) => { e.currentTarget.src = "https://via.placeholder.com/80"; }}
-                              />
-                              <div>
-                                <h5 className="mb-1">{caregiver.name}</h5>
-                                <p className="mb-0">{caregiver.certification}</p>
-                              </div>
-                            </div>
-                            <p><strong>Email:</strong> {caregiver.email}</p>
-                            <p><strong>Mobile:</strong> {caregiver.mobile}</p>
-                            <p><strong>Experience:</strong> {caregiver.yearsExperience} years</p>
-                            <p><strong>Skills:</strong> {caregiver.skills}</p>
+                      </div>
+                    </div>
+                    <div className="card mb-3">
+                      <div className="card-body">
+                        <h5 className="card-title">Professional Information</h5>
+                        <p>
+                          <strong>Experience:</strong> {viewingCaregiver.yearsExperience} years
+                        </p>
+                        <p>
+                          <strong>Skills:</strong> {viewingCaregiver.skills}
+                        </p>
+                        <p>
+                          <strong>Certification:</strong> {viewingCaregiver.certification}
+                        </p>
+                        {viewingCaregiver.documents && viewingCaregiver.documents.length > 0 && (
+                          <div className="mt-3">
+                            <h6>Documents:</h6>
+                            <ul className="list-group">
+                              {viewingCaregiver.documents.map((doc, index) => (
+                                <li
+                                  key={index}
+                                  className="list-group-item d-flex justify-content-between align-items-center"
+                                >
+                                  {doc.name}
+                                  <a
+                                    href={doc.url}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="btn btn-sm btn-outline-primary"
+                                  >
+                                    View
+                                  </a>
+                                </li>
+                              ))}
+                            </ul>
                           </div>
-                        </div>
-                      ) : (
-                        <div className="text-muted">Caregiver not found in list.</div>
-                      );
-                    })()}
-                  </div>
-                  <div className="col-md-4">
-                    <h6 className="mb-3">Doctor Information</h6>
-                    {(() => {
-                      const doctor = getDoctorDetails(viewingAssignment.doctorId);
-                      return doctor ? (
-                        <div className="card mb-3">
-                          <div className="card-body">
-                            <div className="d-flex align-items-center mb-3">
-                              <div className="avatar avatar-lg me-3">
-                                <span className="avatar-title rounded-circle bg-primary text-white">
-                                  {doctor.name?.charAt(0) || 'D'}
-                                </span>
-                              </div>
-                              <div>
-                                <h5 className="mb-1">{doctor.name}</h5>
-                                <p className="mb-0">{doctor.specialty}</p>
-                              </div>
-                            </div>
-                            <p><strong>Doctor ID:</strong> {doctor.id}</p>
-                            <p><strong>Specialty:</strong> {doctor.specialty}</p>
-                          </div>
-                        </div>
-                      ) : (
-                        <div className="text-muted">Doctor: {getDoctorNameFromApiId(viewingAssignment.doctorId)}</div>
-                      );
-                    })()}
-                  </div>
-                </div>
-                <div className="row">
-                  <div className="col-12">
-                    <h6 className="mb-3">Assignment Information</h6>
+                        )}
+                      </div>
+                    </div>
                     <div className="card">
                       <div className="card-body">
-                        <p><strong>Assignment ID:</strong> #{viewingAssignment.id}</p>
-                        <p><strong>Patient:</strong> {viewingAssignment.patientName || getPatientNameFromApiId(viewingAssignment.patientId)}</p>
-                        <p><strong>Caregiver:</strong> {viewingAssignment.caregiverName}</p>
-                        <p><strong>Assigned By (Doctor):</strong> {viewingAssignment.doctorName}</p>
-                        <p><strong>Date Assigned:</strong> {viewingAssignment.dateAssigned || "-"}</p>
-                        <p><strong>Status:</strong>
-                          <span className={`badge ${getStatusClass(viewingAssignment.status)} ms-2`}>{viewingAssignment.status}</span>
+                        <h5 className="card-title">Contact Information</h5>
+                        <p>
+                          <strong>Address:</strong> {viewingCaregiver.address}
                         </p>
                       </div>
                     </div>
@@ -370,7 +387,11 @@ const Caregiver = () => {
                 </div>
               </div>
               <div className="modal-footer">
-                <button type="button" className="btn btn-secondary" onClick={() => setShowViewModal(false)}>
+                <button
+                  type="button"
+                  className="btn btn-secondary"
+                  onClick={() => setShowViewModal(false)}
+                >
                   Close
                 </button>
               </div>
