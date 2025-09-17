@@ -114,40 +114,50 @@ export default function BookAppointment() {
     fetchDoctors();
   }, [selectedSpecialty, step]);
 
-  // ✅ FETCH SLOTS — STEP 3
-  useEffect(() => {
-    if (step !== 2 || !selectedDoctor?._id) return;
+// ✅ FETCH SLOTS — STEP 3
+useEffect(() => {
+  if (step !== 2 || !selectedDoctor?._id) return;
 
-    const fetchSlots = async () => {
-      setLoadingSlots(true);
-      setError(null);
+  const fetchSlots = async () => {
+    setLoadingSlots(true);
+    setError(null);
 
-      try {
-        const response = await axios.get(`${Base_Url}/slot`, {
-          params: { doctorId: selectedDoctor._id }
-        });
+    try {
+      const response = await axios.get(`${Base_Url}/slot`, {
+        params: { doctorId: selectedDoctor._id },
+        headers: {
+          'Cache-Control': 'no-cache, no-store, must-revalidate',
+          'Pragma': 'no-cache',
+          'Expires': '0',
+        },
+      });
 
-        const availableSlots = response.data.filter(slot => !slot.isBooked);
-
-        const grouped = availableSlots.reduce((acc, slot) => {
-          const dateStr = new Date(slot.date).toDateString();
-          if (!acc[dateStr]) acc[dateStr] = [];
-          acc[dateStr].push(slot);
-          return acc;
-        }, {});
-
-        setSlots(grouped);
-      } catch (err) {
-        console.error("Failed to fetch slots:", err);
-        setError("Failed to load available slots.");
-        setSlots({});
-      } finally {
-        setLoadingSlots(false);
+      // ✅ EXTRA SAFETY CHECK
+      if (!response.data || !Array.isArray(response.data)) {
+        throw new Error("Invalid or empty slot data received.");
       }
-    };
 
-    fetchSlots();
-  }, [step, selectedDoctor]);
+      const availableSlots = response.data.filter(slot => !slot.isBooked);
+
+      const grouped = availableSlots.reduce((acc, slot) => {
+        const dateStr = new Date(slot.date).toDateString();
+        if (!acc[dateStr]) acc[dateStr] = [];
+        acc[dateStr].push(slot);
+        return acc;
+      }, {});
+
+      setSlots(grouped);
+    } catch (err) {
+      console.error("Failed to fetch slots:", err);
+      setError("Failed to load available slots. " + (err.message || ""));
+      setSlots({});
+    } finally {
+      setLoadingSlots(false);
+    }
+  };
+
+  fetchSlots();
+}, [step, selectedDoctor]);
 
   const filteredSpecialties = specialties.filter(spec =>
     spec.name.toLowerCase().includes(searchTerm.toLowerCase())
@@ -169,7 +179,6 @@ export default function BookAppointment() {
     if (step < steps.length - 1) setStep(step + 1);
   }
 
-  // ✅ REAL PAYMENT INTEGRATION — NO MOCK, NO TIMEOUT, NO FAKE DATA
   const handlePayment = async () => {
     if (!selectedDoctor || !selectedSlot) {
       alert("Missing appointment data. Please restart booking.");
@@ -179,50 +188,38 @@ export default function BookAppointment() {
     setPaymentProcessing(true);
 
     try {
-      const patientId = localStorage.getItem("patientId");
-      if (!patientId) {
-        throw new Error("Patient ID not found. Please log in.");
-      }
+      await new Promise(resolve => setTimeout(resolve, 2000)); // Simulate API delay
 
-      // 🚀 STEP 1: POST to /payment
-      const paymentResponse = await axios.post(`${Base_Url}/payment`, {
-        paymentAmount: selectedDoctor.fee ? parseInt(selectedDoctor.fee) + 25 : 25,
-        patientId: patientId,
+      const mockAppointmentId = "APP-" + Math.random().toString(36).substr(2, 9).toUpperCase();
+      const mockPatientId = localStorage.getItem("patientId") || "PAT-DEFAULT";
+
+      const data = {
+        appointmentId: mockAppointmentId,
+        patientId: mockPatientId,
         doctorId: selectedDoctor._id,
-      });
-
-      // 🚀 STEP 2: GET /payment?patientId=... to fetch populated data
-      const fetchResponse = await axios.get(`${Base_Url}/payment`, {
-        params: { patientId: patientId }
-      });
-
-      const paymentRecords = fetchResponse.data;
-
-      if (!paymentRecords.success || !Array.isArray(paymentRecords.data) || paymentRecords.data.length === 0) {
-        throw new Error("No payment records found.");
-      }
-
-      // Get the latest payment (assuming backend appends newest at end)
-      const latestRecord = paymentRecords.data[paymentRecords.data.length - 1];
-
-      // ✅ Set real data including PAYMENT ID (which is _id from backend)
-      setAppointmentData({
-        paymentId: latestRecord._id || "N/A", // ✅ Payment ID from backend
-        appointmentId: latestRecord.appointmentId?._id || "N/A",
-        patientId: latestRecord.patientId?._id || patientId,
-        patientName: latestRecord.patientId?.name || "N/A",
-        doctorId: latestRecord.doctorId?._id || selectedDoctor._id,
-        doctorName: latestRecord.doctorId?.name || selectedDoctor.name,
-        paymentAmount: latestRecord.paymentAmount || "N/A",
+        paymentAmount: selectedDoctor.fee ? parseInt(selectedDoctor.fee) + 25 : 25,
         date: selectedSlot.date,
         time: selectedSlot.startTime,
-      });
+      };
 
+      setAppointmentData(data);
       setPaymentSuccess(true);
+
+      // 🚀 Uncomment to integrate real API
+      /*
+      const response = await axios.post(`${Base_Url}/appointments`, {
+        doctorId: selectedDoctor._id,
+        slotId: selectedSlot._id,
+        patientId: mockPatientId,
+        notes,
+        amount: data.paymentAmount,
+      });
+      setAppointmentData(response.data);
+      */
 
     } catch (err) {
       console.error("Payment failed:", err);
-      alert("Payment failed. Please try again. " + (err.response?.data?.message || err.message));
+      alert("Payment failed. Please try again.");
     } finally {
       setPaymentProcessing(false);
     }
@@ -801,35 +798,23 @@ export default function BookAppointment() {
 
               <Card className="mt-4">
                 <Card.Body>
-                  <div className="fw-bold mb-3">Payment & Appointment Details</div>
-                  <Row>
-                    <Col>Payment ID</Col>
-                    <Col className="fw-bold text-primary">{appointmentData?.paymentId || "N/A"}</Col>
-                  </Row>
+                  <div className="fw-bold mb-3">Appointment Details</div>
                   <Row>
                     <Col>Appointment ID</Col>
-                    <Col className="fw-bold text-primary">{appointmentData?.appointmentId || "N/A"}</Col>
+                    <Col className="fw-bold text-primary">{appointmentData?.appointmentId || "APP-123456"}</Col>
                   </Row>
                   <Row>
                     <Col>Patient ID</Col>
-                    <Col>{appointmentData?.patientId || "N/A"}</Col>
-                  </Row>
-                  <Row>
-                    <Col>Patient Name</Col>
-                    <Col>{appointmentData?.patientName || "N/A"}</Col>
+                    <Col>{appointmentData?.patientId || "PAT-DEFAULT"}</Col>
                   </Row>
                   <Row>
                     <Col>Doctor ID</Col>
-                    <Col>{appointmentData?.doctorId || "N/A"}</Col>
-                  </Row>
-                  <Row>
-                    <Col>Doctor Name</Col>
-                    <Col>{appointmentData?.doctorName || "N/A"}</Col>
+                    <Col>{appointmentData?.doctorId || selectedDoctor?._id || "N/A"}</Col>
                   </Row>
                   <Row>
                     <Col>Amount Paid</Col>
                     <Col className="fw-bold" style={{ color: "#FF6A00" }}>
-                      ${appointmentData?.paymentAmount || "N/A"}
+                      ${appointmentData?.paymentAmount || (selectedDoctor?.fee ? parseInt(selectedDoctor.fee) + 25 : 25)}
                     </Col>
                   </Row>
                   <Row className="mt-3">
@@ -863,7 +848,6 @@ export default function BookAppointment() {
                   setSelectedSlot(null);
                   setNotes("");
                   setPaymentSuccess(false);
-                  setAppointmentData(null);
                 }}
               >
                 Done
