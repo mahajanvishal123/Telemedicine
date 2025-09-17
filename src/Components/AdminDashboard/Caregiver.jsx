@@ -18,17 +18,17 @@ const Caregiver = () => {
 
   // 🔹 Pagination states
   const [currentPage, setCurrentPage] = useState(1);
-  const [rowsPerPage, setRowsPerPage] = useState(8); // Default 8
+  const [rowsPerPage, setRowsPerPage] = useState(5); // Default 5
 
   // ===== Helpers =====
   const getStatusClass = (status) => {
     switch (status) {
       case "Active":
-        return "bg-success";
+        return "bg-success text-white";
       case "Inactive":
-        return "bg-secondary";
+        return "bg-secondary text-white";
       default:
-        return "bg-secondary";
+        return "bg-secondary text-white";
     }
   };
 
@@ -123,36 +123,34 @@ const Caregiver = () => {
   const paginate = (pageNumber) => setCurrentPage(pageNumber);
 
   return (
-    <div className="">
+    <div className="container-fluid">
       {/* Header */}
       <div className="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center gap-3 mb-4">
         <h3 className="dashboard-heading">Caregivers List</h3>
         <div className="text-muted">Showing all caregivers from the system</div>
       </div>
 
-      {/* Entries dropdown */}
-      <div className="d-flex justify-content-between align-items-center mb-2">
-        <div>
-          <label className="me-2">Show</label>
-          <select
-            className="form-select d-inline-block w-auto"
-            value={rowsPerPage}
-            onChange={(e) => {
-              setRowsPerPage(e.target.value === "All" ? "All" : parseInt(e.target.value));
-              setCurrentPage(1); // reset to page 1
-            }}
-          >
-            <option value="5">5</option>
-            <option value="8">8</option>
-            <option value="10">10</option>
-            <option value="25">25</option>
-            <option value="All">All</option>
-          </select>
-          <span className="ms-2">entries</span>
-        </div>
+      {/* Top: Entries Dropdown */}
+      <div className="mb-3 d-flex align-items-center">
+        <label className="me-2 mb-0">Show</label>
+        <select
+          className="form-select form-select-sm w-auto"
+          value={rowsPerPage}
+          onChange={(e) => {
+            setRowsPerPage(e.target.value === "All" ? "All" : parseInt(e.target.value));
+            setCurrentPage(1);
+          }}
+        >
+          <option value="3">3</option>
+          <option value="5">5</option>
+          <option value="10">10</option>
+          <option value="25">25</option>
+          <option value="All">All</option>
+        </select>
+        <span className="ms-2 mb-0">entries</span>
       </div>
 
-      {/* Caregivers fetch state */}
+      {/* Table */}
       {loadingCaregivers && <div className="alert alert-info">Loading caregivers…</div>}
       {caregiversError && (
         <div className="alert alert-danger d-flex justify-content-between align-items-center">
@@ -163,106 +161,121 @@ const Caregiver = () => {
         </div>
       )}
 
-      {/* Caregivers Table — with Pagination */}
       {!loadingCaregivers && !caregiversError && (
-        <div className="row">
-          <div className="col-12">
-            <div className="card shadow">
-              <div className="card-body">
-                <div className="table-responsive">
-                  <table className="table table-hover">
-                    <thead>
-                      <tr>
-                        <th>ID</th>
-                        <th>Photo</th>
-                        <th>Name</th>
-                        <th>Email</th>
-                        <th>Gender</th>
-                        <th>Role</th>
-                        <th>Experience</th>
-                        <th>Address</th>
-                        <th>Status</th>
-                        <th>Actions</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {currentRows.length === 0 ? (
-                        <tr>
-                          <td colSpan={10} className="text-center text-muted">
-                            No caregivers found.
-                          </td>
-                        </tr>
-                      ) : (
-                        currentRows.map((caregiver, index) => (
-                          <tr key={caregiver.id}>
-                            <td>{(currentPage - 1) * rowsPerPage + index + 1}</td>
-                            <td className="text-center">
-                              <img
-                                src={caregiver.profilePicture}
-                                alt={caregiver.name || "caregiver"}
-                                className="rounded-circle"
-                                style={{ width: "40px", height: "40px", objectFit: "cover" }}
-                                onError={handleImageError}
-                              />
-                            </td>
-                            <td>{caregiver.name}</td>
-                            <td>{caregiver.email}</td>
-                            <td>{caregiver.gender}</td>
-                            <td>{caregiver.role}</td>
-                            <td>{caregiver.yearsExperience} years</td>
-                            <td>{caregiver.address}</td>
-                            <td>
-                              <span className={`badge ${getStatusClass(caregiver.status)}`}>
-                                {caregiver.status}
-                              </span>
-                            </td>
-                            <td>
-                              <button
-                                className="btn btn-sm btn-outline-primary"
-                                onClick={() => handleView(caregiver)}
-                                title="View"
-                              >
-                                <i className="fas fa-eye"></i>
-                              </button>
-                            </td>
-                          </tr>
-                        ))
-                      )}
-                    </tbody>
-                  </table>
-                </div>
-                <div className="text-muted small">Caregivers loaded: {caregivers.length}</div>
-              </div>
-            </div>
+        <div className="card shadow-sm border">
+          <div className="table-responsive">
+            <table className="table table-hover table-bordered align-middle">
+              <thead className="table-light">
+                <tr>
+                  <th>ID</th>
+                  <th>Photo</th>
+                  <th>Name</th>
+                  <th>Email</th>
+                  <th>Gender</th>
+                  <th>Role</th>
+                  <th>Experience</th>
+                  <th>Status</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {currentRows.length === 0 ? (
+                  <tr>
+                    <td colSpan={9} className="text-center text-muted">
+                      No caregivers found.
+                    </td>
+                  </tr>
+                ) : (
+                  currentRows.map((caregiver, index) => (
+                    <tr key={caregiver.id}>
+                      <td>{(currentPage - 1) * rowsPerPage + index + 1}</td>
+                      <td className="text-center">
+                        <img
+                          src={caregiver.profilePicture}
+                          alt={caregiver.name}
+                          className="rounded-circle"
+                          style={{ width: "40px", height: "40px", objectFit: "cover" }}
+                          onError={handleImageError}
+                        />
+                      </td>
+                      <td>{caregiver.name}</td>
+                      <td>{caregiver.email}</td>
+                      <td>{caregiver.gender}</td>
+                      <td>{caregiver.role}</td>
+                      <td>{caregiver.yearsExperience} years</td>
+                      <td>
+                        <span className={`badge ${getStatusClass(caregiver.status)} rounded-pill`}>
+                          {caregiver.status}
+                        </span>
+                      </td>
+                      <td>
+                        <button
+                          className="btn btn-sm"
+                          onClick={() => handleView(caregiver)}
+                          title="View"
+                        >
+                          <i className="fas fa-eye" style={{ color: "#FF3500" }}></i>
+                        </button>
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
           </div>
+
         </div>
+        
       )}
 
-      {/* 🔹 Pagination Controls */}
-      {rowsPerPage !== "All" && totalPages > 1 && (
-        <nav className="d-flex justify-content-end mt-3">
-          <ul className="pagination">
-            <li className={`page-item ${currentPage === 1 ? "disabled" : ""}`}>
-              <button className="page-link" onClick={() => paginate(currentPage - 1)}>
-                Prev
-              </button>
-            </li>
-            {[...Array(totalPages)].map((_, i) => (
-              <li key={i} className={`page-item ${currentPage === i + 1 ? "active" : ""}`}>
-                <button className="page-link" onClick={() => paginate(i + 1)}>
-                  {i + 1}
-                </button>
-              </li>
-            ))}
-            <li className={`page-item ${currentPage === totalPages ? "disabled" : ""}`}>
-              <button className="page-link" onClick={() => paginate(currentPage + 1)}>
-                Next
-              </button>
-            </li>
-          </ul>
-        </nav>
-      )}
+        {/* ✅ Footer: Pagination (Custom Style Like Your Image) */}
+<div className="d-flex justify-content-between align-items-center p-3 bg-light mt-2">
+  <div className="text-muted small">
+    Showing {indexOfFirstRow + 1} to {Math.min(indexOfLastRow, caregivers.length)} of {caregivers.length} entries
+  </div>
 
+  {/* 👇 Updated Pagination with .pagination, .page-item, .page-link classes */}
+  <nav>
+    <ul className="pagination mb-0">
+      {/* Prev Button */}
+      <li className={`page-item ${currentPage === 1 ? 'disabled' : ''}`}>
+        <button
+          className="page-link"
+          onClick={() => paginate(currentPage - 1)}
+          disabled={currentPage === 1}
+        >
+          Prev
+        </button>
+      </li>
+
+      {/* Page Numbers */}
+      {[...Array(totalPages)].map((_, i) => (
+        <li
+          key={i}
+          className={`page-item ${currentPage === i + 1 ? 'active' : ''}`}
+        >
+          <button
+            className="page-link"
+            onClick={() => paginate(i + 1)}
+          >
+            {i + 1}
+          </button>
+        </li>
+      ))}
+
+      {/* Next Button */}
+      <li className={`page-item ${currentPage === totalPages ? 'disabled' : ''}`}>
+        <button
+          className="page-link"
+          onClick={() => paginate(currentPage + 1)}
+          disabled={currentPage === totalPages}
+        >
+          Next
+        </button>
+      </li>
+    </ul>
+  </nav>
+</div>
       {/* View Caregiver Modal */}
       {showViewModal && viewingCaregiver && (
         <div
