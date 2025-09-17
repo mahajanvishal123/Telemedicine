@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from "react";
-import API_URL from "../../../Baseurl/Baseurl"; // Adjust path as needed
+import React, { useState } from "react";
+// import 'bootstrap/dist/css/bootstrap.min.css';
 import "./MyAppointments.css";
 
 const MyAppointments = () => {
@@ -7,89 +7,44 @@ const MyAppointments = () => {
   const [showEditModal, setShowEditModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [selectedAppointment, setSelectedAppointment] = useState(null);
+  const [appointments, setAppointments] = useState([
+    {
+      id: 1,
+      date: "Jan 20, 2024",
+      time: "2:30 PM",
+      doctor: "Dr. Sarah Johnson",
+      specialty: "Cardiologist",
+      type: "Video Call",
+      status: "Upcoming",
+      payment: "Paid",
+    },
+    {
+      id: 2,
+      date: "Jan 18, 2024",
+      time: "10:00 AM",
+      doctor: "Dr. Michael Chen",
+      specialty: "Neurologist",
+      type: "In-Person",
+      status: "Completed",
+      payment: "Paid",
+    },
+    {
+      id: 3,
+      date: "Jan 15, 2024",
+      time: "11:15 AM",
+      doctor: "Dr. Emily Davis",
+      specialty: "Dermatologist",
+      type: "Video Call",
+      status: "Cancelled",
+      payment: "Refunded",
+    },
+  ]);
 
-  // ✅ Dynamic Data from API — NO HARDCODING
-  const [appointments, setAppointments] = useState([]);
-  const [summary, setSummary] = useState({ total: 0, confirmed: 0, pending: 0, cancelled: 0 });
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
-
-  // ✅ Get doctorId from localStorage (you said use user._id — so we use it as doctorId)
-  const storedUser = localStorage.getItem('user');
-  let doctorId = null;
-
-  if (storedUser) {
-    try {
-      const user = JSON.parse(storedUser);
-      doctorId = user?._id || null; // 👈 You said don't change — so we use user._id as doctorId
-    } catch (e) {
-      console.error("Failed to parse user", e);
-    }
-  }
-
-  // ✅ Fetch appointments on mount — using your endpoint: /appointment?doctorId=...
-  useEffect(() => {
-    if (!doctorId) {
-      setError("Doctor ID not found");
-      setLoading(false);
-      return;
-    }
-
-    const fetchAppointments = async () => {
-      try {
-        // 🔥 EXACTLY AS YOU SAID — USING doctorId ENDPOINT
-        const response = await fetch(`${API_URL}/appointment?doctorId=${doctorId}`);
-        if (!response.ok) throw new Error('Failed to fetch appointments');
-        const result = await response.json();
-
-        if (result.appointments) {
-          setAppointments(result.appointments);
-          setSummary(result.summary || { total: 0, confirmed: 0, pending: 0, cancelled: 0 });
-        } else {
-          throw new Error('Invalid response format');
-        }
-      } catch (err) {
-        setError(err.message);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchAppointments();
-  }, [doctorId]);
-
-  // ✅ Format status as per your UI (Upcoming/Completed/Cancelled)
-  const formatStatus = (status) => {
-    switch (status?.toLowerCase()) {
-      case 'confirmed':
-      case 'pending':
-        return 'Upcoming';
-      case 'completed':
-        return 'Completed';
-      case 'cancelled':
-        return 'Cancelled';
-      default:
-        return 'Pending';
-    }
-  };
-
-  // ✅ Format payment based on status
-  const formatPayment = (status) => {
-    return status === 'cancelled' ? 'Refunded' : 'Paid';
-  };
-
-  // ✅ Filter appointments based on active tab
-  const filteredAppointments = appointments.filter((appt) => {
-    if (activeTab === "all") return true;
-    return formatStatus(appt.status).toLowerCase() === activeTab;
-  });
-
-  // ✅ Stats from API summary (as per your response structure)
   const stats = [
-    { label: "Total Appointments", value: summary.total || 0, icon: "calendar", color: "total" },
-    { label: "Upcoming", value: summary.confirmed + summary.pending || 0, icon: "clock", color: "upcoming" },
-    { label: "Completed", value: summary.completed || 0, icon: "check-circle", color: "completed" },
-    { label: "Cancelled", value: summary.cancelled || 0, icon: "times-circle", color: "cancelled" },
+    { label: "Total Appointments", value: 6, icon: "calendar", color: "total" },
+    { label: "Upcoming", value: 3, icon: "clock", color: "upcoming" },
+    { label: "Completed", value: 2, icon: "check-circle", color: "completed" },
+    { label: "Cancelled", value: 1, icon: "times-circle", color: "cancelled" },
   ];
 
   const tabs = [
@@ -98,6 +53,11 @@ const MyAppointments = () => {
     { key: "completed", label: "Completed", icon: "check" },
     { key: "cancelled", label: "Cancelled", icon: "times" },
   ];
+
+  const filteredAppointments = appointments.filter((appt) => {
+    if (activeTab === "all") return true;
+    return appt.status.toLowerCase() === activeTab;
+  });
 
   const handleEditClick = (appointment) => {
     setSelectedAppointment(appointment);
@@ -110,43 +70,18 @@ const MyAppointments = () => {
   };
 
   const handleEditSave = () => {
+    // In a real application, you would update the appointment in your state/API here
     console.log("Saving changes for appointment:", selectedAppointment);
     setShowEditModal(false);
   };
 
   const handleDeleteConfirm = () => {
-    setAppointments(appointments.filter((appt) => appt._id !== selectedAppointment._id));
+    // Remove the appointment from the list
+    setAppointments(
+      appointments.filter((appt) => appt.id !== selectedAppointment.id)
+    );
     setShowDeleteModal(false);
   };
-
-  // ✅ Loading State
-  if (loading) {
-    return (
-      <div className="d-flex justify-content-center align-items-center vh-100">
-        <div className="spinner-border text-primary" role="status">
-          <span className="visually-hidden">Loading...</span>
-        </div>
-      </div>
-    );
-  }
-
-  // ✅ Error State
-  if (error) {
-    return (
-      <div className="container py-5">
-        <div className="alert alert-danger text-center">
-          <h5>⚠️ Error Loading Appointments</h5>
-          <p>{error}</p>
-          <button 
-            className="btn btn-primary mt-3"
-            onClick={() => window.location.reload()}
-          >
-            Retry
-          </button>
-        </div>
-      </div>
-    );
-  }
 
   return (
     <div className="">
@@ -171,7 +106,7 @@ const MyAppointments = () => {
                 className={`stats-icon d-flex align-items-center justify-content-center rounded-circle bg-${stat.color} text-white`}
                 style={{ width: "50px", height: "50px", fontSize: "20px" }}
               >
-                <i className={`fas fa-${stat.icon}`}></i>
+                <i className={`fas fa-${stat.icon} bg-${stat.color}`}></i>
               </div>
               <div className="ms-3">
                 <h6 className="mb-0 fw-bold text-dark">{stat.value}</h6>
@@ -222,22 +157,16 @@ const MyAppointments = () => {
               <tbody>
                 {filteredAppointments.length > 0 ? (
                   filteredAppointments.map((appt) => (
-                    <tr key={appt._id}>
+                    <tr key={appt.id}>
                       <td>
                         <div className="d-flex align-items-center">
                           <span className="date-box me-2">
                             <i className="fas fa-calendar"></i>
                           </span>
                           <div>
-                            <strong>
-                              {new Date(appt.appointmentDate).toLocaleDateString('en-US', {
-                                year: 'numeric',
-                                month: 'short',
-                                day: 'numeric'
-                              })}
-                            </strong>
+                            <strong>{appt.date}</strong>
                             <br />
-                            <small>{appt.appointmentTime}</small>
+                            <small>{appt.time}</small>
                           </div>
                         </div>
                       </td>
@@ -250,40 +179,38 @@ const MyAppointments = () => {
                             <i className="fas fa-user-md"></i>
                           </div>
                           <div>
-                            <div className="doctor-name">
-                              {appt.doctorId?.name || 'Dr. Not Assigned'}
-                            </div>
+                            <div className="doctor-name">{appt.doctor}</div>
                             <div className="doctor-type small text-muted">
-                              {appt.doctorId?.specialty || 'General'}
+                              {appt.type}
                             </div>
                           </div>
                         </div>
                       </td>
                       <td>
                         <span className="badge bg-light text-dark">
-                          {appt.doctorId?.specialty || 'General'}
+                          {appt.specialty}
                         </span>
                       </td>
                       <td>
                         <span
                           className={`badge ${
-                            formatStatus(appt.status) === "Upcoming"
+                            appt.status === "Upcoming"
                               ? "bg-warning text-dark"
-                              : formatStatus(appt.status) === "Completed"
+                              : appt.status === "Completed"
                               ? "bg-success"
                               : "bg-danger"
                           }`}
                         >
-                          {formatStatus(appt.status)}
+                          {appt.status}
                         </span>
                       </td>
                       <td>
                         <span
                           className={`badge ${
-                            formatPayment(appt.status) === "Paid" ? "bg-success" : "bg-info"
+                            appt.payment === "Paid" ? "bg-success" : "bg-info"
                           }`}
                         >
-                          {formatPayment(appt.status)}
+                          {appt.payment}
                         </span>
                       </td>
                       <td>
@@ -339,13 +266,13 @@ const MyAppointments = () => {
                   <div className="mb-3">
                     <label className="form-label">Date</label>
                     <input
-                      type="date"
+                      type="text"
                       className="form-control"
-                      value={new Date(selectedAppointment.appointmentDate).toISOString().split('T')[0]}
+                      value={selectedAppointment.date}
                       onChange={(e) =>
                         setSelectedAppointment({
                           ...selectedAppointment,
-                          appointmentDate: new Date(e.target.value).toISOString(),
+                          date: e.target.value,
                         })
                       }
                     />
@@ -353,13 +280,13 @@ const MyAppointments = () => {
                   <div className="mb-3">
                     <label className="form-label">Time</label>
                     <input
-                      type="time"
+                      type="text"
                       className="form-control"
-                      value={selectedAppointment.appointmentTime}
+                      value={selectedAppointment.time}
                       onChange={(e) =>
                         setSelectedAppointment({
                           ...selectedAppointment,
-                          appointmentTime: e.target.value,
+                          time: e.target.value,
                         })
                       }
                     />
@@ -369,31 +296,48 @@ const MyAppointments = () => {
                     <input
                       type="text"
                       className="form-control"
-                      value={selectedAppointment.doctorId?.name || ''}
-                      readOnly
+                      value={selectedAppointment.doctor}
+                      onChange={(e) =>
+                        setSelectedAppointment({
+                          ...selectedAppointment,
+                          doctor: e.target.value,
+                        })
+                      }
                     />
                   </div>
                   <div className="mb-3">
                     <label className="form-label">Specialty</label>
-                    <input
-                      type="text"
-                      className="form-control"
-                      value={selectedAppointment.doctorId?.specialty || ''}
-                      readOnly
-                    />
-                  </div>
-                  <div className="mb-3">
-                    <label className="form-label">Reason</label>
-                    <textarea
-                      className="form-control"
-                      value={selectedAppointment.reason || ''}
+                    <select
+                      className="form-select"
+                      value={selectedAppointment.specialty}
                       onChange={(e) =>
                         setSelectedAppointment({
                           ...selectedAppointment,
-                          reason: e.target.value,
+                          specialty: e.target.value,
                         })
                       }
-                    />
+                    >
+                      <option value="Cardiologist">Cardiologist</option>
+                      <option value="Neurologist">Neurologist</option>
+                      <option value="Dermatologist">Dermatologist</option>
+                      <option value="Pediatrician">Pediatrician</option>
+                    </select>
+                  </div>
+                  <div className="mb-3">
+                    <label className="form-label">Appointment Type</label>
+                    <select
+                      className="form-select"
+                      value={selectedAppointment.type}
+                      onChange={(e) =>
+                        setSelectedAppointment({
+                          ...selectedAppointment,
+                          type: e.target.value,
+                        })
+                      }
+                    >
+                      <option value="Video Call">Video Call</option>
+                      <option value="In-Person">In-Person</option>
+                    </select>
                   </div>
                 </form>
               </div>
@@ -409,7 +353,7 @@ const MyAppointments = () => {
                   type="button"
                   className="btn"
                   onClick={handleEditSave}
-                  style={{ backgroundColor: "#f9591a", color: "white" }}
+                  style={{ backgroundColor: "#f9591a", color: "white" } }
                 >
                   Save changes
                 </button>
@@ -439,9 +383,8 @@ const MyAppointments = () => {
               <div className="modal-body">
                 <p>
                   Are you sure you want to cancel your appointment with{" "}
-                  {selectedAppointment.doctorId?.name} on{" "}
-                  {new Date(selectedAppointment.appointmentDate).toLocaleDateString()} at{" "}
-                  {selectedAppointment.appointmentTime}?
+                  {selectedAppointment.doctor} on {selectedAppointment.date} at{" "}
+                  {selectedAppointment.time}?
                 </p>
                 <p className="text-danger">This action cannot be undone.</p>
               </div>
