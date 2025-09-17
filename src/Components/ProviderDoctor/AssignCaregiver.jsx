@@ -1,1091 +1,661 @@
-import React, { useState, useEffect } from "react";
-import axios from "axios";
-import API_URL from "../../Baseurl/Baseurl";
+import React, { useState, useEffect } from 'react';
+import { motion } from 'framer-motion';
+import axios from 'axios';
+import API_URL from '../../Baseurl/Baseurl';
 
 const AssignCaregiver = () => {
-  // ====== CONFIG ======
-  const BASE_URL = API_URL;
+  // Modal states
+  const [showAssignmentModal, setShowAssignmentModal] = useState(false);
+  const [showDetailsModal, setShowDetailsModal] = useState(false);
 
-  // ---- auth helpers (optional but recommended) ----
-  const safeJSON = (txt) => { try { return JSON.parse(txt); } catch { return null; } };
-  const loginBlob = safeJSON(localStorage.getItem("user")) || {};
-  const accessToken =
-    localStorage.getItem("accessToken") ||
-    loginBlob?.token ||
-    "";
-  const authHeaders = () =>
-    accessToken ? { Authorization: `Bearer ${accessToken}` } : {};
-
-  // Patients (static)
-  const [patients] = useState([
-    { id: 1, name: "John Doe", email: "john@example.com", joinDate: "2023-09-15", status: "Active", phone: "555-1234", address: "123 Main St" },
-    { id: 2, name: "Jane Smith", email: "jane@example.com", joinDate: "2023-10-05", status: "Inactive", phone: "555-5678", address: "456 Oak Ave" },
-    { id: 3, name: "Robert Johnson", email: "robert@example.com", joinDate: "2023-08-20", status: "Active", phone: "555-9012", address: "789 Elm St" },
-    { id: 4, name: "Emily Davis", email: "emily@example.com", joinDate: "2023-11-01", status: "Active", phone: "555-3456", address: "321 Pine Rd" },
-  ]);
-
-  // Caregivers from API
-  const [caregivers, setCaregivers] = useState([]);
-  const [loadingCaregivers, setLoadingCaregivers] = useState(false);
-  const [caregiversError, setCaregiversError] = useState(null);
-
-  // Assignments (UI table)
-  const [assignments, setAssignments] = useState([]);
-
-  // UI state
-  const [selectedPatient, setSelectedPatient] = useState("");
-  const [selectedCaregiver, setSelectedCaregiver] = useState("");
-  const [assignmentDate, setAssignmentDate] = useState("");
-  const [showModal, setShowModal] = useState(false);
-  const [showEditModal, setShowEditModal] = useState(false);
-  const [showDeleteModal, setShowDeleteModal] = useState(false);
-  const [showAddCaregiverModal, setShowAddCaregiverModal] = useState(false);
-  const [showViewModal, setShowViewModal] = useState(false);
-  const [selectedAssignment, setSelectedAssignment] = useState(null);
-  const [editingAssignment, setEditingAssignment] = useState(null);
-  const [viewingAssignment, setViewingAssignment] = useState(null);
-
-  // New caregiver form (for POST)
-  const [newCaregiver, setNewCaregiver] = useState({
-    name: "",
-    email: "",
-    mobile: "",
-    address: "",
-    certification: "",
-    yearsExperience: "",
-    skills: "",
-    dateOfBirth: "",
-    gender: "",
-    bloodGroup: "",
-    password: "",
-    confirmPassword: "",
-    profilePicture: "",
-    profilePictureFile: null,
-    documents: [],
-    documentFiles: []
+  // Form state
+  const [formMode, setFormMode] = useState('add'); // 'add' or 'edit'
+  const [currentAssignment, setCurrentAssignment] = useState({
+    id: '',
+    patientId: '',
+    caregiverId: '',
+    assignStartDate: '',
+    assignEndDate: '',
+    createdAt: ''
   });
 
-  const [selectedPatientForNewCaregiver, setSelectedPatientForNewCaregiver] = useState("");
-  const [assignmentDateForNewCaregiver, setAssignmentDateForNewCaregiver] = useState("");
-  const [submitting, setSubmitting] = useState(false);
+  // Selected assignment for view modal
+  const [selectedAssignment, setSelectedAssignment] = useState(null);
 
-  // Edit caregiver (local)
-  const [editingCaregiver, setEditingCaregiver] = useState(null);
-  const [showEditCaregiverModal, setShowEditCaregiverModal] = useState(false);
+  // State for data fetching
+  const [assignments, setAssignments] = useState([]);
+  const [patients, setPatients] = useState([]);
+  const [caregivers, setCaregivers] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
-  // DELETE API state
-  const [deletingCaregiverId, setDeletingCaregiverId] = useState(null);
-  const [deleteError, setDeleteError] = useState(null);
+  // Base URL
 
-  // PUT update (caregiver profile) state
-  const [updatingCaregiver, setUpdatingCaregiver] = useState(false);
-  const [updateError, setUpdateError] = useState(null);
-
-  // PUT assign states
-  const [assignSubmitting, setAssignSubmitting] = useState(false);
-  const [assignError, setAssignError] = useState(null);
-
-  // ===== Helpers =====
-  const resetForm = () => {
-    setSelectedPatient("");
-    setSelectedCaregiver("");
-    setAssignmentDate("");
-    setAssignError(null);
-  };
-
-  const resetNewCaregiverForm = () => {
-    setNewCaregiver({
-      name: "",
-      email: "",
-      mobile: "",
-      address: "",
-      certification: "",
-      yearsExperience: "",
-      skills: "",
-      dateOfBirth: "",
-      gender: "",
-      bloodGroup: "",
-      password: "",
-      confirmPassword: "",
-      profilePicture: "",
-      profilePictureFile: null,
-      documents: [],
-      documentFiles: []
-    });
-    setSelectedPatientForNewCaregiver("");
-    setAssignmentDateForNewCaregiver("");
-  };
-
-  const getStatusClass = (status) => {
-    switch (status) {
-      case "Active": return "bg-success";
-      case "Inactive": return "bg-secondary";
-      default: return "bg-secondary";
-    }
-  };
-
-  const getPatientDetails = (patientId) =>
-    patients.find(p => String(p.id) === String(patientId));
-
-  const getCaregiverDetails = (caregiverId) =>
-    caregivers.find(c => String(c.id) === String(caregiverId));
-
-  const getPatientNameFromApiId = (pid) => {
-    const p = patients.find(p => String(p.id) === String(pid));
-    return p?.name || (pid ? `#${pid}` : "-");
-  };
-
-  // ===== Map API caregiver -> local caregiver object
-  const mapApiCaregiver = (api) => {
-    const trim = (v) => (typeof v === "string" ? v.trim() : v);
-    const expYears = (() => {
-      const e = trim(api.experience);
-      if (!e) return 0;
-      const m = String(e).match(/(\d+)/);
-      return m ? Number(m[1]) : 0;
-    })();
-
-    const docs = [];
-    if (api.certificate && String(api.certificate).length > 0) {
-      const fileName = String(api.certificate).split("/").pop() || "Certificate";
-      docs.push({ name: fileName, url: api.certificate });
-    }
-
-    return {
-      id: api._id,
-      name: trim(api.name) || "",
-      email: trim(api.email) || "",
-      joinDate: api.createdAt ? String(api.createdAt).slice(0, 10) : "",
-      status: "Active",
-      certification: "",
-      yearsExperience: expYears,
-      mobile: trim(api.mobile) || "",
-      address: trim(api.address) || "",
-      skills: trim(api.skills) || "",
-      profilePicture: trim(api.profile) || "https://via.placeholder.com/80",
-      dateOfBirth: trim(api.dob) || "",
-      gender: trim(api.gender) || "",
-      bloodGroup: trim(api.bloodGroup) || "",
-      password: "********",
-      documents: docs,
-      patientId: trim(api.patientId) || "",
-      age: api.age || "",
-      role: api.role || "caregiver",
-    };
-  };
-
-  // ===== GET /caregiver and seed Assignments table
-  const fetchCaregivers = async () => {
-    setLoadingCaregivers(true);
-    setCaregiversError(null);
-    try {
-      const res = await axios.get(`${BASE_URL}/caregiver`, {
-        headers: { ...authHeaders() }
-      });
-      const raw = Array.isArray(res?.data)
-        ? res.data
-        : (Array.isArray(res?.data?.data) ? res.data.data : []);
-      const mapped = raw.map(mapApiCaregiver);
-      setCaregivers(mapped);
-
-      // seed into assignments table once
-      setAssignments(prev => {
-        if (prev.length > 0) return prev;
-        const seeded = mapped.map((c, idx) => ({
-          id: c.id || (Date.now() + idx),
-          patientId: c.patientId || "",
-          patientName: getPatientNameFromApiId(c.patientId),
-          caregiverId: c.id,
-          caregiverName: c.name,
-          dateAssigned: c.joinDate || new Date().toISOString().slice(0, 10),
-          status: c.status || "Active",
-        }));
-        return seeded;
-      });
-    } catch (err) {
-      console.error("Failed to fetch caregivers:", err);
-      setCaregiversError(
-        err?.response?.data?.message ||
-        err?.message ||
-        "Failed to fetch caregivers"
-      );
-    } finally {
-      setLoadingCaregivers(false);
-    }
-  };
-
+  // Fetch all data on load
   useEffect(() => {
-    fetchCaregivers();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    const fetchData = async () => {
+      try {
+        setLoading(true);
+        
+        // Fetch assignments
+        const assignmentResponse = await axios.get(`${API_URL}/caregiver/assignCaregiver`);
+        setAssignments(assignmentResponse.data.assignments || []);
+        
+        // Fetch patients
+        const patientResponse = await axios.get(`${API_URL}/patient`);
+        setPatients(patientResponse.data.patients || []);
+        
+        // Fetch caregivers
+        const caregiverResponse = await axios.get(`${API_URL}/caregiver`);
+        setCaregivers(caregiverResponse.data.caregivers || []);
+        
+      } catch (err) {
+        setError('Failed to load data: ' + err.message);
+        console.error(err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchData();
   }, []);
 
-  // ===== PUT /caregiver/:id — (Assign/Update patient to caregiver)
-  const putAssignCaregiver = async (caregiverId, patientId, dateISO) => {
-    // Payload: JSON — backend can use dateAssigned or assignmentDate
-    const payload = {
-      patientId: String(patientId),
-      dateAssigned: dateISO,
-      assignmentDate: dateISO,
-    };
-
-    const res = await axios.put(
-      `${BASE_URL}/caregiver/${caregiverId}`,
-      payload,
-      {
-        headers: {
-          "Content-Type": "application/json",
-          Accept: "application/json",
-          ...authHeaders(),
-        },
-      }
-    );
-
-    // try to normalize caregiver doc from response (if returned)
-    const updatedApi =
-      res?.data?.caregiver ||
-      res?.data?.data ||
-      res?.data ||
-      null;
-
-    return updatedApi;
+  // Handle input change
+  const handleInputChange = (e) => {
+    const { name, value } = e.target;
+    setCurrentAssignment(prev => ({
+      ...prev,
+      [name]: value
+    }));
   };
 
-  // ===== Assignment actions: CREATE (Assign Existing) with PUT
-  const handleAssign = async () => {
-    if (!selectedPatient || !selectedCaregiver || !assignmentDate) {
-      setAssignError("Please fill all fields.");
-      return;
-    }
-    setAssignSubmitting(true);
-    setAssignError(null);
-
+  // Handle form submit
+  const handleSubmit = async (e) => {
+    e.preventDefault();
     try {
-      const updatedApi = await putAssignCaregiver(
-        selectedCaregiver,
-        selectedPatient,
-        assignmentDate
-      );
-
-      // Update caregivers list if server echoed updated caregiver
-      if (updatedApi && updatedApi._id) {
-        const mapped = mapApiCaregiver(updatedApi);
-        setCaregivers(prev =>
-          prev.some(c => String(c.id) === String(mapped.id))
-            ? prev.map(c => (String(c.id) === String(mapped.id) ? { ...c, ...mapped } : c))
-            : [...prev, mapped]
-        );
+      if (formMode === 'add') {
+        const response = await axios.post(`${API_URL}/caregiver/assignCaregiver`, currentAssignment);
+        setAssignments(prev => [...prev, response.data.assignment]);
+        alert('Caregiver assigned successfully!');
+      } else {
+        const { id, ...updateData } = currentAssignment;
+        const response = await axios.put(`${API_URL}/caregiver/assignment/${id}`, updateData);
+        setAssignments(prev => prev.map(a => a.id === id ? response.data.assignment : a));
+        alert('Assignment updated successfully!');
       }
-
-      // Add/Update assignment row in UI
-      const patient = patients.find(p => p.id === parseInt(selectedPatient, 10));
-      const caregiver = caregivers.find(c => String(c.id) === String(selectedCaregiver));
-
-      const newAssignment = {
-        id: Date.now(),
-        patientId: patient?.id || Number(selectedPatient),
-        patientName: patient?.name || getPatientNameFromApiId(selectedPatient),
-        caregiverId: caregiver?.id || selectedCaregiver,
-        caregiverName: caregiver?.name || "Caregiver",
-        dateAssigned: assignmentDate,
-        status: "Active",
-      };
-      setAssignments(prev => [...prev, newAssignment]);
-
-      setShowModal(false);
-      resetForm();
+      handleCloseAssignmentModal();
     } catch (err) {
-      console.error(err);
-      setAssignError(err?.response?.data?.message || err?.message || "Failed to assign caregiver");
-    } finally {
-      setAssignSubmitting(false);
+      alert('Error: ' + (err.response?.data?.message || err.message));
     }
   };
 
-  // ===== Delete Assignment (opens confirm that deletes caregiver) =====
-  const handleDelete = (assignment) => {
-    setSelectedAssignment(assignment);
-    setDeleteError(null);
-    setShowDeleteModal(true);
-  };
-
-  // ====== DELETE caregiver API ======
-  const deleteCaregiverFromApi = async (caregiverId) => {
-    return axios.delete(`${BASE_URL}/caregiver/${caregiverId}`, {
-      headers: { ...authHeaders() },
-    });
-  };
-
-  const confirmDelete = async () => {
-    if (!selectedAssignment) return;
-    const caregiverId = selectedAssignment.caregiverId;
-
-    try {
-      setDeletingCaregiverId(caregiverId);
-      setDeleteError(null);
-
-      await deleteCaregiverFromApi(caregiverId);
-
-      setCaregivers(prev => prev.filter(c => String(c.id) !== String(caregiverId)));
-      setAssignments(prev => prev.filter(a => String(a.caregiverId) !== String(caregiverId)));
-
-      setShowDeleteModal(false);
-      setSelectedAssignment(null);
-      alert("Caregiver deleted successfully.");
-    } catch (err) {
-      console.error(err);
-      setDeleteError(err?.response?.data?.message || err?.message || "Failed to delete caregiver");
-    } finally {
-      setDeletingCaregiverId(null);
-    }
-  };
-
-  const toggleStatus = (assignmentId) => {
-    setAssignments(prev =>
-      prev.map(assignment =>
-        assignment.id === assignmentId
-          ? { ...assignment, status: assignment.status === "Active" ? "Inactive" : "Active" }
-          : assignment
-      )
-    );
-  };
-
-  // ===== Edit Assignment (open modal filled)
+  // Handle Edit
   const handleEdit = (assignment) => {
-    setEditingAssignment(assignment);
-    setSelectedPatient(assignment.patientId?.toString?.() || "");
-    setSelectedCaregiver(assignment.caregiverId?.toString?.() || "");
-    setAssignmentDate(assignment.dateAssigned || "");
-    setShowEditModal(true);
+    setCurrentAssignment(assignment);
+    setFormMode('edit');
+    setShowAssignmentModal(true);
   };
 
-  // ===== PUT for Edit Assignment
-  const handleUpdate = async () => {
-    if (!selectedPatient || !selectedCaregiver || !assignmentDate) {
-      alert("Please fill all fields");
-      return;
-    }
+  // Handle Delete
+  const handleDelete = async (id) => {
+    if (!window.confirm('Are you sure you want to delete this assignment?')) return;
     try {
-      // Call same PUT assign
-      await putAssignCaregiver(selectedCaregiver, selectedPatient, assignmentDate);
-
-      const patient = patients.find(p => p.id === parseInt(selectedPatient, 10));
-      const caregiver = caregivers.find(c => String(c.id) === String(selectedCaregiver));
-
-      const updatedAssignment = {
-        ...editingAssignment,
-        patientId: patient?.id || Number(selectedPatient),
-        patientName: patient?.name || getPatientNameFromApiId(selectedPatient),
-        caregiverId: caregiver?.id || selectedCaregiver,
-        caregiverName: caregiver?.name || "Caregiver",
-        dateAssigned: assignmentDate,
-      };
-      setAssignments(prev => prev.map(a => (a.id === editingAssignment.id ? updatedAssignment : a)));
-      setShowEditModal(false);
-      resetForm();
-      setEditingAssignment(null);
+      await axios.delete(`${API_URL}/caregiver/assignment/${id}`);
+      setAssignments(prev => prev.filter(a => a.id !== id));
+      alert('Assignment deleted successfully!');
     } catch (err) {
-      console.error(err);
-      alert(err?.response?.data?.message || err?.message || "Failed to update assignment");
+      alert('Error deleting assignment: ' + err.message);
     }
   };
 
-  // ===== New Caregiver form handlers (unchanged)
-  const handleNewCaregiverChange = (e) => {
-    const { name, value } = e.target;
-    setNewCaregiver(prev => ({ ...prev, [name]: value }));
+  // Handle View Details
+  const handleViewDetails = (assignment) => {
+    setSelectedAssignment(assignment);
+    setShowDetailsModal(true);
   };
 
-  const handleProfilePictureUpload = (e) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setNewCaregiver(prev => ({
-          ...prev,
-          profilePicture: reader.result,
-          profilePictureFile: file
-        }));
-      };
-      reader.readAsDataURL(file);
-    }
-  };
-
-  const handleDocumentUpload = (e) => {
-    const files = Array.from(e.target.files || []);
-    const newDocuments = [...newCaregiver.documents];
-    const newDocumentFiles = [...newCaregiver.documentFiles];
-    files.forEach(file => {
-      newDocuments.push({ name: file.name, url: URL.createObjectURL(file) });
-      newDocumentFiles.push(file);
+  // Reset form
+  const resetForm = () => {
+    setCurrentAssignment({
+      id: '',
+      patientId: '',
+      caregiverId: '',
+      assignStartDate: '',
+      assignEndDate: '',
+      createdAt: ''
     });
-    setNewCaregiver(prev => ({
-      ...prev,
-      documents: newDocuments,
-      documentFiles: newDocumentFiles
-    }));
+    setFormMode('add');
   };
 
-  const handleDocumentRemove = (index) => {
-    const newDocuments = [...newCaregiver.documents];
-    const newDocumentFiles = [...newCaregiver.documentFiles];
-    newDocuments.splice(index, 1);
-    newDocumentFiles.splice(index, 1);
-    setNewCaregiver(prev => ({ ...prev, documents: newDocuments, documentFiles: newDocumentFiles }));
+  // Open modals
+  const handleOpenAssignmentModal = () => {
+    resetForm();
+    setShowAssignmentModal(true);
   };
 
-  // ===== Edit Caregiver (profile) modal handlers
-  const handleEditCaregiver = (caregiver) => {
-    setEditingCaregiver({
-      ...caregiver,
-      password: "",
-      confirmPassword: "",
-      profileFile: null,
-      certificateFiles: []
+  const handleCloseAssignmentModal = () => {
+    setShowAssignmentModal(false);
+    resetForm();
+  };
+
+  const handleCloseDetailsModal = () => {
+    setShowDetailsModal(false);
+    setSelectedAssignment(null);
+  };
+
+  // Format date for display
+  const formatDate = (dateString) => {
+    if (!dateString) return 'N/A';
+    return new Date(dateString).toLocaleString('en-US', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
     });
-    setShowEditCaregiverModal(true);
   };
 
-  const handleCaregiverChange = (e) => {
-    const { name, value } = e.target;
-    setEditingCaregiver(prev => ({ ...prev, [name]: value }));
+  // Get patient name by ID
+  const getPatientName = (patientId) => {
+    const patient = patients.find(p => p._id === patientId);
+    return patient ? patient.name : 'Unknown Patient';
   };
 
-  const handleCaregiverProfilePictureUpdate = (e) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setEditingCaregiver(prev => ({
-          ...prev,
-          profilePicture: reader.result, // preview
-          profileFile: file              // real file for PUT
-        }));
-      };
-      reader.readAsDataURL(file);
-    }
+  // Get caregiver name by ID
+  const getCaregiverName = (caregiverId) => {
+    const caregiver = caregivers.find(c => c._id === caregiverId);
+    return caregiver ? caregiver.name : 'Unknown Caregiver';
   };
 
-  const handleCaregiverCertificateUpload = (e) => {
-    const files = Array.from(e.target.files || []);
-    setEditingCaregiver(prev => ({
-      ...prev,
-      certificateFiles: files
-    }));
+  // Modal backdrop click handler
+  const handleBackdropClick = () => {
+    if (showAssignmentModal) handleCloseAssignmentModal();
+    if (showDetailsModal) handleCloseDetailsModal();
   };
 
-  const handleCaregiverDocumentUpload = (e) => {
-    const files = Array.from(e.target.files || []);
-    const newDocuments = [...(editingCaregiver.documents || [])];
-    files.forEach(file => newDocuments.push({ name: file.name, url: URL.createObjectURL(file) }));
-    setEditingCaregiver(prev => ({ ...prev, documents: newDocuments }));
-  };
-
-  const handleCaregiverDocumentRemove = (index) => {
-    const newDocuments = [...(editingCaregiver.documents || [])];
-    newDocuments.splice(index, 1);
-    setEditingCaregiver(prev => ({ ...prev, documents: newDocuments }));
-  };
-
-  // ===== PUT /caregiver/:id (Update profile — multipart/form-data)
-  const handleUpdateCaregiver = async () => {
-    if (!editingCaregiver?.name || !editingCaregiver?.email) {
-      alert("Please fill required fields (Name, Email)");
-      return;
-    }
-
-    const caregiverIdForApi = editingCaregiver?.id;
-
-    const fd = new FormData();
-    fd.append("name", String(editingCaregiver.name || "").trim());
-    fd.append("email", String(editingCaregiver.email || "").trim());
-    if (editingCaregiver.password) fd.append("password", String(editingCaregiver.password || "").trim());
-    if (editingCaregiver.gender) fd.append("gender", String(editingCaregiver.gender).trim());
-    if (editingCaregiver.profileFile) fd.append("profile", editingCaregiver.profileFile);
-    if (editingCaregiver.age) fd.append("age", String(editingCaregiver.age).trim());
-    if (editingCaregiver.dateOfBirth) fd.append("dob", String(editingCaregiver.dateOfBirth).trim());
-    if (Array.isArray(editingCaregiver.certificateFiles) && editingCaregiver.certificateFiles.length) {
-      editingCaregiver.certificateFiles.forEach((file) => fd.append("certificate", file));
-    }
-    if (editingCaregiver.role) fd.append("role", String(editingCaregiver.role).trim());
-    if (editingCaregiver.bloodGroup) fd.append("bloodGroup", String(editingCaregiver.bloodGroup).trim());
-
-    try {
-      setUpdatingCaregiver(true);
-      setUpdateError(null);
-
-      const res = await axios.put(
-        `${BASE_URL}/caregiver/${caregiverIdForApi}`,
-        fd,
-        {
-          headers: {
-            "Content-Type": "multipart/form-data",
-            ...authHeaders(),
-          },
-        }
-      );
-
-      const updatedApi =
-        res?.data?.appointment ||
-        res?.data?.data ||
-        res?.data?.caregiver ||
-        res?.data ||
-        null;
-
-      if (!updatedApi) {
-        throw new Error("No caregiver returned from server");
+  // Handle ESC key to close modals
+  useEffect(() => {
+    const handleEsc = (event) => {
+      if (event.key === 'Escape') {
+        if (showAssignmentModal) handleCloseAssignmentModal();
+        if (showDetailsModal) handleCloseDetailsModal();
       }
+    };
+    
+    window.addEventListener('keydown', handleEsc);
+    return () => {
+      window.removeEventListener('keydown', handleEsc);
+    };
+  }, [showAssignmentModal, showDetailsModal]);
 
-      const mapped = mapApiCaregiver(updatedApi);
-
-      setCaregivers((prev) =>
-        prev.map((c) =>
-          String(c.id) === String(caregiverIdForApi) ? { ...c, ...mapped } : c
-        )
-      );
-
-      setAssignments((prev) =>
-        prev.map((a) =>
-          String(a.caregiverId) === String(caregiverIdForApi)
-            ? { ...a, caregiverName: mapped.name }
-            : a
-        )
-      );
-
-      alert("Caregiver updated successfully.");
-      setShowEditCaregiverModal(false);
-      setEditingCaregiver(null);
-    } catch (err) {
-      console.error(err);
-      setUpdateError(err?.response?.data?.message || err?.message || "Failed to update caregiver");
-    } finally {
-      setUpdatingCaregiver(false);
+  // Prevent body scroll when modals are open
+  useEffect(() => {
+    if (showAssignmentModal || showDetailsModal) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = 'unset';
     }
-  };
+    
+    return () => {
+      document.body.style.overflow = 'unset';
+    };
+  }, [showAssignmentModal, showDetailsModal]);
 
-  // ===== POST /caregiver (Add & Assign)
-  const handleAddCaregiverAndAssign = async () => {
-    if (!newCaregiver.name || !newCaregiver.email || !newCaregiver.mobile || !newCaregiver.gender) {
-      alert("Please fill all required caregiver fields (Name, Email, Mobile, Gender)");
-      return;
-    }
-    if (!newCaregiver.password) {
-      alert("Please set a password for the caregiver");
-      return;
-    }
-    if (newCaregiver.password !== newCaregiver.confirmPassword) {
-      alert("Passwords do not match");
-      return;
-    }
-    if (!selectedPatientForNewCaregiver || !assignmentDateForNewCaregiver) {
-      alert("Please select a patient and assignment date");
-      return;
-    }
+  // Loading state
+  if (loading) {
+    return (
+      <div className="d-flex justify-content-center align-items-center min-vh-100">
+        <div className="spinner-border text-orange" role="status">
+          <span className="visually-hidden">Loading...</span>
+        </div>
+      </div>
+    );
+  }
 
-    const fd = new FormData();
-    fd.append("name", newCaregiver.name.trim());
-    fd.append("namecccccccc", newCaregiver.name.trim()); // (if backend expects)
-    fd.append("email", newCaregiver.email.trim());
-    fd.append("password", newCaregiver.password);
-    fd.append("gender", newCaregiver.gender);
-    fd.append("role", "caregiver");
-    if (newCaregiver.profilePictureFile) fd.append("profile", newCaregiver.profilePictureFile);
-    if (newCaregiver.dateOfBirth) fd.append("dob", newCaregiver.dateOfBirth);
-    if (newCaregiver.bloodGroup) fd.append("bloodGroup", newCaregiver.bloodGroup);
-    if (newCaregiver.yearsExperience) fd.append("experience", `${newCaregiver.yearsExperience} yrs`);
-    if (newCaregiver.address) fd.append("address", newCaregiver.address);
-    if (newCaregiver.mobile) fd.append("mobile", newCaregiver.mobile);
-    if (newCaregiver.skills) fd.append("skills", newCaregiver.skills);
-    if (newCaregiver.documentFiles?.length) newCaregiver.documentFiles.forEach((file) => fd.append("certificate", file));
-    fd.append("patientId", String(selectedPatientForNewCaregiver));
-    fd.append("dateAssigned", assignmentDateForNewCaregiver);
-
-    try {
-      setSubmitting(true);
-      const url = `${BASE_URL}/caregiver`;
-      const res = await axios.post(url, fd, {
-        headers: { "Content-Type": "multipart/form-data", ...authHeaders() }
-      });
-
-      const apiData = res?.data?.data || res?.data || {};
-      const createdCaregiver = apiData.caregiver || apiData.createdCaregiver || apiData;
-      const newId = createdCaregiver?._id ??
-        (Math.max(0, ...caregivers.map((c) => Number(c.id) || 0)) + 1);
-
-      const caregiverForState = {
-        id: newId,
-        name: createdCaregiver?.name?.trim() || newCaregiver.name,
-        email: createdCaregiver?.email?.trim() || newCaregiver.email,
-        mobile: createdCaregiver?.mobile?.trim?.() || newCaregiver.mobile || "",
-        address: createdCaregiver?.address?.trim?.() || newCaregiver.address || "",
-        certification: createdCaregiver?.certification || newCaregiver.certification || "",
-        yearsExperience: createdCaregiver?.yearsExperience ?? Number(newCaregiver.yearsExperience || 0),
-        skills: createdCaregiver?.skills?.trim?.() || newCaregiver.skills || "",
-        profilePicture: createdCaregiver?.profile || newCaregiver.profilePicture || "https://via.placeholder.com/80",
-        dateOfBirth: createdCaregiver?.dob || newCaregiver.dateOfBirth || "",
-        gender: createdCaregiver?.gender || newCaregiver.gender || "",
-        bloodGroup: createdCaregiver?.bloodGroup || newCaregiver.bloodGroup || "",
-        password: "********",
-        status: createdCaregiver?.status || "Active",
-        joinDate: createdCaregiver?.createdAt?.slice?.(0, 10) || new Date().toISOString().split("T")[0],
-        documents: createdCaregiver?.documents || newCaregiver.documents.map((d) => ({ name: d.name, url: d.url })),
-        patientId: createdCaregiver?.patientId || String(selectedPatientForNewCaregiver),
-      };
-
-      setCaregivers((prev) => [...prev, caregiverForState]);
-
-      const patient = getPatientDetails(selectedPatientForNewCaregiver);
-      const assignmentForState = {
-        id: Date.now(),
-        patientId: patient?.id || Number(selectedPatientForNewCaregiver),
-        patientName: patient?.name || getPatientNameFromApiId(selectedPatientForNewCaregiver),
-        caregiverId: newId,
-        caregiverName: caregiverForState.name,
-        dateAssigned: assignmentDateForNewCaregiver,
-        status: "Active",
-      };
-      setAssignments((prev) => [...prev, assignmentForState]);
-
-      alert("Caregiver created and assigned successfully!");
-      setShowAddCaregiverModal(false);
-      resetNewCaregiverForm();
-    } catch (err) {
-      console.error(err);
-      const msg = err?.response?.data?.message || err?.message || "Failed to create caregiver";
-      alert(msg);
-    } finally {
-      setSubmitting(false);
-    }
-  };
+  // Error state
+  if (error) {
+    return (
+      <div className="alert alert-danger text-center m-4">
+        {error}
+      </div>
+    );
+  }
 
   return (
-    <div className="">
-      {/* Header */}
-      <div className="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center gap-3 mb-4">
-        <h3 className="dashboard-heading">Assign Caregivers</h3>
-        <div className="d-flex gap-2">
-          <button className="btn btn-outline-secondary" onClick={() => setShowModal(true)}>
-            + Assign Existing
-          </button>
-          <button className="btn text-white" style={{ backgroundColor: "#F95918" }} onClick={() => setShowAddCaregiverModal(true)}>
-            + Add Caregiver & Assign
-          </button>
+    <div className="container py-4" style={{ backgroundColor: '#FFF8F0', minHeight: '100vh' }}>
+      <motion.div
+        initial={{ opacity: 0, y: -20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5 }}
+      >
+        {/* Header */}
+        <div className="d-flex justify-content-between align-items-center mb-4">
+          <h2 className="fw-bold" style={{ color: '#F95918' }}>
+            <i className="fas fa-user-nurse me-2"></i> Caregiver Assignments
+          </h2>
+          <motion.button
+            className="btn text-white"
+            style={{
+              backgroundColor: '#F95918',
+              borderRadius: '12px',
+              padding: '10px 20px',
+              boxShadow: '0 4px 6px rgba(249, 89, 24, 0.2)'
+            }}
+            whileHover={{ 
+              scale: 1.05,
+              backgroundColor: '#e04a0f',
+              boxShadow: '0 6px 8px rgba(249, 89, 24, 0.3)'
+            }}
+            whileTap={{ scale: 0.95 }}
+            onClick={handleOpenAssignmentModal}
+          >
+            <i className="fas fa-plus me-2"></i> Add New Assignment
+          </motion.button>
         </div>
-      </div>
 
-      {/* Caregivers fetch state */}
-      {loadingCaregivers && <div className="alert alert-info">Loading caregivers…</div>}
-      {caregiversError && (
-        <div className="alert alert-danger d-flex justify-content-between align-items-center">
-          <span>{caregiversError}</span>
-          <button className="btn btn-sm btn-outline-light" onClick={fetchCaregivers}>Retry</button>
-        </div>
-      )}
-
-      {/* ======= Assignments Table ======= */}
-      <div className="row">
-        <div className="col-12">
-          <div className="card shadow">
-            <div className="card-body">
-              <div className="table-responsive">
-                <table className="table table-hover">
-                  <thead>
+        {/* Assignments Table */}
+        <motion.div 
+          className="card border-0 shadow-sm rounded-4 overflow-hidden"
+          style={{ backgroundColor: '#ffffff' }}
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 0.2 }}
+        >
+          <div className="card-body p-0">
+            <div className="table-responsive">
+              <table className="table table-hover mb-0">
+                <thead className="bg-light" style={{ borderBottom: '2px solid #F95918' }}>
+                  <tr>
+                    <th className="py-3 px-4 text-uppercase fw-bold" style={{ color: '#F95918', fontSize: '0.85rem' }}>Assignment ID</th>
+                    <th className="py-3 px-4 text-uppercase fw-bold" style={{ color: '#F95918', fontSize: '0.85rem' }}>Patient</th>
+                    <th className="py-3 px-4 text-uppercase fw-bold" style={{ color: '#F95918', fontSize: '0.85rem' }}>Caregiver</th>
+                    <th className="py-3 px-4 text-uppercase fw-bold" style={{ color: '#F95918', fontSize: '0.85rem' }}>Start Date</th>
+                    <th className="py-3 px-4 text-uppercase fw-bold" style={{ color: '#F95918', fontSize: '0.85rem' }}>End Date</th>
+                    <th className="py-3 px-4 text-center text-uppercase fw-bold" style={{ color: '#F95918', fontSize: '0.85rem' }}>Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {assignments.length === 0 ? (
                     <tr>
-                      <th>Assignment ID</th>
-                      <th>Patient</th>
-                      <th>Caregiver</th>
-                      <th>Photo</th>
-                      <th>Date Assigned</th>
-                      <th>Status</th>
-                      <th>Actions</th>
+                      <td colSpan="6" className="text-center py-4 text-muted">
+                        <i className="fas fa-user-nurse fa-2x mb-2"></i>
+                        <p>No assignments found.</p>
+                      </td>
                     </tr>
-                  </thead>
-                  <tbody>
-                    {assignments.length === 0 ? (
-                      <tr>
-                        <td colSpan={7} className="text-center text-muted">No assignments yet.</td>
-                      </tr>
-                    ) : (
-                      assignments.map((assignment) => {
-                        const caregiver = getCaregiverDetails(assignment.caregiverId);
-                        const isDeletingThis = String(deletingCaregiverId) === String(assignment.caregiverId);
-                        return (
-                          <tr key={assignment.id}>
-                            <td>#{assignment.id}</td>
-                            <td>{assignment.patientName || getPatientNameFromApiId(assignment.patientId)}</td>
-                            <td>{assignment.caregiverName}</td>
-                            <td>
-                              <img
-                                src={caregiver?.profilePicture || "https://via.placeholder.com/40"}
-                                alt={caregiver?.name || "caregiver"}
-                                className="rounded-circle"
-                                style={{ width: "40px", height: "40px", objectFit: "cover" }}
-                                onError={(e) => { e.currentTarget.src = "https://via.placeholder.com/40"; }}
-                              />
-                            </td>
-                            <td>{assignment.dateAssigned || "-"}</td>
-                            <td>
-                              <span className={`badge ${getStatusClass(assignment.status)}`}>{assignment.status}</span>
-                            </td>
-                            <td>
-                              <div className="d-flex gap-2">
-                                <button className="btn btn-sm btn-outline-primary" onClick={() => setShowViewModal(true) || setViewingAssignment(assignment)} title="View">
-                                  <i className="fas fa-eye"></i>
-                                </button>
-                                <button className="btn btn-sm" onClick={() => handleEdit(assignment)} style={{ color: "#F95918" }} title="Edit">
-                                  <i className="fas fa-edit"></i>
-                                </button>
-                                <button
-                                  className={`btn btn-sm ${assignment.status === "Active" ? "btn-outline-danger" : "btn-outline-success"}`}
-                                  onClick={() => toggleStatus(assignment.id)}
-                                  title={assignment.status === "Active" ? "Deactivate" : "Activate"}
-                                >
-                                  {assignment.status === "Active" ? <i className="fas fa-user-slash"></i> : <i className="fas fa-user-check"></i>}
-                                </button>
-                                <button
-                                  className="btn btn-sm btn-outline-danger"
-                                  onClick={() => handleDelete(assignment)}
-                                  title="Delete caregiver"
-                                  disabled={isDeletingThis}
-                                >
-                                  {isDeletingThis ? (
-                                    <span className="spinner-border spinner-border-sm" />
-                                  ) : (
-                                    <i className="fas fa-trash"></i>
-                                  )}
-                                </button>
-                              </div>
-                            </td>
-                          </tr>
-                        );
-                      })
-                    )}
-                  </tbody>
-                </table>
-              </div>
-              <div className="text-muted small">Caregivers loaded: {caregivers.length}</div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Add Assignment Modal (assign existing) */}
-      {showModal && (
-        <div className="modal fade show d-block" style={{ backgroundColor: "rgba(0,0,0,0.5)" }}>
-          <div className="modal-dialog">
-            <div className="modal-content">
-              <div className="modal-header">
-                <h5 className="modal-title">Assign Caregiver to Patient</h5>
-                <button type="button" className="btn-close" onClick={() => { setShowModal(false); resetForm(); }} />
-              </div>
-              <div className="modal-body">
-                {assignError && <div className="alert alert-danger py-2">{assignError}</div>}
-                <div className="mb-3">
-                  <label className="form-label">Select Patient</label>
-                  <select className="form-select" value={selectedPatient} onChange={(e) => setSelectedPatient(e.target.value)}>
-                    <option value="">-- Choose Patient --</option>
-                    {patients.map((patient) => (
-                      <option key={patient.id} value={patient.id}>
-                        {patient.name} (ID: {patient.id})
-                      </option>
-                    ))}
-                  </select>
-                </div>
-                <div className="mb-3">
-                  <label className="form-label">Select Caregiver</label>
-                  <select className="form-select" value={selectedCaregiver} onChange={(e) => setSelectedCaregiver(e.target.value)}>
-                    <option value="">-- Choose Caregiver --</option>
-                    {caregivers.map((caregiver) => (
-                      <option key={caregiver.id} value={caregiver.id}>
-                        {caregiver.name} (ID: {caregiver.id})
-                      </option>
-                    ))}
-                  </select>
-                </div>
-                <div className="mb-3">
-                  <label className="form-label">Assignment Date</label>
-                  <input type="date" className="form-control" value={assignmentDate} onChange={(e) => setAssignmentDate(e.target.value)} />
-                </div>
-              </div>
-              <div className="modal-footer">
-                <button type="button" className="btn btn-secondary" onClick={() => { setShowModal(false); resetForm(); }}>
-                  Cancel
-                </button>
-                <button type="button" className="btn text-white" onClick={handleAssign} style={{ backgroundColor: "#F95918" }} disabled={assignSubmitting}>
-                  {assignSubmitting ? "Assigning..." : "Assign Caregiver"}
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Edit Assignment Modal */}
-      {showEditModal && (
-        <div className="modal fade show d-block" style={{ backgroundColor: "rgba(0,0,0,0.5)" }}>
-          <div className="modal-dialog">
-            <div className="modal-content">
-              <div className="modal-header">
-                <h5 className="modal-title">Edit Assignment</h5>
-                <button type="button" className="btn-close" onClick={() => { setShowEditModal(false); resetForm(); setEditingAssignment(null); }} />
-              </div>
-              <div className="modal-body">
-                <div className="mb-3">
-                  <label className="form-label">Select Patient</label>
-                  <select className="form-select" value={selectedPatient} onChange={(e) => setSelectedPatient(e.target.value)}>
-                    <option value="">-- Choose Patient --</option>
-                    {patients.map((patient) => (
-                      <option key={patient.id} value={patient.id}>
-                        {patient.name} (ID: {patient.id})
-                      </option>
-                    ))}
-                  </select>
-                </div>
-                <div className="mb-3">
-                  <label className="form-label">Select Caregiver</label>
-                  <select className="form-select" value={selectedCaregiver} onChange={(e) => setSelectedCaregiver(e.target.value)}>
-                    <option value="">-- Choose Caregiver --</option>
-                    {caregivers.map((caregiver) => (
-                      <option key={caregiver.id} value={caregiver.id}>
-                        {caregiver.name} (ID: {caregiver.id})
-                      </option>
-                    ))}
-                  </select>
-                </div>
-                <div className="mb-3">
-                  <label className="form-label">Assignment Date</label>
-                  <input type="date" className="form-control" value={assignmentDate} onChange={(e) => setAssignmentDate(e.target.value)} />
-                </div>
-              </div>
-              <div className="modal-footer">
-                <button type="button" className="btn btn-secondary" onClick={() => { setShowEditModal(false); resetForm(); setEditingAssignment(null); }}>
-                  Cancel
-                </button>
-                <button type="button" className="btn text-white" onClick={handleUpdate} style={{ backgroundColor: "#F95918" }}>
-                  Update Assignment
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Delete Confirmation Modal */}
-      {showDeleteModal && (
-        <div className="modal fade show d-block" style={{ backgroundColor: "rgba(0,0,0,0.5)" }}>
-          <div className="modal-dialog">
-            <div className="modal-content">
-              <div className="modal-header">
-                <h5 className="modal-title">Delete Caregiver</h5>
-                <button type="button" className="btn-close" onClick={() => setShowDeleteModal(false)} />
-              </div>
-              <div className="modal-body">
-                <p>Are you sure you want to delete this caregiver? This will remove their assignments as well.</p>
-                <div className="card bg-light">
-                  <div className="card-body">
-                    <p><strong>Patient:</strong> {selectedAssignment?.patientName || getPatientNameFromApiId(selectedAssignment?.patientId)}</p>
-                    <p><strong>Caregiver:</strong> {selectedAssignment?.caregiverName}</p>
-                    <p><strong>Date Assigned:</strong> {selectedAssignment?.dateAssigned}</p>
-                  </div>
-                </div>
-                {deleteError && <div className="alert alert-danger mt-3">{deleteError}</div>}
-              </div>
-              <div className="modal-footer">
-                <button type="button" className="btn btn-secondary" onClick={() => setShowDeleteModal(false)}>Cancel</button>
-                <button
-                  type="button"
-                  className="btn btn-danger"
-                  onClick={confirmDelete}
-                  disabled={String(deletingCaregiverId) === String(selectedAssignment?.caregiverId)}
-                >
-                  {String(deletingCaregiverId) === String(selectedAssignment?.caregiverId)
-                    ? (<><span className="spinner-border spinner-border-sm me-2" /> Deleting...</>)
-                    : "Delete"}
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* View Assignment Modal */}
-      {showViewModal && viewingAssignment && (
-        <div className="modal fade show d-block" style={{ backgroundColor: "rgba(0,0,0,0.5)" }}>
-          <div className="modal-dialog modal-lg">
-            <div className="modal-content">
-              <div className="modal-header">
-                <h5 className="modal-title">Assignment Details</h5>
-                <button type="button" className="btn-close" onClick={() => setShowViewModal(false)} />
-              </div>
-              <div className="modal-body">
-                <div className="row">
-                  <div className="col-md-6">
-                    <h6 className="mb-3">Patient Information</h6>
-                    {(() => {
-                      const patient = getPatientDetails(viewingAssignment.patientId);
-                      return patient ? (
-                        <div className="card mb-3">
-                          <div className="card-body">
-                            <p><strong>Name:</strong> {patient.name}</p>
-                            <p><strong>Email:</strong> {patient.email}</p>
-                            <p><strong>Phone:</strong> {patient.phone}</p>
-                            <p><strong>Address:</strong> {patient.address}</p>
-                            <p><strong>Join Date:</strong> {patient.joinDate}</p>
-                            <p><strong>Status:</strong>
-                              <span className={`badge ${getStatusClass(patient.status)} ms-2`}>{patient.status}</span>
-                            </p>
-                          </div>
-                        </div>
-                      ) : (
-                        <div className="text-muted">Patient: {getPatientNameFromApiId(viewingAssignment.patientId)}</div>
-                      );
-                    })()}
-                  </div>
-                  <div className="col-md-6">
-                    <h6 className="mb-3">Caregiver Information</h6>
-                    {(() => {
-                      const caregiver = getCaregiverDetails(viewingAssignment.caregiverId);
-                      return caregiver ? (
-                        <div className="card mb-3">
-                          <div className="card-body">
-                            <div className="d-flex align-items-center mb-3">
-                              <img
-                                src={caregiver.profilePicture || "https://via.placeholder.com/80"}
-                                alt={caregiver.name}
-                                className="rounded-circle me-3"
-                                style={{ width: "80px", height: "80px", objectFit: "cover" }}
-                                onError={(e) => { e.currentTarget.src = "https://via.placeholder.com/80"; }}
-                              />
-                              <div>
-                                <h5 className="mb-1">{caregiver.name}</h5>
-                                <p className="mb-0">{caregiver.certification}</p>
-                              </div>
+                  ) : (
+                    assignments.map((assignment) => (
+                      <motion.tr 
+                        key={assignment.id}
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ duration: 0.3 }}
+                        whileHover={{ backgroundColor: '#FFF0E6' }}
+                        style={{ borderBottom: '1px solid #f0f0f0' }}
+                      >
+                        <td className="py-3 px-4">#{assignment.id?.slice(-6)}</td>
+                        <td className="py-3 px-4">
+                          <div className="d-flex align-items-center">
+                            <div className="rounded-circle bg-light d-flex align-items-center justify-content-center me-2" 
+                                 style={{ width: '32px', height: '32px' }}>
+                              <i className="fas fa-user text-muted"></i>
                             </div>
-                            <p><strong>Email:</strong> {caregiver.email}</p>
-                            <p><strong>Mobile:</strong> {caregiver.mobile}</p>
-                            <p><strong>Address:</strong> {caregiver.address}</p>
-                            <p><strong>Experience:</strong> {caregiver.yearsExperience} years</p>
-                            <p><strong>Skills:</strong> {caregiver.skills}</p>
-                            <p><strong>Date of Birth:</strong> {caregiver.dateOfBirth}</p>
-                            <p><strong>Gender:</strong> {caregiver.gender}</p>
-                            <p><strong>Blood Group:</strong> {caregiver.bloodGroup}</p>
-                            <p><strong>Password:</strong> {caregiver.password}</p>
-                            <p><strong>Status:</strong>
-                              <span className={`badge ${getStatusClass(caregiver.status)} ms-2`}>{caregiver.status}</span>
-                            </p>
-                            {caregiver.documents?.length > 0 && (
-                              <div className="mt-3">
-                                <h6>Documents:</h6>
-                                <ul className="list-group">
-                                  {caregiver.documents.map((doc, index) => (
-                                    <li key={index} className="list-group-item d-flex justify-content-between align-items-center">
-                                      <a href={doc.url} target="_blank" rel="noopener noreferrer">{doc.name}</a>
-                                      <i className="fas fa-file-pdf text-danger"></i>
-                                    </li>
-                                  ))}
-                                </ul>
-                              </div>
-                            )}
-                            <div className="mt-3">
-                              <button className="btn btn-sm btn-outline-primary" onClick={() => handleEditCaregiver(caregiver)}>
-                                <i className="fas fa-edit me-1" /> Edit Caregiver
-                              </button>
-                            </div>
+                            {getPatientName(assignment.patientId)}
                           </div>
-                        </div>
-                      ) : (
-                        <div className="text-muted">Caregiver not found in list.</div>
-                      );
-                    })()}
-                  </div>
-                </div>
-                <div className="row">
-                  <div className="col-12">
-                    <h6 className="mb-3">Assignment Information</h6>
-                    <div className="card">
-                      <div className="card-body">
-                        <p><strong>Assignment ID:</strong> #{viewingAssignment.id}</p>
-                        <p><strong>Date Assigned:</strong> {viewingAssignment.dateAssigned || "-"}</p>
-                        <p><strong>Status:</strong>
-                          <span className={`badge ${getStatusClass(viewingAssignment.status)} ms-2`}>{viewingAssignment.status}</span>
-                        </p>
+                        </td>
+                        <td className="py-3 px-4">
+                          <div className="d-flex align-items-center">
+                            <div className="rounded-circle bg-light d-flex align-items-center justify-content-center me-2" 
+                                 style={{ width: '32px', height: '32px' }}>
+                              <i className="fas fa-user-nurse text-muted"></i>
+                            </div>
+                            {getCaregiverName(assignment.caregiverId)}
+                          </div>
+                        </td>
+                        <td className="py-3 px-4">{formatDate(assignment.assignStartDate)}</td>
+                        <td className="py-3 px-4">{formatDate(assignment.assignEndDate)}</td>
+                        <td className="py-3 px-4">
+                          <div className="d-flex justify-content-center gap-2">
+                            <motion.button
+                              className="btn btn-sm btn-outline-info rounded-circle d-flex align-items-center justify-content-center"
+                              style={{ width: '36px', height: '36px', border: '1px solid #0dcaf0' }}
+                              whileHover={{ 
+                                scale: 1.1,
+                                backgroundColor: '#0dcaf0',
+                                color: 'white'
+                              }}
+                              whileTap={{ scale: 0.9 }}
+                              onClick={() => handleViewDetails(assignment)}
+                              title="View Details"
+                            >
+                              <i className="fas fa-eye"></i>
+                            </motion.button>
+                            <motion.button
+                              className="btn btn-sm rounded-circle d-flex align-items-center justify-content-center"
+                              style={{ 
+                                width: '36px', 
+                                height: '36px',
+                                backgroundColor: '#F95918',
+                                color: 'white',
+                                border: 'none'
+                              }}
+                              whileHover={{ 
+                                scale: 1.1,
+                                backgroundColor: '#e04a0f'
+                              }}
+                              whileTap={{ scale: 0.9 }}
+                              onClick={() => handleEdit(assignment)}
+                              title="Edit"
+                            >
+                              <i className="fas fa-edit"></i>
+                            </motion.button>
+                            <motion.button
+                              className="btn btn-sm btn-outline-danger rounded-circle d-flex align-items-center justify-content-center"
+                              style={{ width: '36px', height: '36px', border: '1px solid #dc3545' }}
+                              whileHover={{ 
+                                scale: 1.1,
+                                backgroundColor: '#dc3545',
+                                color: 'white'
+                              }}
+                              whileTap={{ scale: 0.9 }}
+                              onClick={() => handleDelete(assignment.id)}
+                              title="Delete"
+                            >
+                              <i className="fas fa-trash-alt"></i>
+                            </motion.button>
+                          </div>
+                        </td>
+                      </motion.tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </motion.div>
+      </motion.div>
+
+      {/* Common Backdrop */}
+      {(showAssignmentModal || showDetailsModal) && (
+        <div 
+          className="modal-backdrop fade show" 
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            width: '100%',
+            height: '100%',
+            backgroundColor: 'rgba(0,0,0,0.75)',
+            zIndex: 1040,
+            backdropFilter: 'blur(5px)'
+          }}
+          onClick={handleBackdropClick}
+        />
+      )}
+
+      {/* Assignment Modal */}
+      {showAssignmentModal && (
+        <motion.div
+          className="modal fade show d-block"
+          style={{ position: 'fixed', top: 0, left: 0, width: '100%', height: '100%', zIndex: 1050 }}
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ duration: 0.3 }}
+        >
+          <div className="modal-dialog modal-dialog-centered" style={{ maxWidth: '600px' }}>
+            <div className="modal-content border-0 shadow-lg rounded-4 overflow-hidden">
+              <div className="modal-header py-3 d-flex justify-content-between align-items-center" style={{ 
+                backgroundColor: '#F95918',
+                color: 'white',
+                borderRadius: '16px 16px 0 0'
+              }}>
+                <h5 className="modal-title mb-0 fw-bold">
+                  {formMode === 'add' ? 'Add New Caregiver Assignment' : 'Edit Assignment'}
+                </h5>
+                <button 
+                  type="button" 
+                  className="btn-close btn-close-white" 
+                  onClick={handleCloseAssignmentModal}
+                ></button>
+              </div>
+              <div className="modal-body p-4">
+                <form onSubmit={handleSubmit}>
+                  <div className="mb-4">
+                    <h6 className="fw-bold mb-3" style={{ color: '#F95918', borderBottom: '1px solid #F95918', paddingBottom: '8px' }}>
+                      Assignment Information
+                    </h6>
+                    <div className="row g-3">
+                      <div className="col-md-6">
+                        <label className="form-label fw-bold" style={{ color: '#333' }}>Patient</label>
+                        <select
+                          className="form-select"
+                          name="patientId"
+                          value={currentAssignment.patientId}
+                          onChange={handleInputChange}
+                          required
+                          style={{ 
+                            borderColor: '#ddd',
+                            borderWidth: '1px',
+                            borderRadius: '8px',
+                            padding: '12px',
+                            backgroundColor: '#fff',
+                            color: '#333'
+                          }}
+                        >
+                          <option value="">Select a patient</option>
+                          {patients.map(patient => (
+                            <option key={patient._id} value={patient._id}>
+                              {patient.name}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                      <div className="col-md-6">
+                        <label className="form-label fw-bold" style={{ color: '#333' }}>Caregiver</label>
+                        <select
+                          className="form-select"
+                          name="caregiverId"
+                          value={currentAssignment.caregiverId}
+                          onChange={handleInputChange}
+                          required
+                          style={{ 
+                            borderColor: '#ddd',
+                            borderWidth: '1px',
+                            borderRadius: '8px',
+                            padding: '12px',
+                            backgroundColor: '#fff',
+                            color: '#333'
+                          }}
+                        >
+                          <option value="">Select a caregiver</option>
+                          {caregivers.map(caregiver => (
+                            <option key={caregiver._id} value={caregiver._id}>
+                              {caregiver.name}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                      <div className="col-md-6">
+                        <label className="form-label fw-bold" style={{ color: '#333' }}>Start Date & Time</label>
+                        <input
+                          type="datetime-local"
+                          className="form-control"
+                          name="assignStartDate"
+                          value={currentAssignment.assignStartDate}
+                          onChange={handleInputChange}
+                          required
+                          style={{ 
+                            borderColor: '#ddd',
+                            borderWidth: '1px',
+                            borderRadius: '8px',
+                            padding: '12px',
+                            backgroundColor: '#fff',
+                            color: '#333'
+                          }}
+                        />
+                      </div>
+                      <div className="col-md-6">
+                        <label className="form-label fw-bold" style={{ color: '#333' }}>End Date & Time</label>
+                        <input
+                          type="datetime-local"
+                          className="form-control"
+                          name="assignEndDate"
+                          value={currentAssignment.assignEndDate}
+                          onChange={handleInputChange}
+                          required
+                          style={{ 
+                            borderColor: '#ddd',
+                            borderWidth: '1px',
+                            borderRadius: '8px',
+                            padding: '12px',
+                            backgroundColor: '#fff',
+                            color: '#333'
+                          }}
+                        />
                       </div>
                     </div>
                   </div>
+                  
+                  <div className="d-flex justify-content-end gap-3 mt-4">
+                    <motion.button
+                      type="button"
+                      className="btn px-4 py-2"
+                      style={{
+                        backgroundColor: '#e9ecef',
+                        color: '#495057',
+                        borderRadius: '8px',
+                        fontWeight: '500'
+                      }}
+                      whileHover={{ 
+                        scale: 1.03,
+                        backgroundColor: '#dee2e6'
+                      }}
+                      whileTap={{ scale: 0.97 }}
+                      onClick={handleCloseAssignmentModal}
+                    >
+                      Cancel
+                    </motion.button>
+                    <motion.button
+                      type="submit"
+                      className="btn px-4 py-2 text-white"
+                      style={{
+                        backgroundColor: '#F95918',
+                        borderRadius: '8px',
+                        fontWeight: '500'
+                      }}
+                      whileHover={{ 
+                        scale: 1.03,
+                        backgroundColor: '#e04a0f'
+                      }}
+                      whileTap={{ scale: 0.97 }}
+                    >
+                      <i className={`fas ${formMode === 'add' ? 'fa-plus' : 'fa-save'} me-2`}></i>
+                      {formMode === 'add' ? 'Assign Caregiver' : 'Update Assignment'}
+                    </motion.button>
+                  </div>
+                </form>
+              </div>
+            </div>
+          </div>
+        </motion.div>
+      )}
+
+      {/* Details Modal */}
+      {showDetailsModal && selectedAssignment && (
+        <motion.div
+          className="modal fade show d-block"
+          style={{ position: 'fixed', top: 0, left: 0, width: '100%', height: '100%', zIndex: 1050 }}
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ duration: 0.3 }}
+        >
+          <div className="modal-dialog modal-dialog-centered" style={{ maxWidth: '500px' }}>
+            <div className="modal-content border-0 shadow-lg rounded-4 overflow-hidden">
+              <div className="modal-header py-3 d-flex justify-content-between align-items-center" style={{ 
+                backgroundColor: '#F95918',
+                color: 'white',
+                borderRadius: '16px 16px 0 0'
+              }}>
+                <h5 className="modal-title mb-0 fw-bold">Assignment Details</h5>
+                <button 
+                  type="button" 
+                  className="btn-close btn-close-white" 
+                  onClick={handleCloseDetailsModal}
+                ></button>
+              </div>
+              <div className="modal-body p-4">
+                <div className="mb-4">
+                  <h6 className="fw-bold mb-3" style={{ color: '#F95918', borderBottom: '1px solid #F95918', paddingBottom: '8px' }}>
+                    Assignment Information
+                  </h6>
+                  <div className="p-4 rounded-3" style={{ 
+                    backgroundColor: '#FFF0E6',
+                    border: '1px solid #F95918',
+                    boxShadow: '0 2px 4px rgba(249, 89, 24, 0.1)'
+                  }}>
+                    <div className="row mb-3">
+                      <div className="col-5 fw-bold" style={{ color: '#333' }}>Assignment ID:</div>
+                      <div className="col-7" style={{ color: '#333', fontWeight: '500' }}>{selectedAssignment.id}</div>
+                    </div>
+                    <div className="row mb-3">
+                      <div className="col-5 fw-bold" style={{ color: '#333' }}>Patient:</div>
+                      <div className="col-7" style={{ color: '#333', fontWeight: '500' }}>
+                        <div className="d-flex align-items-center">
+                          <div className="rounded-circle bg-light d-flex align-items-center justify-content-center me-2" 
+                               style={{ width: '28px', height: '28px' }}>
+                            <i className="fas fa-user text-muted"></i>
+                          </div>
+                          {getPatientName(selectedAssignment.patientId)}
+                        </div>
+                      </div>
+                    </div>
+                    <div className="row mb-3">
+                      <div className="col-5 fw-bold" style={{ color: '#333' }}>Caregiver:</div>
+                      <div className="col-7" style={{ color: '#333', fontWeight: '500' }}>
+                        <div className="d-flex align-items-center">
+                          <div className="rounded-circle bg-light d-flex align-items-center justify-content-center me-2" 
+                               style={{ width: '28px', height: '28px' }}>
+                            <i className="fas fa-user-nurse text-muted"></i>
+                          </div>
+                          {getCaregiverName(selectedAssignment.caregiverId)}
+                        </div>
+                      </div>
+                    </div>
+                    <div className="row mb-3">
+                      <div className="col-5 fw-bold" style={{ color: '#333' }}>Start Date:</div>
+                      <div className="col-7" style={{ color: '#333', fontWeight: '500' }}>{formatDate(selectedAssignment.assignStartDate)}</div>
+                    </div>
+                    <div className="row mb-3">
+                      <div className="col-5 fw-bold" style={{ color: '#333' }}>End Date:</div>
+                      <div className="col-7" style={{ color: '#333', fontWeight: '500' }}>{formatDate(selectedAssignment.assignEndDate)}</div>
+                    </div>
+                    <div className="row">
+                      <div className="col-5 fw-bold" style={{ color: '#333' }}>Created At:</div>
+                      <div className="col-7" style={{ color: '#333', fontWeight: '500' }}>{formatDate(selectedAssignment.createdAt)}</div>
+                    </div>
+                  </div>
+                </div>
+                <div className="d-flex justify-content-end">
+                  <motion.button
+                    className="btn px-4 py-2 text-white"
+                    style={{
+                      backgroundColor: '#F95918',
+                      borderRadius: '8px',
+                      fontWeight: '500'
+                    }}
+                    whileHover={{ 
+                      scale: 1.03,
+                      backgroundColor: '#e04a0f'
+                    }}
+                    whileTap={{ scale: 0.97 }}
+                    onClick={handleCloseDetailsModal}
+                  >
+                    Close
+                  </motion.button>
                 </div>
               </div>
-
-              <div className="modal-footer">
-                <button type="button" className="btn btn-secondary" onClick={() => setShowViewModal(false)}>
-                  Close
-                </button>
-              </div>
             </div>
           </div>
-        </div>
-      )}
-
-      {/* Add Caregiver & Assign Modal (POST) */}
-      {showAddCaregiverModal && (
-        <div className="modal fade show d-block" style={{ backgroundColor: "rgba(0,0,0,0.5)" }}>
-          <div className="modal-dialog modal-lg">
-            <div className="modal-content">
-              <div className="modal-header">
-                <h5 className="modal-title">Add New Caregiver & Assign to Patient</h5>
-                <button type="button" className="btn-close" onClick={() => { setShowAddCaregiverModal(false); resetNewCaregiverForm(); }} />
-              </div>
-              <div className="modal-body">
-                {/* …(same as your previous form)… */}
-                {/* Caregiver Info + Assignment Info (unchanged) */}
-                {/* --- Caregiver fields omitted for brevity since logic above covers POST --- */}
-
-                {/* QUICK: keep forms as-is from your snippet */}
-                {/* (The POST handler above will consume them) */}
-              </div>
-
-              <div className="modal-footer">
-                <button type="button" className="btn btn-secondary" onClick={() => { setShowAddCaregiverModal(false); resetNewCaregiverForm(); }}>
-                  Cancel
-                </button>
-                <button type="button" className="btn text-white" onClick={handleAddCaregiverAndAssign} style={{ backgroundColor: "#F95918" }} disabled={submitting}>
-                  {submitting ? "Saving..." : "Add Caregiver & Assign"}
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Edit Caregiver Modal (PUT /caregiver/:id) */}
-      {showEditCaregiverModal && editingCaregiver && (
-        <div className="modal fade show d-block" style={{ backgroundColor: "rgba(0,0,0,0.5)" }}>
-          <div className="modal-dialog modal-lg">
-            <div className="modal-content">
-              <div className="modal-header">
-                <h5 className="modal-title">Edit Caregiver</h5>
-                <button type="button" className="btn-close" onClick={() => { setShowEditCaregiverModal(false); setEditingCaregiver(null); }} />
-              </div>
-              <div className="modal-body">
-                {updateError && <div className="alert alert-danger">{updateError}</div>}
-                {/* …(same caregiver edit form as your snippet)… */}
-              </div>
-
-              <div className="modal-footer">
-                <button type="button" className="btn btn-secondary" onClick={() => { setShowEditCaregiverModal(false); setEditingCaregiver(null); }}>
-                  Cancel
-                </button>
-                <button
-                  type="button"
-                  className="btn text-white"
-                  onClick={handleUpdateCaregiver}
-                  style={{ backgroundColor: "#F95918" }}
-                  disabled={updatingCaregiver}
-                >
-                  {updatingCaregiver ? (<><span className="spinner-border spinner-border-sm me-2" /> Updating...</>) : "Update Caregiver"}
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
+        </motion.div>
       )}
     </div>
   );

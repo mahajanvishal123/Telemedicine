@@ -8,6 +8,14 @@ const Verification = () => {
   const [error, setError] = useState(null);
   const [selectedDocuments, setSelectedDocuments] = useState(null);
 
+  // 🔹 Pagination states
+  const [currentPage, setCurrentPage] = useState(1);
+  const [rowsPerPage, setRowsPerPage] = useState(5);
+
+  // 🔹 Filter states
+  const [filterName, setFilterName] = useState("");
+  const [filterSpecialty, setFilterSpecialty] = useState("all");
+
   // Fetch ALL doctors on mount
   useEffect(() => {
     const fetchDoctors = async () => {
@@ -52,7 +60,7 @@ const Verification = () => {
     fetchDoctors();
   }, []);
 
-  // Derived Stats - Updated for consistency
+  // Derived Stats
   const pendingDoctors = allDoctors.filter(
     doctor => doctor.isVerify === "0" || doctor.isVerify === false || doctor.isVerify === "false"
   );
@@ -65,7 +73,40 @@ const Verification = () => {
     doctor => doctor.isVerify === "2"
   );
 
-  // Handle approve action — CENTERED ALERT
+  // 🔹 Extract unique specialties from PENDING doctors
+  const specialties = [...new Set(pendingDoctors.map(d => d.specialty).filter(Boolean))];
+
+  // 🔹 Apply Filters to PENDING doctors
+  const filteredPendingDoctors = pendingDoctors.filter(doctor => {
+    const matchesName = filterName
+      ? doctor.name.toLowerCase().includes(filterName.toLowerCase())
+      : true;
+
+    const matchesSpecialty = filterSpecialty === "all"
+      ? true
+      : doctor.specialty === filterSpecialty;
+
+    return matchesName && matchesSpecialty;
+  });
+
+  // 🔹 Pagination Logic — Applied to FILTERED pending doctors
+  const indexOfLastRow = currentPage * rowsPerPage;
+  const indexOfFirstRow = indexOfLastRow - rowsPerPage;
+  const currentRows =
+    rowsPerPage === "All" ? filteredPendingDoctors : filteredPendingDoctors.slice(indexOfFirstRow, indexOfLastRow);
+  const totalPages =
+    rowsPerPage === "All" ? 1 : Math.ceil(filteredPendingDoctors.length / rowsPerPage);
+
+  const paginate = (pageNumber) => setCurrentPage(pageNumber);
+
+  // 🔹 Reset Filters
+  const resetFilters = () => {
+    setFilterName("");
+    setFilterSpecialty("all");
+    setCurrentPage(1);
+  };
+
+  // Handle approve action
   const handleApprove = async (doctorId) => {
     try {
       await axios.put(`${Base_Url}/doctor/${doctorId}`, {
@@ -78,14 +119,13 @@ const Verification = () => {
         )
       );
 
-      // ✅ CENTERED SUCCESS ALERT (NON-TOAST)
       Swal.fire({
         icon: 'success',
         title: 'Approved!',
         text: 'Doctor has been successfully approved.',
         timer: 2000,
         showConfirmButton: false,
-        position: 'center', // 👈 Centered!
+        position: 'center',
         background: '#e8f5e9',
         color: '#2e7d32',
         heightAuto: false,
@@ -95,7 +135,6 @@ const Verification = () => {
       });
     } catch (err) {
       console.error("Error approving doctor:", err);
-      // ✅ CENTERED ERROR ALERT
       Swal.fire({
         icon: 'error',
         title: 'Oops...',
@@ -113,7 +152,7 @@ const Verification = () => {
     }
   };
 
-  // Handle reject action — CENTERED ALERT
+  // Handle reject action
   const handleReject = async (doctorId) => {
     try {
       await axios.put(`${Base_Url}/doctor/${doctorId}`, {
@@ -126,7 +165,6 @@ const Verification = () => {
         )
       );
 
-      // ✅ CENTERED SUCCESS ALERT FOR REJECT
       Swal.fire({
         icon: 'success',
         title: 'Rejected!',
@@ -143,7 +181,6 @@ const Verification = () => {
       });
     } catch (err) {
       console.error("Error rejecting doctor:", err);
-      // ✅ CENTERED ERROR ALERT
       Swal.fire({
         icon: 'error',
         title: 'Oops...',
@@ -161,7 +198,7 @@ const Verification = () => {
     }
   };
 
-  // View documents — opens modal with clickable links
+  // View documents
   const viewDocuments = (documents) => {
     if (!documents || typeof documents !== 'string') {
       Swal.fire({
@@ -199,7 +236,6 @@ const Verification = () => {
       return;
     }
 
-    // Handle comma-separated multiple documents
     const docList = trimmed.includes(',')
       ? trimmed.split(',').map(d => d.trim()).filter(d => d)
       : [trimmed];
@@ -226,9 +262,9 @@ const Verification = () => {
   }
 
   return (
-    <div className="">
+    <div className="container-fluid">
       {/* Page Header */}
-      <div className="d-flex justify-content-between align-items-center mb-2">
+      <div className="d-flex justify-content-between align-items-center">
         <h3 className="dashboard-heading">Verification</h3>
       </div>
 
@@ -250,6 +286,78 @@ const Verification = () => {
         </div>
       </div>
 
+     <div className="row">
+ {/* Entries dropdown */}
+      <div className="d-flex justify-content-between align-items-center mb-3 col-md-3">
+        <div>
+          <label className="me-2">Show</label>
+          <select
+            className="form-select d-inline-block w-auto"
+            value={rowsPerPage}
+            onChange={(e) => {
+              setRowsPerPage(e.target.value === "All" ? "All" : parseInt(e.target.value));
+              setCurrentPage(1);
+            }}
+          >
+            <option value="3">3</option>
+            <option value="5">5</option>
+            <option value="8">8</option>
+            <option value="10">10</option>
+            <option value="25">25</option>
+            <option value="All">All</option>
+          </select>
+          <span className="ms-2">entries</span>
+        </div>
+      </div>
+
+       {/* 🔹 FILTERS SECTION */}
+      <div className="card shadow-sm mb-4 col-md-9">
+        <div className="card-body">
+          <div className="row g-3">
+            <div className="col-md-5">
+              <input
+                type="text"
+                className="form-control"
+                id="filterName"
+                placeholder="Search by doctor name..."
+                value={filterName}
+                onChange={(e) => {
+                  setFilterName(e.target.value);
+                  setCurrentPage(1);
+                }}
+              />
+            </div>
+            <div className="col-md-5">
+              <select
+                className="form-select"
+                id="filterSpecialty"
+                value={filterSpecialty}
+                onChange={(e) => {
+                  setFilterSpecialty(e.target.value);
+                  setCurrentPage(1);
+                }}
+              >
+                <option value="all">All Specialties</option>
+                {specialties.map((spec, i) => (
+                  <option key={i} value={spec}>{spec}</option>
+                ))}
+              </select>
+            </div>
+            <div className="col-md-2">
+            <button
+              className="btn btn-outline-secondary btn-sm"
+              onClick={resetFilters}
+            >
+              <i className="fas fa-sync me-1"></i> Reset Filters
+            </button>
+          
+          </div>
+          </div>
+          
+        </div>
+      </div>
+     </div>
+     
       {/* Doctors Table */}
       <div className="row">
         <div className="col-12">
@@ -286,67 +394,103 @@ const Verification = () => {
                       </tr>
                     </thead>
                     <tbody>
-                      {pendingDoctors.map((doctor, index) => (
-                        <tr key={doctor._id}>
-                          <td>{index + 1}</td>
-                          <td>
-                            <img
-                              src={(doctor.profile || '').trim() || 'https://cdn.pixabay.com/photo/2015/10/05/22/37/blank-profile-picture-973460_960_720.png'}
-                              alt="Profile"
-                              className="img-fluid rounded-circle"
-                              style={{ width: '50px', height: '50px' }}
-                            />
-                          </td>
-                          <td>
-                            <strong>{doctor.name}</strong>
-                          </td>
-                          <td>{doctor.gender || 'N/A'}</td>
-                          <td>{doctor.email}</td>
-                          <td>
-                            <span className="badge bg-secondary">{doctor.specialty}</span>
-                          </td>
-                          <td>{doctor.licenseNo}</td>
-                          <td>{new Date(doctor.createdAt).toLocaleDateString()}</td>
-                          <td>{doctor.availableDay || 'N/A'}</td>
-                          <td>{doctor.openingTime} - {doctor.closingTime}</td>
-                          <td>{doctor.experience}</td>
-                          <td>${doctor.fee}</td>
-                          <td>
-                            <button
-                              className="btn btn-sm btn-outline-primary"
-                              onClick={() => viewDocuments(doctor.documents)}
-                            >
-                              <i className="fas fa-file-alt"></i> View Documents
-                            </button>
-                          </td>
-                          <td>
-                            <div className="d-flex gap-2">
-                              <button
-                                className="btn btn-sm btn-outline-success flex-fill"
-                                onClick={() => handleApprove(doctor._id)}
-                              >
-                                Approve
-                              </button>
-                              <button
-                                className="btn btn-sm btn-outline-danger flex-fill"
-                                onClick={() => handleReject(doctor._id)}
-                              >
-                                Reject
-                              </button>
-                            </div>
-                          </td>
+                      {currentRows.length === 0 ? (
+                        <tr>
+                          <td colSpan="14" className="text-center py-4">No pending doctors found matching your filters.</td>
                         </tr>
-                      ))}
+                      ) : (
+                        currentRows.map((doctor, index) => (
+                          <tr key={doctor._id}>
+                            <td>{(currentPage - 1) * rowsPerPage + index + 1}</td>
+                            <td>
+                              <img
+                                src={(doctor.profile || '').trim() || 'https://cdn.pixabay.com/photo/2015/10/05/22/37/blank-profile-picture-973460_960_720.png'}
+                                alt="Profile"
+                                className="img-fluid rounded-circle"
+                                style={{ width: '50px', height: '50px', objectFit: 'cover' }}
+                              />
+                            </td>
+                            <td><strong>{doctor.name}</strong></td>
+                            <td>{doctor.gender || 'N/A'}</td>
+                            <td>{doctor.email}</td>
+                            <td><span className="badge bg-secondary">{doctor.specialty}</span></td>
+                            <td>{doctor.licenseNo}</td>
+                            <td>{new Date(doctor.createdAt).toLocaleDateString()}</td>
+                            <td>{doctor.availableDay || 'N/A'}</td>
+                            <td>{doctor.openingTime} - {doctor.closingTime}</td>
+                            <td>{doctor.experience}</td>
+                            <td>${doctor.fee}</td>
+                            <td>
+                              <button
+                                className="btn btn-sm btn-outline-primary"
+                                onClick={() => viewDocuments(doctor.documents)}
+                              >
+                                <i className="fas fa-file-alt"></i> View Documents
+                              </button>
+                            </td>
+                            <td>
+                              <div className="d-flex gap-2">
+                                <button
+                                  className="btn btn-sm btn-outline-success flex-fill"
+                                  onClick={() => handleApprove(doctor._id)}
+                                >
+                                  Approve
+                                </button>
+                                <button
+                                  className="btn btn-sm btn-outline-danger flex-fill"
+                                  onClick={() => handleReject(doctor._id)}
+                                >
+                                  Reject
+                                </button>
+                              </div>
+                            </td>
+                          </tr>
+                        ))
+                      )}
                     </tbody>
                   </table>
                 </div>
               )}
             </div>
+
+            
           </div>
         </div>
       </div>
+{/* ✅ FOOTER: Always show pagination if not "All" */}
+            <div className="card-footer bg-light d-flex justify-content-between align-items-center py-3">
+              <div className="text-muted small">
+                Showing {(currentPage - 1) * rowsPerPage + 1} to {Math.min(currentPage * rowsPerPage, filteredPendingDoctors.length)} of {filteredPendingDoctors.length} entries
+              </div>
 
-      {/* Statistics Section — Fully Dynamic */}
+              {rowsPerPage !== "All" && (
+                <nav>
+                  <ul className="pagination mb-0">
+                    <li className={`page-item ${currentPage === 1 ? "disabled" : ""}`}>
+                      <button className="page-link" onClick={() => paginate(currentPage - 1)}>
+                        Prev
+                      </button>
+                    </li>
+                    {[...Array(totalPages)].map((_, i) => (
+                      <li
+                        key={i}
+                        className={`page-item ${currentPage === i + 1 ? "active" : ""}`}
+                      >
+                        <button className="page-link" onClick={() => paginate(i + 1)}>
+                          {i + 1}
+                        </button>
+                      </li>
+                    ))}
+                    <li className={`page-item ${currentPage === totalPages ? "disabled" : ""}`}>
+                      <button className="page-link" onClick={() => paginate(currentPage + 1)}>
+                        Next
+                      </button>
+                    </li>
+                  </ul>
+                </nav>
+              )}
+            </div>
+      {/* Statistics Section */}
       <div className="row mt-4">
         <div className="col-12 col-sm-6 col-md-4 mb-3">
           <div
@@ -403,7 +547,7 @@ const Verification = () => {
         </div>
       </div>
 
-      {/* Document Viewer Modal — Fully Functional */}
+      {/* Document Viewer Modal */}
       {selectedDocuments && (
         <div
           style={{
@@ -419,7 +563,7 @@ const Verification = () => {
             zIndex: 9999,
             padding: '20px',
           }}
-          onClick={() => setSelectedDocuments(null)} // Close on backdrop click
+          onClick={() => setSelectedDocuments(null)}
         >
           <div
             style={{

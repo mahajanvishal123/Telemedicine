@@ -1,12 +1,17 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import Base_Url from '../../Baseurl/Baseurl';
+import { color } from 'framer-motion';
 
 const Appointments = () => {
   // States
   const [appointments, setAppointments] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+
+  // 🔹 Pagination states
+  const [currentPage, setCurrentPage] = useState(1);
+  const [rowsPerPage, setRowsPerPage] = useState(5); // Default 5
 
   // Filter states
   const [filters, setFilters] = useState({
@@ -21,7 +26,6 @@ const Appointments = () => {
   const [selectedAppointment, setSelectedAppointment] = useState(null);
   const [rescheduleDate, setRescheduleDate] = useState('');
   const [rescheduleTime, setRescheduleTime] = useState('');
-  
 
   // Fetch appointments on mount
   useEffect(() => {
@@ -36,7 +40,6 @@ const Appointments = () => {
           id: app._id,
           patientName: app.patientId?.name || 'Unknown',
           patientEmail: app.patientId?.email || '',
-        
           doctorName: app.doctorId?.name || 'Not Assigned',
           doctorSpecialty: app.doctorId?.specialty || '',
           date: new Date(app.appointmentDate).toLocaleDateString(),
@@ -44,7 +47,7 @@ const Appointments = () => {
           status: mapStatus(app.status),
           type: determineType(app.reason),
           reason: app.reason,
-          notes: app.reason, // or use a separate field if exists
+          notes: app.reason,
           duration: app.duration,
           slots: app.slots,
           createdAt: new Date(app.createdAt).toLocaleString(),
@@ -94,6 +97,16 @@ const Appointments = () => {
     const matchesStatus = filters.status === 'all' ? true : app.status === filters.status;
     return matchesDate && matchesStatus;
   });
+
+  // 🔹 Pagination Logic — Applied to FILTERED data
+  const indexOfLastRow = currentPage * rowsPerPage;
+  const indexOfFirstRow = indexOfLastRow - rowsPerPage;
+  const currentRows =
+    rowsPerPage === "All" ? filteredAppointments : filteredAppointments.slice(indexOfFirstRow, indexOfLastRow);
+  const totalPages =
+    rowsPerPage === "All" ? 1 : Math.ceil(filteredAppointments.length / rowsPerPage);
+
+  const paginate = (pageNumber) => setCurrentPage(pageNumber);
 
   // Get status badge class and text
   const getStatusInfo = (status) => {
@@ -198,9 +211,10 @@ const Appointments = () => {
   return (
     <div className="container-fluid">
       {/* Page Header */}
-      <div className="d-flex justify-content-between align-items-center mb-4">
+      <div className="d-flex justify-content-between align-items-center">
         <h3 className="dashboard-heading">Appointments</h3>
       </div>
+
 
       {/* Info Card */}
       <div className="row mb-4">
@@ -219,18 +233,37 @@ const Appointments = () => {
         </div>
       </div>
 
-      {/* Filters Section */}
-      <div className="row mb-4">
-        <div className="col-12">
-          <div className="card shadow">
-            <div className="card-header">
-              <h6 className="mb-0">Filter Appointments</h6>
-            </div>
+    
+<div className="row">
+ {/* Entries dropdown */}
+      <div className="d-flex justify-content-between align-items-center mb-3 col-md-3">
+        <div>
+          <label className="me-2">Show</label>
+          <select
+            className="form-select d-inline-block w-auto"
+            value={rowsPerPage}
+            onChange={(e) => {
+              setRowsPerPage(e.target.value === "All" ? "All" : parseInt(e.target.value));
+              setCurrentPage(1); // reset to page 1
+            }}
+          >
+            <option value="3">3</option>
+            <option value="5">5</option>
+            <option value="8">8</option>
+            <option value="10">10</option>
+            <option value="25">25</option>
+            <option value="All">All</option>
+          </select>
+          <span className="ms-2">Entries</span>
+        </div>
+      </div>
+
+        {/* Filters Section */}
+      <div className="row mb-4 col-md-9">
             <div className="card-body">
               <div className="row">
-                <div className="col-md-6">
+                <div className="col-md-5">
                   <div className="form-group">
-                    <label htmlFor="dateFilter">Filter by Date</label>
                     <input
                       type="date"
                       className="form-control"
@@ -241,9 +274,8 @@ const Appointments = () => {
                     />
                   </div>
                 </div>
-                <div className="col-md-6">
+                <div className="col-md-5">
                   <div className="form-group">
-                    <label htmlFor="statusFilter">Filter by Status</label>
                     <select
                       className="form-control"
                       id="statusFilter"
@@ -259,25 +291,21 @@ const Appointments = () => {
                     </select>
                   </div>
                 </div>
-              </div>
-              <div className="mt-3 d-flex justify-content-between align-items-center">
+                 <div className="d-flex justify-content-between align-items-center col-md-2">
                 <button
-                  className="btn me-2"
-                  style={{ backgroundColor: '#F95918', color: 'white' }}
+                  className="btn border"
+                 
                   onClick={resetFilters}
                 >
-                  <i className="fas fa-sync me-1"></i> Reset Filters
+                Reset Filters
                 </button>
-                <span className="text-muted">
-                  {filters.date && `Date: ${filters.date} | `}
-                  {filters.status !== 'all' && `Status: ${filters.status}`}
-                </span>
+            
+              </div>
               </div>
             </div>
-          </div>
-        </div>
       </div>
-
+</div>
+     
       {/* Appointments Table */}
       <div className="row">
         <div className="col-12">
@@ -319,11 +347,11 @@ const Appointments = () => {
                       </tr>
                     </thead>
                     <tbody>
-                      {filteredAppointments.map((app,index) => {
+                      {currentRows.map((app, index) => {
                         const statusInfo = getStatusInfo(app.status);
                         return (
                           <tr key={app.id}>
-                            <td>{index+1}</td>
+                            <td>{(currentPage - 1) * rowsPerPage + index + 1}</td>
                             <td>
                               <strong>{app.patientName}</strong>
                             </td>
@@ -348,14 +376,14 @@ const Appointments = () => {
                             <td>
                               <div className="d-flex gap-2">
                                 <button
-                                  className="btn btn-sm btn-outline-primary"
+                                  className="btn-sm"style={{ color: '#FF3500' }}
                                   title="View Details"
                                   onClick={() => openDetailModal(app)}
                                 >
                                   <i className="fas fa-eye"></i>
                                 </button>
                                 <button
-                                  className="btn btn-sm btn-outline-secondary"
+                                  className="btn-sm"style={{ color: '#FF3500' }}
                                   title="Reschedule"
                                   onClick={() => openRescheduleModal(app)}
                                   disabled={app.status === 'cancelled' || app.status === 'completed'}
@@ -363,7 +391,7 @@ const Appointments = () => {
                                   <i className="fas fa-calendar-alt"></i>
                                 </button>
                                 <button
-                                  className="btn btn-sm btn-outline-danger"
+                                  className="btn-sm" style={{ color: '#FF3500' }}
                                   title="Cancel Appointment"
                                   onClick={() => openCancelModal(app)}
                                   disabled={app.status === 'cancelled' || app.status === 'completed'}
@@ -380,10 +408,44 @@ const Appointments = () => {
                 </div>
               )}
             </div>
+
+          
           </div>
         </div>
       </div>
+  {/* ✅ FOOTER: Always show pagination if not "All" */}
+            <div className="card-footer bg-light d-flex justify-content-between align-items-center py-3">
+              <div className="text-muted small">
+                Showing {(currentPage - 1) * rowsPerPage + 1} to {Math.min(currentPage * rowsPerPage, filteredAppointments.length)} of {filteredAppointments.length} entries
+              </div>
 
+              {rowsPerPage !== "All" && (
+                <nav>
+                  <ul className="pagination mb-0">
+                    <li className={`page-item ${currentPage === 1 ? "disabled" : ""}`}>
+                      <button className="page-link" onClick={() => paginate(currentPage - 1)}>
+                        Prev
+                      </button>
+                    </li>
+                    {[...Array(totalPages)].map((_, i) => (
+                      <li
+                        key={i}
+                        className={`page-item ${currentPage === i + 1 ? "active" : ""}`}
+                      >
+                        <button className="page-link" onClick={() => paginate(i + 1)}>
+                          {i + 1}
+                        </button>
+                      </li>
+                    ))}
+                    <li className={`page-item ${currentPage === totalPages ? "disabled" : ""}`}>
+                      <button className="page-link" onClick={() => paginate(currentPage + 1)}>
+                        Next
+                      </button>
+                    </li>
+                  </ul>
+                </nav>
+              )}
+            </div>
       {/* Statistics Section */}
       <div className="row mt-4">
         <div className="col-12 col-sm-6 col-md-3 mb-3">
@@ -474,7 +536,6 @@ const Appointments = () => {
                     <h6 className="text-muted">Patient Information</h6>
                     <p><strong>Name:</strong> {selectedAppointment.patientName}</p>
                     <p><strong>Email:</strong> {selectedAppointment.patientEmail}</p>
-                   
                   </div>
                   <div className="col-md-6">
                     <h6 className="text-muted">Doctor Information</h6>
