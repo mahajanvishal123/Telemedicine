@@ -4,7 +4,9 @@ import 'bootstrap/dist/css/bootstrap.min.css';
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faCamera, faUserCircle, faTimes } from "@fortawesome/free-solid-svg-icons";
 import axios from "axios";
-import API_URL from "../../../Baseurl/Baseurl"; // path adjust karein
+// import Swal from "sweetalert2";
+// import 'sweetalert2/dist/sweetalert2.min.css';
+import API_URL from "../../../Baseurl/Baseurl";
 
 // ---------- Theme ----------
 const BRAND_ORANGE = '#ff6b00';
@@ -23,6 +25,19 @@ const calculateAge = (dobString) => {
   const m = t.getMonth() - d.getMonth();
   if (m < 0 || (m === 0 && t.getDate() < d.getDate())) age--;
   return String(Math.max(0, age));
+};
+
+// Center success modal — "Done"
+const showCenterSuccess = (msg = "Patient updated") => {
+  return Swal.fire({
+    icon: 'success',
+    title: 'Done',
+    text: msg,
+    confirmButtonText: 'OK',
+    confirmButtonColor: BRAND_ORANGE,
+    backdrop: true,
+    allowOutsideClick: false,
+  });
 };
 
 const Profile = ({ userId: userIdProp }) => {
@@ -164,8 +179,6 @@ const Profile = ({ userId: userIdProp }) => {
   const [fetchError, setFetchError] = useState("");
   const [rawDobWarning, setRawDobWarning] = useState("");
   const [dobError, setDobError] = useState("");
-  const [submitError, setSubmitError] = useState("");
-  const [submitSuccess, setSubmitSuccess] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const fileInputRef = useRef(null);
 
@@ -292,18 +305,27 @@ const Profile = ({ userId: userIdProp }) => {
   // ---------------- PUT /patient/:id ----------------
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setSubmitError("");
-    setSubmitSuccess("");
 
     const id = getPatientId();
     if (!id) {
-      setSubmitError("User ID not found. Update aborted.");
+      await Swal.fire({
+        icon: 'error',
+        title: 'Update failed',
+        text: 'User ID not found. Update aborted.',
+        confirmButtonColor: BRAND_ORANGE
+      });
       return;
     }
 
     // If DOB invalid/future, prevent submit
     if (profileData.dob && (!isValidDateISO(profileData.dob) || isFutureDate(profileData.dob))) {
       setDobError("Valid DOB (YYYY-MM-DD) required aur future date allow nahi.");
+      await Swal.fire({
+        icon: 'warning',
+        title: 'Invalid DOB',
+        text: 'Please enter a valid, non-future date of birth.',
+        confirmButtonColor: BRAND_ORANGE
+      });
       return;
     }
 
@@ -338,9 +360,16 @@ const Profile = ({ userId: userIdProp }) => {
       }));
       setPreviewUrl(normalized.avatar || payload.profile || null);
 
-      setSubmitSuccess(res?.data?.message || "Patient updated");
+      // ✅ Centered SweetAlert "Done"
+      await showCenterSuccess(res?.data?.message || "Patient updated");
     } catch (err) {
-      setSubmitError(err?.response?.data?.message || err?.message || "Failed to update patient.");
+      const msg = err?.response?.data?.message || err?.message || "Failed to update patient.";
+      await Swal.fire({
+        icon: 'error',
+        title: 'Update failed',
+        text: msg,
+        confirmButtonColor: BRAND_ORANGE
+      });
     } finally {
       setIsSubmitting(false);
     }
@@ -383,10 +412,6 @@ const Profile = ({ userId: userIdProp }) => {
             </div>
 
             <div className="card-body p-4">
-              {/* Success / Error */}
-              {submitSuccess && <div className="alert alert-success py-2">{submitSuccess}</div>}
-              {submitError && <div className="alert alert-danger py-2">{submitError}</div>}
-
               {/* Profile Photo Upload Section (perfectly centered) */}
               <div className="mb-5 d-flex flex-column align-items-center">
                 <div
@@ -451,7 +476,7 @@ const Profile = ({ userId: userIdProp }) => {
                   className="d-none"
                 />
 
-                {/* Keep the button on its own centered line */}
+                {/* Remove button */}
                 {(previewUrl || profileData.avatar) && (
                   <button
                     type="button"
