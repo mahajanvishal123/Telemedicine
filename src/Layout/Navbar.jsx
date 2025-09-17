@@ -2,7 +2,7 @@
 import React, { useState, useRef, useEffect } from "react";
 import axios from "axios";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faUserCircle, faBars, faTimes, faCamera } from "@fortawesome/free-solid-svg-icons";
+import { faUserCircle, faBars, faTimes } from "@fortawesome/free-solid-svg-icons";
 import { useNavigate, useLocation } from "react-router-dom";
 import "./Navbar.css";
 import API_URL from "../Baseurl/Baseurl";
@@ -67,57 +67,61 @@ function resolveId({ userIdProp, location }) {
 
 /** Normalize any backend profile shape to a consistent object */
 function normalizeProfile(data) {
-  const raw = data?.profile || data?.user || data || null;
+  const raw =
+    data?.profile ||
+    data?.user ||
+    data?.patient ||
+    data?.doctor ||
+    data?.caregiver ||
+    data ||
+    null;
+
   if (!raw) return null;
+
   return {
     id: pickId(raw),
     name: raw.name || raw.fullName || "",
     email: raw.email || "",
     phone: raw.phone || raw.mobile || "",
-    role: raw.role || data?.role || "",
-    avatarUrl: raw.avatar || raw.avatarUrl || raw.photo || "",
+    role: raw.role || data?.role || raw?.type || "",
+    avatarUrl: raw.avatar || raw.avatarUrl || raw.photo || raw.profile || "",
     ...raw,
   };
 }
 
-// ================ Profile Modal =================
+/** Build a list of GET-by-ID endpoints to try in order */
+function buildProfileEndpoints(id) {
+  return [
+    { url: `${BASE_URL}/auth/profile/${id}` },          // REST by id
+    { url: `${PROFILE_ENDPOINT}`, config: { params: { id } } }, // ?id=
+    { url: `${BASE_URL}/users/${id}` },                 // generic users
+    { url: `${BASE_URL}/patient/${id}` },               // healthcare roles
+    { url: `${BASE_URL}/caregiver/${id}` },
+    { url: `${BASE_URL}/doctor/${id}` },
+  ];
+}
+
+// ================ Profile Modal (READ-ONLY) =================
 const ProfileModal = ({ isOpen, onClose, initialProfile }) => {
   const [profileData, setProfileData] = useState({
     fullName: "",
     email: "",
     phone: "",
-    password: "",
-    avatar: null,
   });
-  const [isEditing, setIsEditing] = useState(false);
-  const fileInputRef = useRef(null);
 
   useEffect(() => {
     if (initialProfile && isOpen) {
-      setProfileData((prev) => ({
-        ...prev,
+      setProfileData({
         fullName: initialProfile.name ?? "",
         email: initialProfile.email ?? "",
         phone: initialProfile.phone ?? "",
-      }));
+      });
     }
   }, [initialProfile, isOpen]);
 
   if (!isOpen) return null;
 
-  const handleInputChange = (e) => {
-    const { name, value } = e.target;
-    setProfileData((prev) => ({ ...prev, [name]: value }));
-  };
-
-  const handleFileChange = (e) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onloadend = () => setProfileData((p) => ({ ...p, avatar: reader.result }));
-      reader.readAsDataURL(file);
-    }
-  };
+  const avatarSrc = initialProfile?.avatarUrl || "";
 
   return (
     <div className="modal-overlay" onClick={onClose}>
@@ -132,75 +136,47 @@ const ProfileModal = ({ isOpen, onClose, initialProfile }) => {
         }}
       >
         <div className="d-flex justify-content-between align-items-center mb-4">
-          <h5 className="mb-0">Edit Profile</h5>
-          <div className="d-flex gap-2">
-            {!isEditing ? (
-              <button className="btn btn-sm btn-orange" onClick={() => setIsEditing(true)}>Edit</button>
-            ) : (
-              <button className="btn btn-sm btn-success" onClick={() => setIsEditing(false)}>Save</button>
-            )}
-            <button className="btn btn-sm btn-outline-secondary" onClick={onClose}>
-              <FontAwesomeIcon icon={faTimes} />
-            </button>
-          </div>
+          <h5 className="mb-0">Profile</h5>
+          <button className="btn btn-sm btn-outline-secondary" onClick={onClose}>
+            <FontAwesomeIcon icon={faTimes} />
+          </button>
         </div>
 
-        <form onSubmit={(e) => e.preventDefault()}>
-          <div className="text-center mb-4 position-relative">
-            <div
-              onClick={isEditing ? () => fileInputRef.current?.click() : undefined}
-              style={{ cursor: isEditing ? "pointer" : "default", display: "inline-block", position: "relative" }}
-            >
-              {profileData.avatar ? (
-                <img src={profileData.avatar} alt="Profile" width="100" height="100" className="rounded-circle border" />
-              ) : (
-                <FontAwesomeIcon icon={faUserCircle} size="6x" className="text-muted" />
-              )}
-              {isEditing && (
-                <div
-                  className="position-absolute bottom-0 end-0 bg-orange text-white rounded-circle d-flex align-items-center justify-content-center"
-                  style={{ width: "30px", height: "30px", fontSize: "0.8rem" }}
-                >
-                  <FontAwesomeIcon icon={faCamera} />
-                </div>
-              )}
-            </div>
-            <input type="file" ref={fileInputRef} onChange={handleFileChange} accept="image/*" style={{ display: "none" }} />
-            <h5 className="mt-2">{profileData.fullName || "—"}</h5>
-            <p className="text-muted">{profileData.email || "—"}</p>
+        {/* Centered circular avatar + centered text */}
+        <div className="mb-4">
+          <div className="d-flex justify-content-center">
+            {avatarSrc ? (
+              <img src={avatarSrc} alt="Profile" className="profile-avatar" />
+            ) : (
+              <FontAwesomeIcon icon={faUserCircle} className="profile-avatar-fallback" />
+            )}
           </div>
+          <h5 className="mt-3 text-center">{profileData.fullName || "—"}</h5>
+          <p className="text-muted text-center">{profileData.email || "—"}</p>
+        </div>
 
-          <hr />
+        <hr />
 
-          <div className="mb-3">
-            <label htmlFor="fullName" className="form-label fw-bold">Full Name</label>
-            <input type="text" className="form-control" id="fullName" name="fullName"
-              value={profileData.fullName} onChange={handleInputChange} disabled={!isEditing} />
-          </div>
+        <div className="mb-3">
+          <label htmlFor="fullName" className="form-label fw-bold">Full Name</label>
+          <input type="text" className="form-control" id="fullName" value={profileData.fullName} disabled />
+        </div>
 
-          <div className="mb-3">
-            <label htmlFor="email" className="form-label fw-bold">Email Address</label>
-            <input type="email" className="form-control" id="email" name="email"
-              value={profileData.email} onChange={handleInputChange} disabled={!isEditing} />
-          </div>
+        <div className="mb-3">
+          <label htmlFor="email" className="form-label fw-bold">Email Address</label>
+          <input type="email" className="form-control" id="email" value={profileData.email} disabled />
+        </div>
 
-          <div className="mb-3">
-            <label htmlFor="phone" className="form-label fw-bold">Phone Number</label>
-            <input type="tel" className="form-control" id="phone" name="phone"
-              value={profileData.phone} onChange={handleInputChange} disabled={!isEditing} />
-          </div>
+        <div className="mb-3">
+          <label htmlFor="phone" className="form-label fw-bold">Phone Number</label>
+          <input type="tel" className="form-control" id="phone" value={profileData.phone} disabled />
+        </div>
 
-          <div className="mb-3">
-            <label htmlFor="password" className="form-label fw-bold">Change Password (optional)</label>
-            <input type="password" className="form-control" id="password" name="password"
-              value={profileData.password} onChange={handleInputChange} disabled={!isEditing} />
-          </div>
-
-          <div className="d-flex gap-2 justify-content-end mt-4 flex-wrap">
-            <button type="button" className="btn btn-outline-secondary w-100 w-md-auto" onClick={onClose}>Close</button>
-            {isEditing && <button type="submit" className="btn btn-orange w-100 w-md-auto">Save Changes</button>}
-          </div>
-        </form>
+        <div className="d-flex gap-2 justify-content-end mt-4 flex-wrap">
+          <button type="button" className="btn btn-outline-secondary w-100 w-md-auto" onClick={onClose}>
+            Close
+          </button>
+        </div>
       </div>
     </div>
   );
@@ -222,7 +198,7 @@ const Navbar = ({ toggleSidebar, userId: userIdProp }) => {
   useEffect(() => {
     let cancelled = false;
 
-    async function tryGet(url, config) {
+    async function tryGet(url, config = {}) {
       try {
         const res = await axios.get(url, config);
         if (!res?.data) throw new Error("Empty response");
@@ -241,27 +217,26 @@ const Navbar = ({ toggleSidebar, userId: userIdProp }) => {
       if (!id) {
         if (!cancelled) {
           setProfile(null);
-          setProfileError("User ID not found. localStorage me 'userId' save karo ya URL me ?id= pass karo.");
           setLoadingProfile(false);
         }
         return;
       }
 
-      // Try 1: /auth/profile?id=<id> (NO TOKEN)
-      let res = await tryGet(PROFILE_ENDPOINT, { params: { id } });
+      // Try multiple GET-by-ID endpoints in order
+      const endpoints = buildProfileEndpoints(id);
 
-      // Try 2: /users/:id fallback
-      if (res.error) {
-        res = await tryGet(`${BASE_URL}/users/${id}`, {});
+      let finalRes = null;
+      for (const ep of endpoints) {
+        const res = await tryGet(ep.url, ep.config || {});
+        if (!res.error) { finalRes = res; break; }
       }
 
       if (!cancelled) {
-        if (res.error) {
-          const msg = res.error?.response?.data?.message || res.error?.message || "Failed to load profile";
+        if (!finalRes) {
           setProfile(null);
-          setProfileError(msg);
+          setProfileError("Failed to load profile");
         } else {
-          setProfile(normalizeProfile(res.data));
+          setProfile(normalizeProfile(finalRes.data));
         }
         setLoadingProfile(false);
       }
@@ -363,17 +338,28 @@ const Navbar = ({ toggleSidebar, userId: userIdProp }) => {
       <style>{`
         .modal-overlay {
           position: fixed;
-          top: 0;
-          left: 0;
-          width: 100%;
-          height: 100%;
+          top: 0; left: 0; width: 100%; height: 100%;
           background-color: rgba(0, 0, 0, 0.5);
-          display: flex;
-          justify-content: center;
-          align-items: center;
+          display: flex; justify-content: center; align-items: center;
           z-index: 1050;
         }
         .cursor-pointer { cursor: pointer; }
+
+        /* NEW: centered circular avatar */
+        .profile-avatar {
+          width: 120px;
+          height: 120px;
+          display: block;
+          border-radius: 50%;
+          object-fit: cover;
+          border: 2px solid #dee2e6;
+        }
+        .profile-avatar-fallback {
+          width: 120px;
+          height: 120px;
+          border-radius: 50%;
+          display: block;
+        }
       `}</style>
     </>
   );
