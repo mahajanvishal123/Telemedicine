@@ -46,19 +46,23 @@ const ProviderDashboard = () => {
     }
   };
 
-  // Fetch dashboard data
+  // Fetch dashboard data (with doctorId)
   useEffect(() => {
     const fetchDashboardData = async () => {
       try {
-        const response = await axios.get(`${API_URL}/dashboard`);
-        
+        const doctorId = "68c53ce6628a1d6fce6ee726"; // Replace with dynamic value if needed (e.g., from auth context)
+
+        const response = await axios.get(`${API_URL}/dashboard/doctor`, {
+          params: { doctorId }
+        });
+
         if (response.data.success) {
           setDashboardData(response.data.data);
         } else {
           setError('Failed to fetch dashboard data');
         }
       } catch (err) {
-        setError('Error fetching  ' + err.message);
+        setError('Error fetching data: ' + err.message);
       } finally {
         setLoading(false);
       }
@@ -80,7 +84,6 @@ const ProviderDashboard = () => {
   useEffect(() => {
     if (exportFormat) {
       handleExport(exportFormat);
-      // Reset export format after handling
       setTimeout(() => setExportFormat(null), 1000);
     }
   }, [exportFormat]);
@@ -95,7 +98,6 @@ const ProviderDashboard = () => {
 
   // Handle export functionality
   const handleExport = (format) => {
-    // In a real application, this would generate and download a file
     console.log(`Exporting earnings data in ${format} format`);
     alert(`Earnings data exported as ${format.toUpperCase()} successfully!`);
   };
@@ -123,12 +125,26 @@ const ProviderDashboard = () => {
     );
   }
 
-  // Use API data or fallback values
-  const totalDoctors = dashboardData?.totalDoctors || 17;
-  const totalPatients = dashboardData?.totalPatients || 9;
-  const totalCaregivers = dashboardData?.totalCaregivers || 2;
-  const totalUsers = dashboardData?.totalUsers || 28;
-  const recentSignups = dashboardData?.recentSignups || [];
+  // Extract data from API response
+  const totalAppointments = dashboardData?.totalAppointments || 0;
+  const totalPatients = dashboardData?.totalPatients || 0;
+  const totalSlots = dashboardData?.totalSlot || 0;
+  const totalPayment = dashboardData?.totalPayment || 0;
+  const weeklyEarnings = dashboardData?.weeklyEarnings || [];
+
+  // Calculate total weekly earnings
+  const totalWeeklyEarnings = weeklyEarnings.reduce((sum, day) => sum + day.amount, 0);
+
+  // Format days for chart
+  const dailyEarnings = weeklyEarnings.map(day => ({
+    day: day.day,
+    amount: day.amount
+  }));
+
+  // Recent signups placeholder — assuming not available in this API
+  const recentSignups = [
+    
+  ];
 
   return (
     <div className="">
@@ -162,30 +178,30 @@ const ProviderDashboard = () => {
         >
           {[
             {
-              icon: "fas fa-user-injured",
-              value: totalPatients,
-              label: "Total Patients",
+              icon: "fas fa-calendar-check",
+              value: totalAppointments,
+              label: "Total Appointments",
               color: "#3498db",
               bg: "rgba(52, 152, 219, 0.15)"
             },
             {
-              icon: "fas fa-user-md",
-              value: totalDoctors,
-              label: "Total Doctors",
+              icon: "fas fa-user-injured",
+              value: totalPatients,
+              label: "Total Patients",
               color: "#2ecc71",
               bg: "rgba(46, 204, 113, 0.15)"
             },
             {
-              icon: "fas fa-user-friends",
-              value: totalCaregivers,
-              label: "Total Caregivers",
+              icon: "fas fa-clock",
+              value: totalSlots,
+              label: "Total Slots",
               color: "#f1c40f",
               bg: "rgba(241, 196, 15, 0.15)"
             },
             {
-              icon: "fas fa-users",
-              value: totalUsers,
-              label: "Total Users",
+              icon: "fas fa-dollar-sign",
+              value: `$${totalPayment}`,
+              label: "Total Payment",
               color: "#e67e22",
               bg: "rgba(230, 126, 34, 0.15)"
             }
@@ -230,79 +246,30 @@ const ProviderDashboard = () => {
       </motion.div>
 
       {/* Recent Signups */}
-      <div
-        className="row mb-4"
-        variants={containerVariants}
-        initial="hidden"
-        animate="visible"
-      >
-        <div className="col-12" variants={itemVariants}>
-          <div
-            className="card  h-100 border-0"
-            whileHover={cardHover}
-          >
-            <div className="card-header">
-              <h5 className="mb-0">Recent Signups</h5>
-            </div>
-            <div className="card-body">
-              <div className="table-responsive">
-                <table className="table table-hover">
-                  <thead>
-                    <tr>
-                      <th>Name</th>
-                      <th>Role</th>
-                      <th>Signup Date</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {recentSignups.map((user) => (
-                      <tr key={user._id}>
-                        <td>{user.name}</td>
-                        <td>
-                          <span className={`badge ${
-                            user.role === 'Doctor' ? 'bg-primary' :
-                            user.role === 'Patient' ? 'bg-success' : 'bg-info'
-                          }`}>
-                            {user.role}
-                          </span>
-                        </td>
-                        <td>{new Date(user.createdAt).toLocaleDateString()}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
+     
 
       {/* Earnings Overview */}
       <motion.div
         className="row mb-4"
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        // transition={{ delay: 0.3, duration: 0.5 }}
       >
         <div className="col-12 mt-3">
           <motion.div
-            className="card shadow-sm border-0 "
+            className="card shadow-sm border-0"
             whileHover={cardHover}
             style={{ position: "relative", overflow: "visible" }}
           >
-            <div className="card-header d-flex flex-column flex-sm-row justify-content-between align-items-start align-items-sm-center ">
+            <div className="card-header d-flex flex-column flex-sm-row justify-content-between align-items-start align-items-sm-center">
               <h5 className="mb-2 mb-sm-0">Earnings Overview (This Week)</h5>
               <div>
-                <span className="badge bg-light text-dark">Total: $3,020</span>
+                <span className="badge bg-light text-dark">Total: ${totalWeeklyEarnings}</span>
               </div>
             </div>
 
-            <div
-              className="card-body"
-              style={{ position: "relative", overflow: "visible" }}
-            >
+            <div className="card-body" style={{ position: "relative", overflow: "visible" }}>
               {showEarningsDetails ? (
-                // Detailed view
+                // Detailed View
                 <motion.div
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
@@ -312,41 +279,25 @@ const ProviderDashboard = () => {
                   <div className="row gy-3">
                     <div className="col-12 col-md-6">
                       <ul className="list-group">
-                        <li className="list-group-item d-flex justify-content-between align-items-center">
-                          Monday
-                          <span className="badge bg-primary rounded-pill">$380</span>
-                        </li>
-                        <li className="list-group-item d-flex justify-content-between align-items-center">
-                          Tuesday
-                          <span className="badge bg-primary rounded-pill">$520</span>
-                        </li>
-                        <li className="list-group-item d-flex justify-content-between align-items-center">
-                          Wednesday
-                          <span className="badge bg-primary rounded-pill">$460</span>
-                        </li>
-                        <li className="list-group-item d-flex justify-content-between align-items-center">
-                          Thursday
-                          <span className="badge bg-primary rounded-pill">$610</span>
-                        </li>
+                        {dailyEarnings.slice(0, 4).map((day, i) => (
+                          <li key={i} className="list-group-item d-flex justify-content-between align-items-center">
+                            {day.day}
+                            <span className="badge bg-primary rounded-pill">${day.amount}</span>
+                          </li>
+                        ))}
                       </ul>
                     </div>
                     <div className="col-12 col-md-6">
                       <ul className="list-group">
-                        <li className="list-group-item d-flex justify-content-between align-items-center">
-                          Friday
-                          <span className="badge bg-primary rounded-pill">$550</span>
-                        </li>
-                        <li className="list-group-item d-flex justify-content-between align-items-center">
-                          Saturday
-                          <span className="badge bg-primary rounded-pill">$320</span>
-                        </li>
-                        <li className="list-group-item d-flex justify-content-between align-items-center">
-                          Sunday
-                          <span className="badge bg-primary rounded-pill">$180</span>
-                        </li>
+                        {dailyEarnings.slice(4).map((day, i) => (
+                          <li key={i} className="list-group-item d-flex justify-content-between align-items-center">
+                            {day.day}
+                            <span className="badge bg-primary rounded-pill">${day.amount}</span>
+                          </li>
+                        ))}
                         <li className="list-group-item d-flex justify-content-between align-items-center">
                           Total
-                          <span className="badge bg-success rounded-pill">$3,020</span>
+                          <span className="badge bg-success rounded-pill">${totalWeeklyEarnings}</span>
                         </li>
                       </ul>
                     </div>
@@ -363,7 +314,7 @@ const ProviderDashboard = () => {
                   </div>
                 </motion.div>
               ) : (
-                // Chart view
+                // Chart View
                 <>
                   <div className="row gy-4">
                     {/* Chart */}
@@ -373,15 +324,16 @@ const ProviderDashboard = () => {
                           className="d-flex align-items-end h-100"
                           style={{ gap: "12px" }}
                         >
-                          {[380, 520, 460, 610, 550, 320, 180].map((earnings, index) => {
-                            const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+                          {dailyEarnings.map((day, index) => {
+                            const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+                            const dayName = days.find(d => d.toLowerCase() === day.day.toLowerCase()) || day.day;
                             return (
                               <motion.div
                                 key={index}
                                 className="d-flex flex-column align-items-center"
                                 style={{ flex: 1 }}
                                 initial={{ height: 0 }}
-                                animate={{ height: `${(earnings / 700) * 100}%` }}
+                                animate={{ height: `${(day.amount / 1000) * 100}%` }}
                                 transition={{
                                   delay: index * 0.1 + 0.5,
                                   duration: 0.8,
@@ -398,8 +350,8 @@ const ProviderDashboard = () => {
                                   }}
                                   whileHover={{ backgroundColor: "#e14a12" }}
                                 ></motion.div>
-                                <small className="mt-2">{days[index]}</small>
-                                <small className="fw-bold">${earnings}</small>
+                                <small className="mt-2">{dayName}</small>
+                                <small className="fw-bold">${day.amount}</small>
                               </motion.div>
                             );
                           })}
@@ -418,7 +370,7 @@ const ProviderDashboard = () => {
                           className="progress-bar"
                           initial={{ width: 0 }}
                           animate={{
-                            width: `${3020 / 2800 * 100 > 100 ? 100 : (3020 / 2800) * 100
+                            width: `${totalWeeklyEarnings / 2800 * 100 > 100 ? 100 : (totalWeeklyEarnings / 2800) * 100
                               }%`,
                           }}
                           transition={{ delay: 0.8, duration: 1.5 }}
