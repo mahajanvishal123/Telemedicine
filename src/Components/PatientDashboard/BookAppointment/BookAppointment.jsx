@@ -114,50 +114,40 @@ export default function BookAppointment() {
     fetchDoctors();
   }, [selectedSpecialty, step]);
 
-// ✅ FETCH SLOTS — STEP 3
-useEffect(() => {
-  if (step !== 2 || !selectedDoctor?._id) return;
+  // ✅ FETCH SLOTS — STEP 3
+  useEffect(() => {
+    if (step !== 2 || !selectedDoctor?._id) return;
 
-  const fetchSlots = async () => {
-    setLoadingSlots(true);
-    setError(null);
+    const fetchSlots = async () => {
+      setLoadingSlots(true);
+      setError(null);
 
-    try {
-      const response = await axios.get(`${Base_Url}/slot`, {
-        params: { doctorId: selectedDoctor._id },
-        headers: {
-          'Cache-Control': 'no-cache, no-store, must-revalidate',
-          'Pragma': 'no-cache',
-          'Expires': '0',
-        },
-      });
+      try {
+        const response = await axios.get(`${Base_Url}/slot`, {
+          params: { doctorId: selectedDoctor._id }
+        });
 
-      // ✅ EXTRA SAFETY CHECK
-      if (!response.data || !Array.isArray(response.data)) {
-        throw new Error("Invalid or empty slot data received.");
+        const availableSlots = response.data.filter(slot => !slot.isBooked);
+
+        const grouped = availableSlots.reduce((acc, slot) => {
+          const dateStr = new Date(slot.date).toDateString();
+          if (!acc[dateStr]) acc[dateStr] = [];
+          acc[dateStr].push(slot);
+          return acc;
+        }, {});
+
+        setSlots(grouped);
+      } catch (err) {
+        console.error("Failed to fetch slots:", err);
+        setError("Failed to load available slots.");
+        setSlots({});
+      } finally {
+        setLoadingSlots(false);
       }
+    };
 
-      const availableSlots = response.data.filter(slot => !slot.isBooked);
-
-      const grouped = availableSlots.reduce((acc, slot) => {
-        const dateStr = new Date(slot.date).toDateString();
-        if (!acc[dateStr]) acc[dateStr] = [];
-        acc[dateStr].push(slot);
-        return acc;
-      }, {});
-
-      setSlots(grouped);
-    } catch (err) {
-      console.error("Failed to fetch slots:", err);
-      setError("Failed to load available slots. " + (err.message || ""));
-      setSlots({});
-    } finally {
-      setLoadingSlots(false);
-    }
-  };
-
-  fetchSlots();
-}, [step, selectedDoctor]);
+    fetchSlots();
+  }, [step, selectedDoctor]);
 
   const filteredSpecialties = specialties.filter(spec =>
     spec.name.toLowerCase().includes(searchTerm.toLowerCase())
@@ -179,6 +169,7 @@ useEffect(() => {
     if (step < steps.length - 1) setStep(step + 1);
   }
 
+  // ✅ REAL PAYMENT API INTEGRATION — WITH FRONTEND-GENERATED APPOINTMENT ID
   const handlePayment = async () => {
     if (!selectedDoctor || !selectedSlot) {
       alert("Missing appointment data. Please restart booking.");
@@ -188,38 +179,63 @@ useEffect(() => {
     setPaymentProcessing(true);
 
     try {
-      await new Promise(resolve => setTimeout(resolve, 2000)); // Simulate API delay
+      // 🆕 Get user from localStorage (stored as JSON string)
+      const userJson = localStorage.getItem("user");
+      if (!userJson) {
+        alert("User not logged in. Please log in again.");
+        return;
+      }
 
-      const mockAppointmentId = "APP-" + Math.random().toString(36).substr(2, 9).toUpperCase();
-      const mockPatientId = localStorage.getItem("patientId") || "PAT-DEFAULT";
+      let user;
+      try {
+        user = JSON.parse(userJson);
+      } catch (e) {
+        console.error("Failed to parse user from localStorage:", e);
+        alert("Invalid user data. Please log in again.");
+        return;
+      }
 
-      const data = {
-        appointmentId: mockAppointmentId,
-        patientId: mockPatientId,
+      if (!user._id) {
+        alert("Patient ID not found in user data. Please log in again.");
+        return;
+      }
+
+      const patientId = user._id;
+      const paymentAmount = selectedDoctor.fee ? parseInt(selectedDoctor.fee) + 25 : 25;
+
+      // ✅ GENERATE APPOINTMENT ID ON FRONTEND
+      const appointmentId = "APP-" + Date.now().toString(36).toUpperCase() + Math.random().toString(36).substr(2, 4);
+
+      // 🚀 POST to /payment API — NOW INCLUDING appointmentId
+      const response = await axios.post(`${Base_Url}/payment`, {
+        patientId,
         doctorId: selectedDoctor._id,
-        paymentAmount: selectedDoctor.fee ? parseInt(selectedDoctor.fee) + 25 : 25,
-        date: selectedSlot.date,
-        time: selectedSlot.startTime,
-      };
+        paymentAmount,
+        appointmentId, // 👈 SEND IT TO BACKEND
+      });
 
-      setAppointmentData(data);
+      // ✅ Set appointment data (we generated ID, so no need to wait for backend)
+      setAppointmentData({
+        appointmentId,
+        patientId,
+        doctorId: selectedDoctor._id,
+        paymentAmount,
+      });
+
       setPaymentSuccess(true);
 
-      // 🚀 Uncomment to integrate real API
-      /*
-      const response = await axios.post(`${Base_Url}/appointments`, {
-        doctorId: selectedDoctor._id,
-        slotId: selectedSlot._id,
-        patientId: mockPatientId,
-        notes,
-        amount: data.paymentAmount,
-      });
-      setAppointmentData(response.data);
-      */
-
     } catch (err) {
-      console.error("Payment failed:", err);
-      alert("Payment failed. Please try again.");
+      console.error("Payment failed:", err.response?.data || err.message);
+
+      if (err.response && err.response.status === 400) {
+        alert("Invalid request: " + (err.response.data.message || "Check patient or doctor details."));
+      } else if (err.response && err.response.status === 401) {
+        alert("Unauthorized: Please log in again.");
+      } else if (err.response && err.response.status === 500) {
+        alert("Server error. Try again later.");
+      } else {
+        alert("Payment failed. Please check network and try again.");
+      }
     } finally {
       setPaymentProcessing(false);
     }
@@ -617,25 +633,19 @@ useEffect(() => {
                 </Row>
 
                 <Row className="mt-3">
-                  <Col>
-                    <div>Date</div>
-                    <div className="fw-bold">
-                      {new Date(selectedSlot.date).toLocaleDateString('en-US', {
-                        weekday: 'long',
-                        year: 'numeric',
-                        month: 'long',
-                        day: 'numeric'
-                      })}
-                    </div>
+                  <Col>Date</Col>
+                  <Col className="fw-bold">
+                    {new Date(selectedSlot.date).toLocaleDateString('en-US', {
+                      weekday: 'long',
+                      year: 'numeric',
+                      month: 'long',
+                      day: 'numeric'
+                    })}
                   </Col>
-                  <Col>
-                    <div>Time</div>
-                    <div className="fw-bold">{selectedSlot.startTime}</div>
-                  </Col>
-                  <Col>
-                    <div>Type</div>
-                    <div className="fw-bold" style={{ color: "#4caf50" }}>Video Call</div>
-                  </Col>
+                  <Col>Time</Col>
+                  <Col className="fw-bold">{selectedSlot.startTime}</Col>
+                  <Col>Type</Col>
+                  <Col className="fw-bold" style={{ color: "#4caf50" }}>Video Call</Col>
                 </Row>
               </Card.Body>
             </Card>
@@ -790,68 +800,78 @@ useEffect(() => {
             )
           ) : (
             <div className="text-center py-4">
-              <div className="text-success mb-3">
-                <FaCheckCircle size={60} />
-              </div>
-              <h4>Payment Successful!</h4>
-              <p className="text-muted">Your appointment is confirmed.</p>
+              {appointmentData ? (
+                <>
+                  <div className="text-success mb-3">
+                    <FaCheckCircle size={60} />
+                  </div>
+                  <h4>Payment Successful!</h4>
+                  <p className="text-muted">Your appointment is confirmed.</p>
 
-              <Card className="mt-4">
-                <Card.Body>
-                  <div className="fw-bold mb-3">Appointment Details</div>
-                  <Row>
-                    <Col>Appointment ID</Col>
-                    <Col className="fw-bold text-primary">{appointmentData?.appointmentId || "APP-123456"}</Col>
-                  </Row>
-                  <Row>
-                    <Col>Patient ID</Col>
-                    <Col>{appointmentData?.patientId || "PAT-DEFAULT"}</Col>
-                  </Row>
-                  <Row>
-                    <Col>Doctor ID</Col>
-                    <Col>{appointmentData?.doctorId || selectedDoctor?._id || "N/A"}</Col>
-                  </Row>
-                  <Row>
-                    <Col>Amount Paid</Col>
-                    <Col className="fw-bold" style={{ color: "#FF6A00" }}>
-                      ${appointmentData?.paymentAmount || (selectedDoctor?.fee ? parseInt(selectedDoctor.fee) + 25 : 25)}
-                    </Col>
-                  </Row>
-                  <Row className="mt-3">
-                    <Col>Date</Col>
-                    <Col>
-                      {selectedSlot?.date
-                        ? new Date(selectedSlot.date).toLocaleDateString('en-US', {
-                            weekday: 'long',
-                            year: 'numeric',
-                            month: 'long',
-                            day: 'numeric'
-                          })
-                        : "N/A"}
-                    </Col>
-                  </Row>
-                  <Row>
-                    <Col>Time</Col>
-                    <Col className="fw-bold">{selectedSlot?.startTime || "N/A"}</Col>
-                  </Row>
-                </Card.Body>
-              </Card>
+                  <Card className="mt-4">
+                    <Card.Body>
+                      <div className="fw-bold mb-3">Appointment Details</div>
+                      <Row>
+                        <Col>Appointment ID</Col>
+                        <Col className="fw-bold text-primary">{appointmentData.appointmentId}</Col>
+                      </Row>
+                      <Row>
+                        <Col>Patient ID</Col>
+                        <Col>{appointmentData.patientId}</Col>
+                      </Row>
+                      <Row>
+                        <Col>Doctor ID</Col>
+                        <Col>{appointmentData.doctorId}</Col>
+                      </Row>
+                      <Row>
+                        <Col>Amount Paid</Col>
+                        <Col className="fw-bold" style={{ color: "#FF6A00" }}>
+                          ${appointmentData.paymentAmount}
+                        </Col>
+                      </Row>
+                      <Row className="mt-3">
+                        <Col>Date</Col>
+                        <Col>
+                          {selectedSlot?.date
+                            ? new Date(selectedSlot.date).toLocaleDateString('en-US', {
+                                weekday: 'long',
+                                year: 'numeric',
+                                month: 'long',
+                                day: 'numeric'
+                              })
+                            : "N/A"}
+                        </Col>
+                      </Row>
+                      <Row>
+                        <Col>Time</Col>
+                        <Col className="fw-bold">{selectedSlot?.startTime || "N/A"}</Col>
+                      </Row>
+                    </Card.Body>
+                  </Card>
 
-              <Button
-                variant="primary"
-                className="mt-4"
-                onClick={() => {
-                  setShowPaymentModal(false);
-                  setStep(0);
-                  setSelectedSpecialty(null);
-                  setSelectedDoctor(null);
-                  setSelectedSlot(null);
-                  setNotes("");
-                  setPaymentSuccess(false);
-                }}
-              >
-                Done
-              </Button>
+                  <Button
+                    variant="primary"
+                    className="mt-4"
+                    onClick={() => {
+                      setShowPaymentModal(false);
+                      setStep(0);
+                      setSelectedSpecialty(null);
+                      setSelectedDoctor(null);
+                      setSelectedSlot(null);
+                      setNotes("");
+                      setPaymentSuccess(false);
+                      setAppointmentData(null);
+                    }}
+                  >
+                    Done
+                  </Button>
+                </>
+              ) : (
+                <div>
+                  <Spinner animation="border" variant="primary" />
+                  <div className="mt-3">Confirming your appointment...</div>
+                </div>
+              )}
             </div>
           )}
         </Modal.Body>

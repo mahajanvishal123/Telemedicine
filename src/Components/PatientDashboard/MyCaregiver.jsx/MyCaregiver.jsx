@@ -2,6 +2,35 @@ import React, { useState, useMemo } from "react";
 import { Link } from "react-router-dom";
 
 const BRAND_ORANGE = "#ff6b00";
+const DEFAULT_COUNTRY_CODE = "+91"; // <- yahan change kar sakte ho
+
+// ------- Helpers -------
+const normalizePhone = (raw, defaultCC = DEFAULT_COUNTRY_CODE) => {
+  if (!raw) return "";
+  const trimmed = String(raw).trim();
+  // keep plus if present, else strip non-digits
+  if (trimmed.startsWith("+")) {
+    const cleaned = "+" + trimmed.replace(/[^\d]/g, "");
+    return cleaned;
+  }
+  const digits = trimmed.replace(/[^\d]/g, "");
+  if (!digits) return "";
+  if (digits.length === 10 && defaultCC) return defaultCC + digits;
+  return digits; // fallback (already has country code digits)
+};
+
+const buildWhatsAppLink = (phone, text) => {
+  const normalized = normalizePhone(phone);
+  if (!normalized) return "#";
+  const numForWa = normalized.replace(/^\+/, ""); // wa.me expects no '+'
+  const q = text ? `?text=${encodeURIComponent(text)}` : "";
+  return `https://wa.me/${numForWa}${q}`;
+};
+
+const buildTelLink = (phone) => {
+  const normalized = normalizePhone(phone);
+  return normalized ? `tel:${normalized}` : "#";
+};
 
 const MyCaregiver = () => {
   // ---------- Sample data ----------
@@ -97,6 +126,10 @@ const MyCaregiver = () => {
     const cg = getCaregiver(asn.caregiverId);
     if (!cg) return null;
 
+    const telHref = buildTelLink(cg.mobile);
+    const waText = `Hello ${cg.name}, this is ${currentPatient?.name || "your patient"}.`;
+    const waHref = buildWhatsAppLink(cg.mobile, waText);
+
     return (
       <div className="mini-card">
         <div className="mini-top">
@@ -108,7 +141,7 @@ const MyCaregiver = () => {
             )}
           </div>
 
-          <div className="mini-meta">
+        <div className="mini-meta">
             <div className="mini-name">{cg.name}</div>
             <div className="mini-role">{cg.certification}</div>
           </div>
@@ -133,7 +166,7 @@ const MyCaregiver = () => {
           </div>
           <div className="rowi">
             <span className="ico"><i className="fas fa-phone" /></span>
-            <span className="val">{cg.mobile}</span>
+            <span className="val">{normalizePhone(cg.mobile)}</span>
           </div>
           <div className="rowi">
             <span className="ico"><i className="fas fa-calendar-check" /></span>
@@ -145,9 +178,16 @@ const MyCaregiver = () => {
           <button className="btn btn-orange btn-sm" onClick={() => openDetail(asn)}>
             <i className="fas fa-eye me" /> View
           </button>
-          <button className="btn btn-ghost-orange btn-sm">
-            <i className="fas fa-phone me" /> Contact
-          </button>
+
+          {/* Call */}
+          <a className="btn btn-ghost-orange btn-sm" href={telHref}>
+            <i className="fas fa-phone me" /> Call
+          </a>
+
+          {/* WhatsApp */}
+          <a className="btn btn-ghost-orange btn-sm" href={waHref} target="_blank" rel="noreferrer">
+            <i className="fab fa-whatsapp me" /> WhatsApp
+          </a>
         </div>
       </div>
     );
@@ -158,6 +198,10 @@ const MyCaregiver = () => {
     if (!detailOpen || !detailCaregiver) return null;
     const cg = detailCaregiver;
     const asn = detailAssignment;
+
+    const telHref = buildTelLink(cg.mobile);
+    const waText = `Hello ${cg.name}, this is ${currentPatient?.name || "your patient"}.`;
+    const waHref = buildWhatsAppLink(cg.mobile, waText);
 
     return (
       <div className="modal-backdrop" role="dialog" aria-modal="true">
@@ -215,7 +259,7 @@ const MyCaregiver = () => {
                     <span className="ico"><i className="fas fa-phone" /></span>
                     <div>
                       <div className="label">Mobile</div>
-                      <div className="val">{cg.mobile}</div>
+                      <div className="val">{normalizePhone(cg.mobile)}</div>
                     </div>
                   </div>
                   <div className="rowi">
@@ -311,9 +355,14 @@ const MyCaregiver = () => {
             <button className="btn btn-ghost-orange" onClick={closeDetail}>
               Close
             </button>
-            <button className="btn btn-orange">
-              <i className="fas fa-phone me" /> Contact Caregiver
-            </button>
+            {/* Call */}
+            <a className="btn btn-ghost-orange" href={telHref}>
+              <i className="fas fa-phone me" /> Call
+            </a>
+            {/* WhatsApp */}
+            <a className="btn btn-orange" href={waHref} target="_blank" rel="noreferrer">
+              <i className="fab fa-whatsapp me" /> WhatsApp
+            </a>
           </div>
         </div>
       </div>
@@ -440,7 +489,7 @@ const MyCaregiver = () => {
         .ico{ min-width:28px; height:28px; border-radius:10px; background:rgba(255,107,0,.12); color:var(--orange); display:flex; align-items:center; justify-content:center; }
         .val{ font-weight:700; word-break: break-word; }
 
-        .mini-actions{ display:flex; gap:8px; margin-top:4px; }
+        .mini-actions{ display:flex; gap:8px; margin-top:4px; flex-wrap: wrap; }
 
         .empty{ text-align:center; padding:40px 20px; }
         .empty-icon{ font-size:44px; color:#cbd5e1; margin-bottom:10px; }
@@ -525,7 +574,6 @@ const MyCaregiver = () => {
         .doc-item{ display:flex; justify-content:space-between; align-items:center; gap:10px; padding:10px; border:1px solid var(--line); border-radius:12px; flex-wrap: wrap; }
         .doc-left{ display:flex; align-items:center; gap:10px; }
         .doc-name{ font-weight:700; }
-
         .icon-dot{ min-width:36px; height:36px; border-radius:12px; background:rgba(255,107,0,.12); color:var(--orange); display:flex; align-items:center; justify-content:center; }
 
         /* Responsive */
