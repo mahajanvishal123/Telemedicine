@@ -2,7 +2,6 @@ import React, { useState, useEffect } from "react";
 import axios from "axios";
 import API_URL from "../../Baseurl/Baseurl";
 
-
 const AddCaregiver = () => {
   // ====== CONFIG ======
   const BASE_URL = API_URL;
@@ -16,9 +15,6 @@ const AddCaregiver = () => {
     "";
   const authHeaders = () =>
     accessToken ? { Authorization: `Bearer ${accessToken}` } : {};
-
-  
-  
 
   // Caregivers state
   const [caregivers, setCaregivers] = useState([]);
@@ -37,6 +33,14 @@ const AddCaregiver = () => {
   const [updating, setUpdating] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [error, setError] = useState(null);
+
+  // 🔹 Filter states
+  const [filterName, setFilterName] = useState("");
+  const [filterSpecialty, setFilterSpecialty] = useState("all");
+
+  // 🔹 Pagination states
+  const [currentPage, setCurrentPage] = useState(1);
+  const [rowsPerPage, setRowsPerPage] = useState(5);
 
   // New caregiver form
   const [newCaregiver, setNewCaregiver] = useState({
@@ -137,7 +141,6 @@ const AddCaregiver = () => {
         headers: { ...authHeaders() }
       });
       
-      // Handle different response structures
       const raw = Array.isArray(res?.data)
         ? res.data
         : (Array.isArray(res?.data?.data) ? res.data.data : []);
@@ -160,6 +163,42 @@ const AddCaregiver = () => {
     fetchCaregivers();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+   // 🔹 Apply Filters
+  const filteredCaregivers = caregivers.filter(caregiver => {
+    const matchesNameOrMobile = filterName
+      ? (caregiver.name.toLowerCase().includes(filterName.toLowerCase()) ||
+         caregiver.mobile.toLowerCase().includes(filterName.toLowerCase()))
+      : true;
+    const matchesSpecialty = filterSpecialty === "all"
+      ? true
+      : caregiver.skills.toLowerCase().includes(filterSpecialty.toLowerCase());
+    return matchesNameOrMobile && matchesSpecialty;
+  });
+
+  // 🔹 Extract unique specialties from skills (comma-separated or single)
+  const allSkills = caregivers.flatMap(c => {
+    if (!c.skills) return [];
+    return c.skills.split(',').map(s => s.trim()).filter(s => s);
+  });
+  const specialties = [...new Set(allSkills)];
+
+  // 🔹 Pagination Logic
+  const indexOfLastRow = currentPage * rowsPerPage;
+  const indexOfFirstRow = indexOfLastRow - rowsPerPage;
+  const currentRows =
+    rowsPerPage === "All" ? filteredCaregivers : filteredCaregivers.slice(indexOfFirstRow, indexOfLastRow);
+  const totalPages =
+    rowsPerPage === "All" ? 1 : Math.ceil(filteredCaregivers.length / rowsPerPage);
+
+  const paginate = (pageNumber) => setCurrentPage(pageNumber);
+
+  // 🔹 Reset Filters
+  const resetFilters = () => {
+    setFilterName("");
+    setFilterSpecialty("all");
+    setCurrentPage(1);
+  };
 
   // ===== POST /caregiver (Add Caregiver) =====
   const handleAddCaregiver = async () => {
@@ -199,14 +238,9 @@ const AddCaregiver = () => {
         headers: { "Content-Type": "multipart/form-data", ...authHeaders() }
       });
 
-      // Extract data from API response matching the structure in the image
       const apiData = res.data;
-      const createdCaregiver = apiData.caregiver; // Directly access caregiver object from response
-
-      // Map the API caregiver to our local format
+      const createdCaregiver = apiData.caregiver;
       const mappedCaregiver = mapApiCaregiver(createdCaregiver);
-
-      // Update caregivers state with the new caregiver
       setCaregivers(prev => [...prev, mappedCaregiver]);
 
       alert("Caregiver created successfully!");
@@ -421,7 +455,7 @@ const AddCaregiver = () => {
         <h3 className="dashboard-heading">Manage Caregivers</h3>
         <div className="d-flex gap-2">
           <button className="btn text-white" style={{ backgroundColor: "#F95918" }} onClick={() => setShowAddCaregiverModal(true)}>
-            + Add Caregiver
+            Add Caregiver
           </button>
         </div>
       </div>
@@ -434,6 +468,63 @@ const AddCaregiver = () => {
           <button className="btn btn-sm btn-outline-light" onClick={fetchCaregivers}>Retry</button>
         </div>
       )}
+
+         <div className="row">
+{/* Entries dropdown */}
+      <div className="d-flex justify-content-between align-items-center mb-3 col-md-3">
+        <div>
+          <label className="me-2">Show</label>
+          <select
+            className="form-select d-inline-block w-auto"
+            value={rowsPerPage}
+            onChange={(e) => {
+              setRowsPerPage(e.target.value === "All" ? "All" : parseInt(e.target.value));
+              setCurrentPage(1);
+            }}
+          >
+            <option value="3">3</option>
+            <option value="5">5</option>
+            <option value="8">8</option>
+            <option value="10">10</option>
+            <option value="25">25</option>
+            <option value="All">All</option>
+          </select>
+          <span className="ms-2">entries</span>
+        </div>
+      </div>
+      {/* 🔹 FILTERS SECTION */}
+      <div className="mb-4 col-md-9">
+        <div className="card-body">
+          <div className="row g-3">
+            <div className="col-md-5">
+              <input
+                type="text"
+                className="form-control"
+                id="filterName"
+                placeholder="Search by caregiver name..."
+                value={filterName}
+                onChange={(e) => {
+                  setFilterName(e.target.value);
+                  setCurrentPage(1);
+                }}
+              />
+            </div>
+          
+              <div className="col-md-2">
+            <button
+              className="btn btn-outline-secondary btn-sm"
+              onClick={resetFilters}
+            >
+              <i className="fas fa-sync me-1"></i> Reset Filters
+            </button>
+           
+            </div>
+          </div>
+        
+        </div>
+      </div>
+         </div>
+      
 
       {/* ======= Caregivers Table ======= */}
       <div className="row">
@@ -454,17 +545,17 @@ const AddCaregiver = () => {
                     </tr>
                   </thead>
                   <tbody>
-                    {caregivers.length === 0 ? (
+                    {currentRows.length === 0 ? (
                       <tr>
-                        <td colSpan={7} className="text-center text-muted">No caregivers found.</td>
+                        <td colSpan={7} className="text-center text-muted">No caregivers found matching your filters.</td>
                       </tr>
                     ) : (
-                      caregivers.map((caregiver,index) => (
+                      currentRows.map((caregiver, index) => (
                         <tr key={caregiver.id}>
-                          <td>{index+1}</td>
+                          <td>{(currentPage - 1) * rowsPerPage + index + 1}</td>
                           <td>{caregiver.name}</td>
                           <td>{caregiver.email}</td>
-                          <td>{caregiver.phone}</td>
+                          <td>{caregiver.mobile}</td>
                           <td>{caregiver.role}</td>
                           <td>
                             <span className={`badge ${getStatusClass(caregiver.status)}`}>
@@ -472,10 +563,11 @@ const AddCaregiver = () => {
                             </span>
                           </td>
                           <td>
-                            <div className="d-flex gap-2">
+                            <div className="d-flex">
                               <button 
-                                className="btn btn-sm btn-outline-primary" 
+                                className="btn btn-sm" 
                                 onClick={() => handleView(caregiver)} 
+                                 style={{ color: "#F95918" }} 
                                 title="View"
                               >
                                 <i className="fas fa-eye"></i>
@@ -489,8 +581,9 @@ const AddCaregiver = () => {
                                 <i className="fas fa-edit"></i>
                               </button>
                               <button
-                                className="btn btn-sm btn-outline-danger"
+                                className="btn btn-sm"
                                 onClick={() => handleDelete(caregiver)}
+                                 style={{ color: "#F95918" }} 
                                 title="Delete"
                                 disabled={deleting && deletingCaregiver?.id === caregiver.id}
                               >
@@ -508,12 +601,43 @@ const AddCaregiver = () => {
                   </tbody>
                 </table>
               </div>
-              <div className="text-muted small">Caregivers loaded: {caregivers.length}</div>
             </div>
           </div>
         </div>
       </div>
+ {/* ✅ FOOTER: Pagination */}
+              <div className="card-footer bg-light d-flex justify-content-between align-items-center py-3">
+                <div className="text-muted small">
+                  Showing {(currentPage - 1) * rowsPerPage + 1} to {Math.min(currentPage * rowsPerPage, filteredCaregivers.length)} of {filteredCaregivers.length} entries
+                </div>
 
+                {rowsPerPage !== "All" && (
+                  <nav>
+                    <ul className="pagination mb-0">
+                      <li className={`page-item ${currentPage === 1 ? "disabled" : ""}`}>
+                        <button className="page-link" onClick={() => paginate(currentPage - 1)}>
+                          Prev
+                        </button>
+                      </li>
+                      {[...Array(totalPages)].map((_, i) => (
+                        <li
+                          key={i}
+                          className={`page-item ${currentPage === i + 1 ? "active" : ""}`}
+                        >
+                          <button className="page-link" onClick={() => paginate(i + 1)}>
+                            {i + 1}
+                          </button>
+                        </li>
+                      ))}
+                      <li className={`page-item ${currentPage === totalPages ? "disabled" : ""}`}>
+                        <button className="page-link" onClick={() => paginate(currentPage + 1)}>
+                          Next
+                        </button>
+                      </li>
+                    </ul>
+                  </nav>
+                )}
+              </div>
       {/* Add Caregiver Modal */}
       {showAddCaregiverModal && (
         <div className="modal fade show d-block" style={{ backgroundColor: "rgba(0,0,0,0.5)" }}>
@@ -588,7 +712,7 @@ const AddCaregiver = () => {
                     </div>
                     <div className="mb-3">
                       <label className="form-label">Skills</label>
-                      <textarea className="form-control" name="skills" value={newCaregiver.skills} onChange={handleInputChange} rows="2"></textarea>
+                      <textarea className="form-control" name="skills" value={newCaregiver.skills} onChange={handleInputChange} rows="2" placeholder="e.g., Elderly Care, First Aid, CPR"></textarea>
                     </div>
                     <div className="mb-3">
                       <label className="form-label">Profile Picture</label>
@@ -799,7 +923,7 @@ const AddCaregiver = () => {
                     </div>
                     <div className="mb-3">
                       <label className="form-label">Skills</label>
-                      <textarea className="form-control" name="skills" value={editingCaregiver.skills} onChange={handleEditInputChange} rows="2"></textarea>
+                      <textarea className="form-control" name="skills" value={editingCaregiver.skills} onChange={handleEditInputChange} rows="2" placeholder="e.g., Elderly Care, First Aid, CPR"></textarea>
                     </div>
                     <div className="mb-3">
                       <label className="form-label">Profile Picture</label>

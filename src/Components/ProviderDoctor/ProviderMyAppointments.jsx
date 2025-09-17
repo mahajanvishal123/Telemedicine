@@ -59,7 +59,12 @@ const ProviderMyAppointments = () => {
 
   const [filter, setFilter] = useState("all"); // all | scheduled | confirmed | completed
   const [searchTerm, setSearchTerm] = useState("");
+  const [filterReason, setFilterReason] = useState("all");
   const [buttonAnimations, setButtonAnimations] = useState({});
+
+  // 🔹 Pagination states
+  const [currentPage, setCurrentPage] = useState(1);
+  const [rowsPerPage, setRowsPerPage] = useState(5);
 
   // ============ utils ============
   const properCase = (s) =>
@@ -98,7 +103,8 @@ const ProviderMyAppointments = () => {
       status,
       paymentStatus,
       notes: reason,
-      _raw: a, // keep original
+      reason,
+      _raw: a,
     };
   };
 
@@ -138,18 +144,45 @@ const ProviderMyAppointments = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // 🔹 Extract unique reasons for filter dropdown
+  const reasons = [...new Set(appointments.map(a => a.reason).filter(Boolean))];
+
   // ============ filtering/search ============
   const filteredAppointments = appointments.filter((appointment) => {
     const matchesFilter =
       filter === "all" ||
       String(appointment.status).toLowerCase() === filter;
+
+    const matchesReason = filterReason === "all"
+      ? true
+      : appointment.reason === filterReason;
+
     const q = searchTerm.toLowerCase();
+    // ✅ SEARCH ONLY BY PATIENT NAME AND DATE/TIME — NOT NOTES
     const matchesSearch =
       appointment.patientName.toLowerCase().includes(q) ||
-      appointment.dateTime.toLowerCase().includes(q) ||
-      (appointment.notes || "").toLowerCase().includes(q);
-    return matchesFilter && matchesSearch;
+      appointment.dateTime.toLowerCase().includes(q);
+
+    return matchesFilter && matchesReason && matchesSearch;
   });
+
+  // 🔹 Pagination Logic
+  const indexOfLastRow = currentPage * rowsPerPage;
+  const indexOfFirstRow = indexOfLastRow - rowsPerPage;
+  const currentRows =
+    rowsPerPage === "All" ? filteredAppointments : filteredAppointments.slice(indexOfFirstRow, indexOfLastRow);
+  const totalPages =
+    rowsPerPage === "All" ? 1 : Math.ceil(filteredAppointments.length / rowsPerPage);
+
+  const paginate = (pageNumber) => setCurrentPage(pageNumber);
+
+  // 🔹 Reset Filters
+  const resetFilters = () => {
+    setFilter("all");
+    setFilterReason("all");
+    setSearchTerm("");
+    setCurrentPage(1);
+  };
 
   // ============ actions ============
   const handleStartCall = (appointment) => {
@@ -191,11 +224,8 @@ const ProviderMyAppointments = () => {
           prev.map((a) => (a.id === appointmentId ? mapped : a))
         );
       } else {
-        // fallback: just flip to Cancelled in UI
         setAppointments((prev) =>
-          prev.map((a) =>
-            a.id === appointmentId ? { ...a, status: "Cancelled" } : a
-          )
+          prev.map((a) => (a.id === appointmentId ? { ...a, status: "Cancelled" } : a))
         );
       }
     } catch (err) {
@@ -274,7 +304,6 @@ const ProviderMyAppointments = () => {
         params: { userId },
       });
 
-      // success → remove from UI
       if (res?.status === 200 || res?.status === 204 || res?.data) {
         setAppointments((prev) => prev.filter((a) => a.id !== appointmentId));
       } else {
@@ -334,90 +363,84 @@ const ProviderMyAppointments = () => {
       <div className="">
         <div className="d-flex align-items-center gap-2">
           <h3 className="dashboard-heading mb-0">My Appointment</h3>
-          <button
-            className="btn btn-sm btn-outline-secondary"
-            onClick={fetchAppointments}
-            title="Refresh"
-            disabled={!userId}
-          >
-            <i className="fas fa-sync-alt me-1" />
-            Refresh
-          </button>
         </div>
-        <p className="text-muted mb-4">
-          Manage your patient appointments and consultations
-        </p>
       </div>
 
-      {!userId && (
-        <div className="alert alert-warning">
-          User ID not found. URL me <code>?id=YOUR_ID</code> pass karo ya{" "}
-          <code>localStorage.setItem('userId','YOUR_ID')</code> set karo.
+      <div className="row mt-4">
+        {/* Entries dropdown */}
+        <div className="d-flex justify-content-between align-items-center mb-3 col-md-3">
+          <div>
+            <label className="me-2">Show</label>
+            <select
+              className="form-select d-inline-block w-auto"
+              value={rowsPerPage}
+              onChange={(e) => {
+                setRowsPerPage(e.target.value === "All" ? "All" : parseInt(e.target.value));
+                setCurrentPage(1);
+              }}
+            >
+              <option value="3">3</option>
+              <option value="5">5</option>
+              <option value="8">8</option>
+              <option value="10">10</option>
+              <option value="25">25</option>
+              <option value="All">All</option>
+            </select>
+            <span className="ms-2">entries</span>
+          </div>
         </div>
-      )}
 
-      {loading && (
-        <div className="alert alert-info py-2">Loading appointments…</div>
-      )}
-      {apiError && (
-        <div className="alert alert-danger d-flex justify-content-between align-items-center">
-          <span>{apiError}</span>
-          <button className="btn btn-sm btn-light" onClick={fetchAppointments} disabled={!userId}>
-            Retry
-          </button>
-        </div>
-      )}
-
-      <div className="card shadow-lg border-0">
-        <div className="card-body">
-          {/* Search & Filters */}
-          <div className="row mb-4">
-            <div className="col-md-6">
-              <div className="input-group">
-                <span className="input-group-text bg-transparent">
-                  <i className="fas fa-search text-muted"></i>
-                </span>
-                <input
-                  type="text"
-                  className="form-control"
-                  placeholder="Search appointments..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                />
+        {/* 🔹 FILTERS SECTION */}
+        <div className="mb-4 mt-4 col-md-9">
+          <div className="card-body">
+            <div className="row g-3">
+              <div className="col-md-5">
+                <div className="input-group">
+                  <span className="input-group-text bg-transparent">
+                    <i className="fas fa-search text-muted"></i>
+                  </span>
+                  <input
+                    type="text"
+                    className="form-control"
+                    id="searchTerm"
+                    placeholder="Search by patient name or date..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                  />
+                </div>
               </div>
-            </div>
-
-            <div className="col-md-6 mt-3">
-              <div className="d-flex flex-wrap justify-content-md-end gap-2">
-                <button
-                  className={`btn btn-sm ${filter === "all" ? "btn-primary" : "btn-outline-primary"}`}
-                  onClick={() => setFilter("all")}
+              {/* <div className="col-md-5">
+                <select
+                  className="form-select"
+                  id="filterReason"
+                  value={filterReason}
+                  onChange={(e) => {
+                    setFilterReason(e.target.value);
+                    setCurrentPage(1);
+                  }}
                 >
-                  All
-                </button>
+                  <option value="all">All Reasons</option>
+                  {reasons.map((reason, i) => (
+                    <option key={i} value={reason}>{reason}</option>
+                  ))}
+                </select>
+              </div> */}
+              <div className="mt-3 d-flex justify-content-between align-items-center flex-wrap gap-2 col-md-2">
                 <button
-                  className={`btn btn-sm ${filter === "scheduled" ? "btn-info text-white" : "btn-outline-info"}`}
-                  onClick={() => setFilter("scheduled")}
+                  className="btn btn-outline-secondary btn-sm"
+                  onClick={resetFilters}
                 >
-                  Scheduled
-                </button>
-                <button
-                  className={`btn btn-sm ${filter === "confirmed" ? "btn-primary" : "btn-outline-primary"}`}
-                  onClick={() => setFilter("confirmed")}
-                >
-                  Confirmed
-                </button>
-                <button
-                  className={`btn btn-sm ${filter === "completed" ? "btn-success" : "btn-outline-success"}`}
-                  onClick={() => setFilter("completed")}
-                >
-                  Completed
+                  <i className="fas fa-sync me-1"></i> Reset Filters
                 </button>
               </div>
             </div>
           </div>
+        </div>
+      </div>
 
-          {/* Table */}
+      {/* Table */}
+      <div className="card shadow-lg border-0">
+        <div className="card-body">
           <div className="table-responsive rounded">
             <table className="table table-hover align-middle">
               <thead>
@@ -445,116 +468,149 @@ const ProviderMyAppointments = () => {
                 </tr>
               </thead>
               <tbody>
-                {filteredAppointments.map((appointment, index) => (
-                  <tr
-                    key={appointment.id}
-                    className="animate__animated animate__fadeIn"
-                    style={{ animationDelay: `${index * 0.1}s` }}
-                  >
-                    <td className="ps-4">
-                      <div className="d-flex align-items-center">
-                        <i className="far fa-calendar-alt text-muted me-2"></i>
-                        <span>{appointment.dateTime}</span>
-                      </div>
-                    </td>
-                    <td>
-                      <div className="d-flex align-items-center">
-                        <div
-                          className="rounded-circle d-flex align-items-center justify-content-center me-2"
-                          style={{
-                            width: "36px",
-                            height: "36px",
-                            backgroundColor: "#F95918",
-                            color: "white",
-                          }}
-                        >
-                          {appointment.patientName.charAt(0).toUpperCase()}
-                        </div>
-                        <span>{appointment.patientName}</span>
-                      </div>
-                    </td>
-                    <td>{getStatusBadge(appointment.status)}</td>
-                    <td>{getPaymentBadge(appointment.paymentStatus)}</td>
-                    <td className="pe-4">
-                      <div className="d-flex justify-content-center gap-2">
-                        <button
-                          className={`btn text-white btn-sm ${
-                            buttonAnimations[`call-${appointment.id}`]
-                              ? "animate__animated animate__pulse"
-                              : ""
-                          }`}
-                          style={{ backgroundColor: "#F95918" }}
-                          onClick={() => handleStartCall(appointment)}
-                          disabled={
-                            (!userId) ||
-                            (appointment.status !== "Confirmed" &&
-                             appointment.status !== "Scheduled")
-                          }
-                        >
-                          <i className="fas fa-video me-1"></i>
-                          Start Call
-                        </button>
-
-                        {/* Cancel (PUT by ID) */}
-                        <button
-                          className={`btn btn-outline-danger btn-sm ${
-                            buttonAnimations[`cancel-${appointment.id}`]
-                              ? "animate__animated animate__shakeX"
-                              : ""
-                          }`}
-                          onClick={() => handleCancel(appointment.id)}
-                          disabled={cancellingId === appointment.id || !userId}
-                          title="Cancel appointment"
-                        >
-                          {cancellingId === appointment.id ? (
-                            <span className="spinner-border spinner-border-sm" />
-                          ) : (
-                            <i className="fas fa-times"></i>
-                          )}
-                        </button>
-
-                        {/* Notes (PUT reason by ID) */}
-                        <button
-                          className={`btn btn-outline-secondary btn-sm ${
-                            buttonAnimations[`notes-${appointment.id}`]
-                              ? "animate__animated animate__rubberBand"
-                              : ""
-                          }`}
-                          onClick={() => handleAddNotes(appointment)}
-                          title="Edit notes"
-                          disabled={!userId}
-                        >
-                          <i className="fas fa-edit"></i>
-                        </button>
-
-                        {/* Delete (DELETE by ID) */}
-                        <button
-                          className="btn btn-outline-dark btn-sm"
-                          onClick={() => handleDelete(appointment.id)}
-                          disabled={deletingId === appointment.id || !userId}
-                          title="Delete appointment permanently"
-                        >
-                          {deletingId === appointment.id ? (
-                            <span className="spinner-border spinner-border-sm" />
-                          ) : (
-                            <i className="fas fa-trash"></i>
-                          )}
-                        </button>
-                      </div>
+                {currentRows.length === 0 ? (
+                  <tr>
+                    <td colSpan="5" className="text-center py-5">
+                      <i className="far fa-calendar-times display-4 text-muted mb-3"></i>
+                      <p className="text-muted">No appointments found matching your filters</p>
                     </td>
                   </tr>
-                ))}
+                ) : (
+                  currentRows.map((appointment, index) => (
+                    <tr
+                      key={appointment.id}
+                      className="animate__animated animate__fadeIn"
+                      style={{ animationDelay: `${index * 0.1}s` }}
+                    >
+                      <td className="ps-4">
+                        <div className="d-flex align-items-center">
+                          <i className="far fa-calendar-alt text-muted me-2"></i>
+                          <span>{appointment.dateTime}</span>
+                        </div>
+                      </td>
+                      <td>
+                        <div className="d-flex align-items-center">
+                          <div
+                            className="rounded-circle d-flex align-items-center justify-content-center me-2"
+                            style={{
+                              width: "36px",
+                              height: "36px",
+                              backgroundColor: "#F95918",
+                              color: "white",
+                            }}
+                          >
+                            {appointment.patientName.charAt(0).toUpperCase()}
+                          </div>
+                          <span>{appointment.patientName}</span>
+                        </div>
+                      </td>
+                      <td>{getStatusBadge(appointment.status)}</td>
+                      <td>{getPaymentBadge(appointment.paymentStatus)}</td>
+                      <td className="pe-4">
+                        <div className="d-flex justify-content-center gap-2">
+                          <button
+                            className={`btn text-white btn-sm ${
+                              buttonAnimations[`call-${appointment.id}`]
+                                ? "animate__animated animate__pulse"
+                                : ""
+                            }`}
+                            style={{ backgroundColor: "#F95918" }}
+                            onClick={() => handleStartCall(appointment)}
+                            disabled={
+                              (!userId) ||
+                              (appointment.status !== "Confirmed" &&
+                               appointment.status !== "Scheduled")
+                            }
+                          >
+                            <i className="fas fa-video me-1"></i>
+                            Start Call
+                          </button>
+
+                          <button
+                            className={`btn btn-outline-danger btn-sm ${
+                              buttonAnimations[`cancel-${appointment.id}`]
+                                ? "animate__animated animate__shakeX"
+                                : ""
+                            }`}
+                            onClick={() => handleCancel(appointment.id)}
+                            disabled={cancellingId === appointment.id || !userId}
+                            title="Cancel appointment"
+                          >
+                            {cancellingId === appointment.id ? (
+                              <span className="spinner-border spinner-border-sm" />
+                            ) : (
+                              <i className="fas fa-times"></i>
+                            )}
+                          </button>
+
+                          <button
+                            className={`btn btn-outline-secondary btn-sm ${
+                              buttonAnimations[`notes-${appointment.id}`]
+                                ? "animate__animated animate__rubberBand"
+                                : ""
+                            }`}
+                            onClick={() => handleAddNotes(appointment)}
+                            title="Edit notes"
+                            disabled={!userId}
+                          >
+                            <i className="fas fa-edit"></i>
+                          </button>
+
+                          <button
+                            className="btn btn-outline-dark btn-sm"
+                            onClick={() => handleDelete(appointment.id)}
+                            disabled={deletingId === appointment.id || !userId}
+                            title="Delete appointment permanently"
+                          >
+                            {deletingId === appointment.id ? (
+                              <span className="spinner-border spinner-border-sm" />
+                            ) : (
+                              <i className="fas fa-trash"></i>
+                            )}
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))
+                )}
               </tbody>
             </table>
-
-            {!loading && filteredAppointments.length === 0 && (
-              <div className="text-center py-5">
-                <i className="far fa-calendar-times display-4 text-muted mb-3"></i>
-                <p className="text-muted">No appointments found</p>
-              </div>
-            )}
           </div>
         </div>
+      </div>
+
+      {/* ✅ FOOTER: Pagination */}
+      <div className="card-footer bg-light d-flex justify-content-between align-items-center py-3">
+        <div className="text-muted small">
+          Showing {(currentPage - 1) * rowsPerPage + 1} to {Math.min(currentPage * rowsPerPage, filteredAppointments.length)} of {filteredAppointments.length} entries
+        </div>
+
+        {rowsPerPage !== "All" && (
+          <nav>
+            <ul className="pagination mb-0">
+              <li className={`page-item ${currentPage === 1 ? "disabled" : ""}`}>
+                <button className="page-link" onClick={() => paginate(currentPage - 1)}>
+                  Prev
+                </button>
+              </li>
+              {[...Array(totalPages)].map((_, i) => (
+                <li
+                  key={i}
+                  className={`page-item ${currentPage === i + 1 ? "active" : ""}`}
+                >
+                  <button className="page-link" onClick={() => paginate(i + 1)}>
+                    {i + 1}
+                  </button>
+                </li>
+              ))}
+              <li className={`page-item ${currentPage === totalPages ? "disabled" : ""}`}>
+                <button className="page-link" onClick={() => paginate(currentPage + 1)}>
+                  Next
+                </button>
+              </li>
+            </ul>
+          </nav>
+        )}
       </div>
 
       {/* Notes Modal */}
