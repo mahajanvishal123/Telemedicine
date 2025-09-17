@@ -233,67 +233,10 @@ const Appointments = () => {
         </div>
       </div>
 
-      {/* Filters Section */}
-      <div className="row mb-4">
-        <div className="col-12">
-          <div className="card shadow">
-            <div className="card-header">
-              <h6 className="mb-0">Filter Appointments</h6>
-            </div>
-            <div className="card-body">
-              <div className="row">
-                <div className="col-md-6">
-                  <div className="form-group">
-                    <label htmlFor="dateFilter">Filter by Date</label>
-                    <input
-                      type="date"
-                      className="form-control"
-                      id="dateFilter"
-                      name="date"
-                      value={filters.date}
-                      onChange={handleFilterChange}
-                    />
-                  </div>
-                </div>
-                <div className="col-md-6">
-                  <div className="form-group">
-                    <label htmlFor="statusFilter">Filter by Status</label>
-                    <select
-                      className="form-control"
-                      id="statusFilter"
-                      name="status"
-                      value={filters.status}
-                      onChange={handleFilterChange}
-                    >
-                      <option value="all">All Statuses</option>
-                      <option value="confirmed">Confirmed</option>
-                      <option value="pending">Pending</option>
-                      <option value="completed">Completed</option>
-                      <option value="cancelled">Cancelled</option>
-                    </select>
-                  </div>
-                </div>
-              </div>
-              <div className="mt-3 d-flex justify-content-between align-items-center">
-                <button
-                  className="btn me-2"
-                  style={{ backgroundColor: '#F95918', color: 'white' }}
-                  onClick={resetFilters}
-                >
-                  <i className="fas fa-sync me-1"></i> Reset Filters
-                </button>
-                <span className="text-muted">
-                  {filters.date && `Date: ${filters.date} | `}
-                  {filters.status !== 'all' && `Status: ${filters.status}`}
-                </span>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Entries dropdown */}
-      <div className="d-flex justify-content-between align-items-center mb-3">
+    
+<div className="row">
+ {/* Entries dropdown */}
+      <div className="d-flex justify-content-between align-items-center mb-3 col-md-3">
         <div>
           <label className="me-2">Show</label>
           <select
@@ -311,9 +254,58 @@ const Appointments = () => {
             <option value="25">25</option>
             <option value="All">All</option>
           </select>
-          <span className="ms-2">entries</span>
+          <span className="ms-2">Entries</span>
         </div>
       </div>
+
+        {/* Filters Section */}
+      <div className="row mb-4 col-md-9">
+            <div className="card-body">
+              <div className="row">
+                <div className="col-md-5">
+                  <div className="form-group">
+                    <input
+                      type="date"
+                      className="form-control"
+                      id="dateFilter"
+                      name="date"
+                      value={filters.date}
+                      onChange={handleFilterChange}
+                    />
+                  </div>
+                </div>
+                <div className="col-md-5">
+                  <div className="form-group">
+                    <select
+                      className="form-control"
+                      id="statusFilter"
+                      name="status"
+                      value={filters.status}
+                      onChange={handleFilterChange}
+                    >
+                      <option value="all">All Statuses</option>
+                      <option value="confirmed">Confirmed</option>
+                      <option value="pending">Pending</option>
+                      <option value="completed">Completed</option>
+                      <option value="cancelled">Cancelled</option>
+                    </select>
+                  </div>
+                </div>
+                 <div className="d-flex justify-content-between align-items-center col-md-2">
+                <button
+                  className="btn border"
+                 
+                  onClick={resetFilters}
+                >
+                Reset Filters
+                </button>
+            
+              </div>
+              </div>
+            </div>
+      </div>
+</div>
+     
       {/* Appointments Table */}
       <div className="row">
         <div className="col-12">
@@ -417,7 +409,11 @@ const Appointments = () => {
               )}
             </div>
 
-            {/* ✅ FOOTER: Always show pagination if not "All" */}
+          
+          </div>
+        </div>
+      </div>
+  {/* ✅ FOOTER: Always show pagination if not "All" */}
             <div className="card-footer bg-light d-flex justify-content-between align-items-center py-3">
               <div className="text-muted small">
                 Showing {(currentPage - 1) * rowsPerPage + 1} to {Math.min(currentPage * rowsPerPage, filteredAppointments.length)} of {filteredAppointments.length} entries
@@ -450,10 +446,6 @@ const Appointments = () => {
                 </nav>
               )}
             </div>
-          </div>
-        </div>
-      </div>
-
       {/* Statistics Section */}
       <div className="row mt-4">
         <div className="col-12 col-sm-6 col-md-3 mb-3">

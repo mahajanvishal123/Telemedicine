@@ -22,15 +22,9 @@ const PatientManagement = () => {
   // Loading states for actions
   const [actionLoading, setActionLoading] = useState({ view: false, edit: false, delete: false });
 
-  // Pagination calculations
-  const indexOfLastRow = currentPage * rowsPerPage;
-  const indexOfFirstRow = indexOfLastRow - rowsPerPage;
-  const currentRows =
-    rowsPerPage === "All" ? patients : patients.slice(indexOfFirstRow, indexOfLastRow);
-  const totalPages =
-    rowsPerPage === "All" ? 1 : Math.ceil(patients.length / rowsPerPage);
-
-  const paginate = (pageNumber) => setCurrentPage(pageNumber);
+  // 🔹 Filter states
+  const [filterName, setFilterName] = useState("");
+  const [filterJoinDate, setFilterJoinDate] = useState("");
 
   // ======================
   // ONLY GET REQUEST — NO VARIABLES, DIRECT URL
@@ -211,6 +205,36 @@ const PatientManagement = () => {
     }
   };
 
+  // 🔹 Apply Filters
+  const filteredPatients = patients.filter(patient => {
+    const matchesName = filterName
+      ? patient.name.toLowerCase().includes(filterName.toLowerCase())
+      : true;
+
+    const matchesJoinDate = filterJoinDate
+      ? new Date(patient.createdAt).toLocaleDateString('en-CA') === filterJoinDate // Format: YYYY-MM-DD
+      : true;
+
+    return matchesName && matchesJoinDate;
+  });
+
+  // Pagination calculations — applied to FILTERED data
+  const indexOfLastRow = currentPage * rowsPerPage;
+  const indexOfFirstRow = indexOfLastRow - rowsPerPage;
+  const currentRows =
+    rowsPerPage === "All" ? filteredPatients : filteredPatients.slice(indexOfFirstRow, indexOfLastRow);
+  const totalPages =
+    rowsPerPage === "All" ? 1 : Math.ceil(filteredPatients.length / rowsPerPage);
+
+  const paginate = (pageNumber) => setCurrentPage(pageNumber);
+
+  // 🔹 Reset Filters
+  const resetFilters = () => {
+    setFilterName("");
+    setFilterJoinDate("");
+    setCurrentPage(1);
+  };
+
   // ======================
   // RENDERING
   // ======================
@@ -248,8 +272,9 @@ const PatientManagement = () => {
         <h3 className="dashboard-heading">Patient Management</h3>
       </div>
 
-      {/* Entries dropdown */}
-      <div className="d-flex justify-content-between align-items-center mb-3">
+<div className="row">
+ {/* Entries dropdown */}
+      <div className="d-flex justify-content-between align-items-center mb-3 col-md-3">
         <div>
           <label className="me-2">Show</label>
           <select
@@ -257,7 +282,7 @@ const PatientManagement = () => {
             value={rowsPerPage}
             onChange={(e) => {
               setRowsPerPage(e.target.value === "All" ? "All" : parseInt(e.target.value));
-              setCurrentPage(1); // reset to page 1
+              setCurrentPage(1);
             }}
           >
             <option value="3">3</option>
@@ -271,6 +296,50 @@ const PatientManagement = () => {
         </div>
       </div>
 
+      {/* 🔹 FILTERS SECTION */}
+      <div className="mb-4 col-md-9">
+        <div className="card-body">
+          <div className="row g-3">
+            <div className="col-md-5">
+              <input
+                type="text"
+                className="form-control"
+                id="filterName"
+                placeholder="Search by patient name..."
+                value={filterName}
+                onChange={(e) => {
+                  setFilterName(e.target.value);
+                  setCurrentPage(1); // Reset to page 1 on filter change
+                }}
+              />
+            </div>
+            <div className="col-md-5">
+              <input
+                type="date"
+                className="form-control"
+                id="filterJoinDate"
+                value={filterJoinDate}
+                onChange={(e) => {
+                  setFilterJoinDate(e.target.value);
+                  setCurrentPage(1);
+                }}
+              />
+            </div>
+             <div className="mt-3 col-md-2">
+            <button
+              className="btn btn-outline-secondary btn-sm"
+              onClick={resetFilters}
+            >
+              <i className="fas fa-sync me-1"></i> Reset Filters
+            </button>
+          
+          </div>
+          </div>
+         
+        </div>
+      </div>
+</div>
+     
       {/* Table Section */}
       <div className="row">
         <div className="col-12">
@@ -294,7 +363,7 @@ const PatientManagement = () => {
                     {currentRows.length === 0 ? (
                       <tr>
                         <td colSpan="8" className="text-center py-4">
-                          No patients found.
+                          No patients found matching your filters.
                         </td>
                       </tr>
                     ) : (
@@ -369,45 +438,45 @@ const PatientManagement = () => {
                   </tbody>
                 </table>
               </div>
-             
             </div>
-          </div>
-          {/* ✅ FOOTER: Showing info + Pagination — Always show if not "All" */}
-<div className="card-footer bg-light d-flex justify-content-between align-items-center py-3">
-  <div className="text-muted small">
-    Showing {(currentPage - 1) * rowsPerPage + 1} to {Math.min(currentPage * rowsPerPage, patients.length)} of {patients.length} entries
-  </div>
 
-  {rowsPerPage !== "All" && (
-    <nav>
-      <ul className="pagination mb-0">
-        <li className={`page-item ${currentPage === 1 ? "disabled" : ""}`}>
-          <button className="page-link" onClick={() => paginate(currentPage - 1)}>
-            Prev
-          </button>
-        </li>
-        {[...Array(totalPages)].map((_, i) => (
-          <li
-            key={i}
-            className={`page-item ${currentPage === i + 1 ? "active" : ""}`}
-          >
-            <button className="page-link" onClick={() => paginate(i + 1)}>
-              {i + 1}
-            </button>
-          </li>
-        ))}
-        <li className={`page-item ${currentPage === totalPages ? "disabled" : ""}`}>
-          <button className="page-link" onClick={() => paginate(currentPage + 1)}>
-            Next
-          </button>
-        </li>
-      </ul>
-    </nav>
-  )}
-</div>
+          </div>
         </div>
       </div>
 
+            {/* ✅ FOOTER: Showing info + Pagination — Always show if not "All" */}
+            <div className="card-footer bg-light d-flex justify-content-between align-items-center py-3">
+              <div className="text-muted small">
+                Showing {(currentPage - 1) * rowsPerPage + 1} to {Math.min(currentPage * rowsPerPage, filteredPatients.length)} of {filteredPatients.length} entries
+              </div>
+
+              {rowsPerPage !== "All" && (
+                <nav>
+                  <ul className="pagination mb-0">
+                    <li className={`page-item ${currentPage === 1 ? "disabled" : ""}`}>
+                      <button className="page-link" onClick={() => paginate(currentPage - 1)}>
+                        Prev
+                      </button>
+                    </li>
+                    {[...Array(totalPages)].map((_, i) => (
+                      <li
+                        key={i}
+                        className={`page-item ${currentPage === i + 1 ? "active" : ""}`}
+                      >
+                        <button className="page-link" onClick={() => paginate(i + 1)}>
+                          {i + 1}
+                        </button>
+                      </li>
+                    ))}
+                    <li className={`page-item ${currentPage === totalPages ? "disabled" : ""}`}>
+                      <button className="page-link" onClick={() => paginate(currentPage + 1)}>
+                        Next
+                      </button>
+                    </li>
+                  </ul>
+                </nav>
+              )}
+            </div>
       {/* ========== VIEW MODAL ========== */}
       {showViewModal && (
         <div className="modal show d-block" tabIndex="-1" style={{ backgroundColor: "rgba(0,0,0,0.5)" }}>

@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
-// import Swal from 'sweetalert2'; 
 import Base_Url from "../../Baseurl/Baseurl";
 
 const Verification = () => {
@@ -11,7 +10,11 @@ const Verification = () => {
 
   // 🔹 Pagination states
   const [currentPage, setCurrentPage] = useState(1);
-  const [rowsPerPage, setRowsPerPage] = useState(5); // Default 5
+  const [rowsPerPage, setRowsPerPage] = useState(5);
+
+  // 🔹 Filter states
+  const [filterName, setFilterName] = useState("");
+  const [filterSpecialty, setFilterSpecialty] = useState("all");
 
   // Fetch ALL doctors on mount
   useEffect(() => {
@@ -57,17 +60,7 @@ const Verification = () => {
     fetchDoctors();
   }, []);
 
-  // 🔹 Pagination Logic
-  const indexOfLastRow = currentPage * rowsPerPage;
-  const indexOfFirstRow = indexOfLastRow - rowsPerPage;
-  const currentRows =
-    rowsPerPage === "All" ? allDoctors : allDoctors.slice(indexOfFirstRow, indexOfLastRow);
-  const totalPages =
-    rowsPerPage === "All" ? 1 : Math.ceil(allDoctors.length / rowsPerPage);
-
-  const paginate = (pageNumber) => setCurrentPage(pageNumber);
-
-  // Derived Stats - Updated for consistency
+  // Derived Stats
   const pendingDoctors = allDoctors.filter(
     doctor => doctor.isVerify === "0" || doctor.isVerify === false || doctor.isVerify === "false"
   );
@@ -80,7 +73,40 @@ const Verification = () => {
     doctor => doctor.isVerify === "2"
   );
 
-  // Handle approve action — CENTERED ALERT
+  // 🔹 Extract unique specialties from PENDING doctors
+  const specialties = [...new Set(pendingDoctors.map(d => d.specialty).filter(Boolean))];
+
+  // 🔹 Apply Filters to PENDING doctors
+  const filteredPendingDoctors = pendingDoctors.filter(doctor => {
+    const matchesName = filterName
+      ? doctor.name.toLowerCase().includes(filterName.toLowerCase())
+      : true;
+
+    const matchesSpecialty = filterSpecialty === "all"
+      ? true
+      : doctor.specialty === filterSpecialty;
+
+    return matchesName && matchesSpecialty;
+  });
+
+  // 🔹 Pagination Logic — Applied to FILTERED pending doctors
+  const indexOfLastRow = currentPage * rowsPerPage;
+  const indexOfFirstRow = indexOfLastRow - rowsPerPage;
+  const currentRows =
+    rowsPerPage === "All" ? filteredPendingDoctors : filteredPendingDoctors.slice(indexOfFirstRow, indexOfLastRow);
+  const totalPages =
+    rowsPerPage === "All" ? 1 : Math.ceil(filteredPendingDoctors.length / rowsPerPage);
+
+  const paginate = (pageNumber) => setCurrentPage(pageNumber);
+
+  // 🔹 Reset Filters
+  const resetFilters = () => {
+    setFilterName("");
+    setFilterSpecialty("all");
+    setCurrentPage(1);
+  };
+
+  // Handle approve action
   const handleApprove = async (doctorId) => {
     try {
       await axios.put(`${Base_Url}/doctor/${doctorId}`, {
@@ -126,7 +152,7 @@ const Verification = () => {
     }
   };
 
-  // Handle reject action — CENTERED ALERT
+  // Handle reject action
   const handleReject = async (doctorId) => {
     try {
       await axios.put(`${Base_Url}/doctor/${doctorId}`, {
@@ -172,7 +198,7 @@ const Verification = () => {
     }
   };
 
-  // View documents — opens modal with clickable links
+  // View documents
   const viewDocuments = (documents) => {
     if (!documents || typeof documents !== 'string') {
       Swal.fire({
@@ -259,11 +285,10 @@ const Verification = () => {
           </div>
         </div>
       </div>
-        <div className="card-header">
-              <h5 className="mb-0">Doctors Awaiting Approval</h5>
-            </div>
+
+     <div className="row">
  {/* Entries dropdown */}
-      <div className="d-flex justify-content-between align-items-center mb-3 mt-3">
+      <div className="d-flex justify-content-between align-items-center mb-3 col-md-3">
         <div>
           <label className="me-2">Show</label>
           <select
@@ -271,7 +296,7 @@ const Verification = () => {
             value={rowsPerPage}
             onChange={(e) => {
               setRowsPerPage(e.target.value === "All" ? "All" : parseInt(e.target.value));
-              setCurrentPage(1); // reset to page 1
+              setCurrentPage(1);
             }}
           >
             <option value="3">3</option>
@@ -285,11 +310,61 @@ const Verification = () => {
         </div>
       </div>
 
+       {/* 🔹 FILTERS SECTION */}
+      <div className="card shadow-sm mb-4 col-md-9">
+        <div className="card-body">
+          <div className="row g-3">
+            <div className="col-md-5">
+              <input
+                type="text"
+                className="form-control"
+                id="filterName"
+                placeholder="Search by doctor name..."
+                value={filterName}
+                onChange={(e) => {
+                  setFilterName(e.target.value);
+                  setCurrentPage(1);
+                }}
+              />
+            </div>
+            <div className="col-md-5">
+              <select
+                className="form-select"
+                id="filterSpecialty"
+                value={filterSpecialty}
+                onChange={(e) => {
+                  setFilterSpecialty(e.target.value);
+                  setCurrentPage(1);
+                }}
+              >
+                <option value="all">All Specialties</option>
+                {specialties.map((spec, i) => (
+                  <option key={i} value={spec}>{spec}</option>
+                ))}
+              </select>
+            </div>
+            <div className="col-md-2">
+            <button
+              className="btn btn-outline-secondary btn-sm"
+              onClick={resetFilters}
+            >
+              <i className="fas fa-sync me-1"></i> Reset Filters
+            </button>
+          
+          </div>
+          </div>
+          
+        </div>
+      </div>
+     </div>
+     
       {/* Doctors Table */}
       <div className="row">
         <div className="col-12">
           <div className="card border-0 shadow">
-          
+            <div className="card-header">
+              <h5 className="mb-0">Doctors Awaiting Approval</h5>
+            </div>
             <div className="card-body">
               {pendingDoctors.length === 0 ? (
                 <div className="text-center py-4">
@@ -321,7 +396,7 @@ const Verification = () => {
                     <tbody>
                       {currentRows.length === 0 ? (
                         <tr>
-                          <td colSpan="14" className="text-center py-4">No pending doctors found.</td>
+                          <td colSpan="14" className="text-center py-4">No pending doctors found matching your filters.</td>
                         </tr>
                       ) : (
                         currentRows.map((doctor, index) => (
@@ -378,10 +453,14 @@ const Verification = () => {
               )}
             </div>
 
-            {/* ✅ FOOTER: Always show pagination if not "All" */}
+            
+          </div>
+        </div>
+      </div>
+{/* ✅ FOOTER: Always show pagination if not "All" */}
             <div className="card-footer bg-light d-flex justify-content-between align-items-center py-3">
               <div className="text-muted small">
-                Showing {(currentPage - 1) * rowsPerPage + 1} to {Math.min(currentPage * rowsPerPage, allDoctors.length)} of {allDoctors.length} entries
+                Showing {(currentPage - 1) * rowsPerPage + 1} to {Math.min(currentPage * rowsPerPage, filteredPendingDoctors.length)} of {filteredPendingDoctors.length} entries
               </div>
 
               {rowsPerPage !== "All" && (
@@ -411,11 +490,7 @@ const Verification = () => {
                 </nav>
               )}
             </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Statistics Section — Fully Dynamic */}
+      {/* Statistics Section */}
       <div className="row mt-4">
         <div className="col-12 col-sm-6 col-md-4 mb-3">
           <div
@@ -472,7 +547,7 @@ const Verification = () => {
         </div>
       </div>
 
-      {/* Document Viewer Modal — Fully Functional */}
+      {/* Document Viewer Modal */}
       {selectedDocuments && (
         <div
           style={{
@@ -488,7 +563,7 @@ const Verification = () => {
             zIndex: 9999,
             padding: '20px',
           }}
-          onClick={() => setSelectedDocuments(null)} // Close on backdrop click
+          onClick={() => setSelectedDocuments(null)}
         >
           <div
             style={{

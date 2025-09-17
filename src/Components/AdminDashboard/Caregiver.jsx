@@ -20,6 +20,10 @@ const Caregiver = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [rowsPerPage, setRowsPerPage] = useState(5); // Default 5
 
+  // 🔹 Filter states
+  const [filterName, setFilterName] = useState("");
+  const [filterEmail, setFilterEmail] = useState("");
+
   // ===== Helpers =====
   const getStatusClass = (status) => {
     switch (status) {
@@ -110,28 +114,48 @@ const Caregiver = () => {
       "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='40' height='40' viewBox='0 0 24 24' fill='none' stroke='%236c757d' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2'%3E%3C/path%3E%3Ccircle cx='12' cy='7' r='4'%3E%3C/circle%3E%3C/svg%3E";
   };
 
-  // 🔹 Pagination Logic
+  // 🔹 Apply Filters
+  const filteredCaregivers = caregivers.filter(caregiver => {
+    const matchesName = filterName
+      ? caregiver.name.toLowerCase().includes(filterName.toLowerCase())
+      : true;
+
+    const matchesEmail = filterEmail
+      ? caregiver.email.toLowerCase().includes(filterEmail.toLowerCase())
+      : true;
+
+    return matchesName && matchesEmail;
+  });
+
+  // 🔹 Pagination Logic — Applied to FILTERED data
   const indexOfLastRow = currentPage * rowsPerPage;
   const indexOfFirstRow = indexOfLastRow - rowsPerPage;
   const currentRows =
     rowsPerPage === "All"
-      ? caregivers
-      : caregivers.slice(indexOfFirstRow, indexOfLastRow);
+      ? filteredCaregivers
+      : filteredCaregivers.slice(indexOfFirstRow, indexOfLastRow);
   const totalPages =
-    rowsPerPage === "All" ? 1 : Math.ceil(caregivers.length / rowsPerPage);
+    rowsPerPage === "All" ? 1 : Math.ceil(filteredCaregivers.length / rowsPerPage);
 
   const paginate = (pageNumber) => setCurrentPage(pageNumber);
+
+  // 🔹 Reset Filters
+  const resetFilters = () => {
+    setFilterName("");
+    setFilterEmail("");
+    setCurrentPage(1);
+  };
 
   return (
     <div className="container-fluid">
       {/* Header */}
       <div className="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center gap-3 mb-4">
         <h3 className="dashboard-heading">Caregivers List</h3>
-        <div className="text-muted">Showing all caregivers from the system</div>
       </div>
 
-      {/* Top: Entries Dropdown */}
-      <div className="mb-3 d-flex align-items-center">
+<div className="row mb-3">
+{/* Top: Entries Dropdown */}
+      <div className="mb-3 d-flex align-items-center col-md-3">
         <label className="me-2 mb-0">Show</label>
         <select
           className="form-select form-select-sm w-auto"
@@ -147,8 +171,59 @@ const Caregiver = () => {
           <option value="25">25</option>
           <option value="All">All</option>
         </select>
-        <span className="ms-2 mb-0">entries</span>
+        <span className="ms-2 mb-0">Entries</span>
       </div>
+      {/* 🔹 FILTERS SECTION */}
+      <div className="col-md-9">
+        <div className="card-header bg-light">
+        </div>
+        <div className="card-body">
+          <div className="row g-3">
+            <div className="col-md-5">
+            
+              <input
+                type="text"
+                className="form-control"
+                id="filterName"
+                placeholder="Search by caregiver name..."
+                value={filterName}
+                onChange={(e) => {
+                  setFilterName(e.target.value);
+                  setCurrentPage(1); // Reset to page 1 on filter change
+                }}
+              />
+            </div>
+            <div className="col-md-5">
+          
+              <input
+                type="email"
+                className="form-control"
+                id="filterEmail"
+                placeholder="Search by email..."
+                value={filterEmail}
+                onChange={(e) => {
+                  setFilterEmail(e.target.value);
+                  setCurrentPage(1);
+                }}
+              />
+            </div>
+            <div className="mt-3 col-md-2">
+            <button
+              className="btn btn-outline-secondary btn-sm"
+              onClick={resetFilters}
+            >
+              <i className="fas fa-sync me-1"></i> Reset Filters
+            </button>
+           
+          </div>
+          </div>
+          
+        </div>
+      </div>
+</div>
+      
+
+      
 
       {/* Table */}
       {loadingCaregivers && <div className="alert alert-info">Loading caregivers…</div>}
@@ -162,9 +237,10 @@ const Caregiver = () => {
       )}
 
       {!loadingCaregivers && !caregiversError && (
-        <div className="card shadow-sm border">
+        <div className="card shadow ">
+          <div className="card-body">
           <div className="table-responsive">
-            <table className="table table-hover table-bordered align-middle">
+            <table className="table table-hover align-middle">
               <thead className="table-light">
                 <tr>
                   <th>ID</th>
@@ -182,7 +258,7 @@ const Caregiver = () => {
                 {currentRows.length === 0 ? (
                   <tr>
                     <td colSpan={9} className="text-center text-muted">
-                      No caregivers found.
+                      No caregivers found matching your filters.
                     </td>
                   </tr>
                 ) : (
@@ -223,59 +299,56 @@ const Caregiver = () => {
               </tbody>
             </table>
           </div>
-
-        </div>
+             </div>
         
+        </div>
       )}
+  {/* ✅ Footer: Pagination */}
+          <div className="card-footer bg-light d-flex justify-content-between align-items-center py-3">
+            <div className="text-muted small">
+              Showing {(currentPage - 1) * rowsPerPage + 1} to {Math.min(currentPage * rowsPerPage, filteredCaregivers.length)} of {filteredCaregivers.length} entries
+            </div>
 
-        {/* ✅ Footer: Pagination (Custom Style Like Your Image) */}
-<div className="d-flex justify-content-between align-items-center p-3 bg-light mt-2">
-  <div className="text-muted small">
-    Showing {indexOfFirstRow + 1} to {Math.min(indexOfLastRow, caregivers.length)} of {caregivers.length} entries
-  </div>
+            {rowsPerPage !== "All" && (
+              <nav>
+                <ul className="pagination mb-0">
+                  <li className={`page-item ${currentPage === 1 ? 'disabled' : ''}`}>
+                    <button
+                      className="page-link"
+                      onClick={() => paginate(currentPage - 1)}
+                      disabled={currentPage === 1}
+                    >
+                      Prev
+                    </button>
+                  </li>
 
-  {/* 👇 Updated Pagination with .pagination, .page-item, .page-link classes */}
-  <nav>
-    <ul className="pagination mb-0">
-      {/* Prev Button */}
-      <li className={`page-item ${currentPage === 1 ? 'disabled' : ''}`}>
-        <button
-          className="page-link"
-          onClick={() => paginate(currentPage - 1)}
-          disabled={currentPage === 1}
-        >
-          Prev
-        </button>
-      </li>
+                  {[...Array(totalPages)].map((_, i) => (
+                    <li
+                      key={i}
+                      className={`page-item ${currentPage === i + 1 ? 'active' : ''}`}
+                    >
+                      <button
+                        className="page-link"
+                        onClick={() => paginate(i + 1)}
+                      >
+                        {i + 1}
+                      </button>
+                    </li>
+                  ))}
 
-      {/* Page Numbers */}
-      {[...Array(totalPages)].map((_, i) => (
-        <li
-          key={i}
-          className={`page-item ${currentPage === i + 1 ? 'active' : ''}`}
-        >
-          <button
-            className="page-link"
-            onClick={() => paginate(i + 1)}
-          >
-            {i + 1}
-          </button>
-        </li>
-      ))}
-
-      {/* Next Button */}
-      <li className={`page-item ${currentPage === totalPages ? 'disabled' : ''}`}>
-        <button
-          className="page-link"
-          onClick={() => paginate(currentPage + 1)}
-          disabled={currentPage === totalPages}
-        >
-          Next
-        </button>
-      </li>
-    </ul>
-  </nav>
-</div>
+                  <li className={`page-item ${currentPage === totalPages ? 'disabled' : ''}`}>
+                    <button
+                      className="page-link"
+                      onClick={() => paginate(currentPage + 1)}
+                      disabled={currentPage === totalPages}
+                    >
+                      Next
+                    </button>
+                  </li>
+                </ul>
+              </nav>
+            )}
+          </div>
       {/* View Caregiver Modal */}
       {showViewModal && viewingCaregiver && (
         <div
