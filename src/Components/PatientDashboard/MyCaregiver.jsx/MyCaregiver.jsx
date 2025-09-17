@@ -1,62 +1,41 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useMemo } from "react";
+import { Link } from "react-router-dom";
 
-import  {Link} from "react-router-dom"
-import {
-  Container,
-  Row,
-  Col,
-  Card,
-  Badge,
-  Form,
-  Nav,
-  Modal,
-  Button ,
-  InputGroup
-} from "react-bootstrap";
-import { FaUserMd, FaStar, FaSearch, FaCalendarAlt, FaClock, FaUserNurse } from "react-icons/fa";
+const BRAND_ORANGE = "#ff6b00";
+const DEFAULT_COUNTRY_CODE = "+91"; // <- yahan change kar sakte ho
+
+// ------- Helpers -------
+const normalizePhone = (raw, defaultCC = DEFAULT_COUNTRY_CODE) => {
+  if (!raw) return "";
+  const trimmed = String(raw).trim();
+  // keep plus if present, else strip non-digits
+  if (trimmed.startsWith("+")) {
+    const cleaned = "+" + trimmed.replace(/[^\d]/g, "");
+    return cleaned;
+  }
+  const digits = trimmed.replace(/[^\d]/g, "");
+  if (!digits) return "";
+  if (digits.length === 10 && defaultCC) return defaultCC + digits;
+  return digits; // fallback (already has country code digits)
+};
+
+const buildWhatsAppLink = (phone, text) => {
+  const normalized = normalizePhone(phone);
+  if (!normalized) return "#";
+  const numForWa = normalized.replace(/^\+/, ""); // wa.me expects no '+'
+  const q = text ? `?text=${encodeURIComponent(text)}` : "";
+  return `https://wa.me/${numForWa}${q}`;
+};
+
+const buildTelLink = (phone) => {
+  const normalized = normalizePhone(phone);
+  return normalized ? `tel:${normalized}` : "#";
+};
 
 const MyCaregiver = () => {
-  // Sample patients data
-  const [patients] = useState([
-    {
-      id: 1,
-      name: "John Doe",
-      email: "john@example.com",
-      joinDate: "2023-09-15",
-      status: "Active",
-      phone: "555-1234",
-      address: "123 Main St",
-    },
-    {
-      id: 2,
-      name: "Jane Smith",
-      email: "jane@example.com",
-      joinDate: "2023-10-05",
-      status: "Inactive",
-      phone: "555-5678",
-      address: "456 Oak Ave",
-    },
-    {
-      id: 3,
-      name: "Robert Johnson",
-      email: "robert@example.com",
-      joinDate: "2023-08-20",
-      status: "Active",
-      phone: "555-9012",
-      address: "789 Elm St",
-    },
-    {
-      id: 4,
-      name: "Emily Davis",
-      email: "emily@example.com",
-      joinDate: "2023-11-01",
-      status: "Active",
-      phone: "555-3456",
-      address: "321 Pine Rd",
-    },
-  ]);
-  
-  // Sample caregivers data
+  // ---------- Sample data ----------
+  const [patients] = useState([{ id: 1, name: "John Doe", email: "john@example.com" }]);
+
   const [caregivers] = useState([
     {
       id: 201,
@@ -72,8 +51,8 @@ const MyCaregiver = () => {
       profilePicture: "https://randomuser.me/api/portraits/women/44.jpg",
       documents: [
         { name: "Certification.pdf", url: "https://example.com/cert1.pdf" },
-        { name: "BackgroundCheck.pdf", url: "https://example.com/bg1.pdf" }
-      ]
+        { name: "BackgroundCheck.pdf", url: "https://example.com/bg1.pdf" },
+      ],
     },
     {
       id: 202,
@@ -87,9 +66,7 @@ const MyCaregiver = () => {
       address: "321 Health Ave",
       skills: "Wound Care, Medication Administration, Physical Therapy",
       profilePicture: "https://randomuser.me/api/portraits/men/32.jpg",
-      documents: [
-        { name: "License.pdf", url: "https://example.com/license1.pdf" }
-      ]
+      documents: [{ name: "License.pdf", url: "https://example.com/license1.pdf" }],
     },
     {
       id: 203,
@@ -103,440 +80,518 @@ const MyCaregiver = () => {
       address: "654 Nurse Lane",
       skills: "Patient Hygiene, Vital Signs Monitoring, Dementia Care",
       profilePicture: "https://randomuser.me/api/portraits/women/68.jpg",
-      documents: []
+      documents: [],
     },
   ]);
-  
-  // State for assignments
+
   const [assignments] = useState([
-    {
-      id: 1001,
-      patientId: 1,
-      patientName: "John Doe",
-      caregiverId: 201,
-      caregiverName: "Amy Rodriguez",
-      dateAssigned: "2023-10-15",
-      status: "Active",
-    },
-    {
-      id: 1002,
-      patientId: 3,
-      patientName: "Robert Johnson",
-      caregiverId: 202,
-      caregiverName: "Michael Johnson",
-      dateAssigned: "2023-10-20",
-      status: "Active",
-    },
+    { id: 1001, patientId: 1, caregiverId: 201, dateAssigned: "2023-10-15", status: "Active" },
+    { id: 1002, patientId: 1, caregiverId: 202, dateAssigned: "2023-10-20", status: "Active" },
+    { id: 1003, patientId: 1, caregiverId: 203, dateAssigned: "2023-11-04", status: "Inactive" },
   ]);
-  
-  // State for modals
-  const [showCaregiverModal, setShowCaregiverModal] = useState(false);
-  const [selectedCaregiver, setSelectedCaregiver] = useState(null);
-  
-  // Current patient (in a real app, this would come from authentication)
-  const currentPatientId = 1; // John Doe
-  
-  // Get current patient
-  const currentPatient = patients.find(p => p.id === currentPatientId);
-  
-  // Get assignments for current patient
-  const patientAssignments = assignments.filter(a => a.patientId === currentPatientId);
-  
-  // Get caregiver details by ID
-  const getCaregiverDetails = (caregiverId) => {
-    return caregivers.find(c => c.id === caregiverId);
+
+  const currentPatientId = 1;
+  const currentPatient = patients.find((p) => p.id === currentPatientId);
+
+  const myAssignments = useMemo(
+    () => assignments.filter((a) => a.patientId === currentPatientId),
+    [assignments]
+  );
+
+  const getCaregiver = (id) => caregivers.find((c) => c.id === id);
+
+  const pillClass = (status) =>
+    status === "Active" ? "pill pill-success" : "pill pill-muted";
+
+  // ---------- Detail component state ----------
+  const [detailOpen, setDetailOpen] = useState(false);
+  const [detailCaregiver, setDetailCaregiver] = useState(null);
+  const [detailAssignment, setDetailAssignment] = useState(null);
+
+  const openDetail = (asn) => {
+    const cg = getCaregiver(asn.caregiverId);
+    setDetailCaregiver(cg || null);
+    setDetailAssignment(asn || null);
+    setDetailOpen(true);
   };
-  
-  // Handle view caregiver details
-  const handleViewCaregiver = (caregiverId) => {
-    const caregiver = getCaregiverDetails(caregiverId);
-    if (caregiver) {
-      setSelectedCaregiver(caregiver);
-      setShowCaregiverModal(true);
-    }
+
+  const closeDetail = () => {
+    setDetailOpen(false);
+    setDetailCaregiver(null);
+    setDetailAssignment(null);
   };
-  
-  // Get status class
-  const getStatusClass = (status) => {
-    switch (status) {
-      case "Active":
-        return "bg-success";
-      case "Inactive":
-        return "bg-secondary";
-      default:
-        return "bg-secondary";
-    }
-  };
-  
-  return (
-    <div className="container">
-      {/* Page Header */}
-      <div className="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center gap-3 mb-4">
-        <div>
-          <h3 className="dashboard-heading">My Caregiver</h3>
-          <p className="text-muted">View your assigned caregiver information</p>
-        </div>
-        <Link to="/dashboard" className="btn btn-outline-secondary">
-          Back to Dashboard
-        </Link>
-      </div>
-      
-      {/* Patient Info Card */}
-      <div className="card shadow mb-4">
-        <div className="card-body">
-          <div className="d-flex align-items-center">
-            <div className="me-3">
-              <div className="bg-primary rounded-circle d-flex align-items-center justify-content-center" 
-                   style={{ width: '60px', height: '60px' }}>
-                <span className="text-white fw-bold fs-4">
-                  {currentPatient ? currentPatient.name.charAt(0) : 'P'}
-                </span>
-              </div>
-            </div>
-            <div>
-              <h5 className="mb-1">{currentPatient ? currentPatient.name : 'Patient'}</h5>
-              <p className="mb-0 text-muted">
-                {currentPatient ? currentPatient.email : 'patient@example.com'}
-              </p>
-            </div>
+
+  // ---------- Compact card ----------
+  const CompactCard = ({ asn }) => {
+    const cg = getCaregiver(asn.caregiverId);
+    if (!cg) return null;
+
+    const telHref = buildTelLink(cg.mobile);
+    const waText = `Hello ${cg.name}, this is ${currentPatient?.name || "your patient"}.`;
+    const waHref = buildWhatsAppLink(cg.mobile, waText);
+
+    return (
+      <div className="mini-card">
+        <div className="mini-top">
+          <div className="mini-avatar">
+            {cg.profilePicture ? (
+              <img src={cg.profilePicture} alt={cg.name} />
+            ) : (
+              <div className="placeholder">{cg.name.charAt(0)}</div>
+            )}
+          </div>
+
+        <div className="mini-meta">
+            <div className="mini-name">{cg.name}</div>
+            <div className="mini-role">{cg.certification}</div>
           </div>
         </div>
-      </div>
-      
-      {/* Caregiver Section */}
-      <div className="row">
-        <div className="col-12">
-          <div className="card shadow">
-            <div className="card-header bg-white">
-              <h5 className="mb-0">Assigned Caregiver</h5>
-            </div>
-            <div className="card-body">
-              {patientAssignments.length > 0 ? (
-                patientAssignments.map((assignment) => {
-                  const caregiver = getCaregiverDetails(assignment.caregiverId);
-                  return caregiver ? (
-                    <div key={assignment.id} className="row">
-                      <div className="col-md-4 mb-4 mb-md-0">
-                        <div className="text-center">
-                          {caregiver.profilePicture ? (
-                            <img 
-                              src={caregiver.profilePicture} 
-                              alt={caregiver.name}
-                              className="rounded-circle mb-3"
-                              style={{ width: '150px', height: '150px', objectFit: 'cover' }}
-                            />
-                          ) : (
-                            <div className="bg-secondary rounded-circle d-flex align-items-center justify-content-center mx-auto mb-3" 
-                                 style={{ width: '150px', height: '150px' }}>
-                              <span className="text-white fw-bold fs-2">
-                                {caregiver.name.charAt(0)}
-                              </span>
-                            </div>
-                          )}
-                          <h5 className="mb-1">{caregiver.name}</h5>
-                          <p className="text-muted mb-2">{caregiver.certification}</p>
-                          <span className={`badge ${getStatusClass(caregiver.status)}`}>
-                            {caregiver.status}
-                          </span>
-                        </div>
-                      </div>
-                      <div className="col-md-8">
-                        <div className="mb-4">
-                          <h6 className="mb-3 border-bottom pb-2">Contact Information</h6>
-                          <div className="row">
-                            <div className="col-sm-6 mb-3">
-                              <div className="d-flex">
-                                <i className="fas fa-envelope me-2 mt-1 text-primary"></i>
-                                <div>
-                                  <small className="text-muted d-block">Email</small>
-                                  <span>{caregiver.email}</span>
-                                </div>
-                              </div>
-                            </div>
-                            <div className="col-sm-6 mb-3">
-                              <div className="d-flex">
-                                <i className="fas fa-phone me-2 mt-1 text-primary"></i>
-                                <div>
-                                  <small className="text-muted d-block">Phone</small>
-                                  <span>{caregiver.mobile}</span>
-                                </div>
-                              </div>
-                            </div>
-                            <div className="col-12 mb-3">
-                              <div className="d-flex">
-                                <i className="fas fa-map-marker-alt me-2 mt-1 text-primary"></i>
-                                <div>
-                                  <small className="text-muted d-block">Address</small>
-                                  <span>{caregiver.address}</span>
-                                </div>
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-                        
-                        <div className="mb-4">
-                          <h6 className="mb-3 border-bottom pb-2">Professional Information</h6>
-                          <div className="row">
-                            <div className="col-sm-6 mb-3">
-                              <div className="d-flex">
-                                <i className="fas fa-certificate me-2 mt-1 text-primary"></i>
-                                <div>
-                                  <small className="text-muted d-block">Certification</small>
-                                  <span>{caregiver.certification}</span>
-                                </div>
-                              </div>
-                            </div>
-                            <div className="col-sm-6 mb-3">
-                              <div className="d-flex">
-                                <i className="fas fa-history me-2 mt-1 text-primary"></i>
-                                <div>
-                                  <small className="text-muted d-block">Experience</small>
-                                  <span>{caregiver.yearsExperience} years</span>
-                                </div>
-                              </div>
-                            </div>
-                            <div className="col-sm-6 mb-3">
-                              <div className="d-flex">
-                                <i className="fas fa-calendar-alt me-2 mt-1 text-primary"></i>
-                                <div>
-                                  <small className="text-muted d-block">Join Date</small>
-                                  <span>{caregiver.joinDate}</span>
-                                </div>
-                              </div>
-                            </div>
-                            <div className="col-12 mb-3">
-                              <div className="d-flex">
-                                <i className="fas fa-tools me-2 mt-1 text-primary"></i>
-                                <div>
-                                  <small className="text-muted d-block">Skills</small>
-                                  <span>{caregiver.skills}</span>
-                                </div>
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-                        
-                        <div className="mb-4">
-                          <h6 className="mb-3 border-bottom pb-2">Assignment Details</h6>
-                          <div className="row">
-                            <div className="col-sm-6 mb-3">
-                              <div className="d-flex">
-                                <i className="fas fa-calendar-check me-2 mt-1 text-primary"></i>
-                                <div>
-                                  <small className="text-muted d-block">Assigned Date</small>
-                                  <span>{assignment.dateAssigned}</span>
-                                </div>
-                              </div>
-                            </div>
-                            <div className="col-sm-6 mb-3">
-                              <div className="d-flex">
-                                <i className="fas fa-info-circle me-2 mt-1 text-primary"></i>
-                                <div>
-                                  <small className="text-muted d-block">Status</small>
-                                  <span className={`badge ${getStatusClass(assignment.status)}`}>
-                                    {assignment.status}
-                                  </span>
-                                </div>
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-                        
-                        <div className="d-flex gap-2">
-                          <button
-                            className="btn btn-primary"
-                            onClick={() => handleViewCaregiver(caregiver.id)}
-                          >
-                            <i className="fas fa-eye me-1"></i> View Full Profile
-                          </button>
-                          <button
-                            className="btn btn-outline-primary"
-                          >
-                            <i className="fas fa-phone me-1"></i> Contact
-                          </button>
-                        </div>
-                      </div>
-                    </div>
-                  ) : null;
-                })
-              ) : (
-                <div className="text-center py-5">
-                  <i className="fas fa-user-nurse fa-3x text-muted mb-3"></i>
-                  <h5>No Caregiver Assigned</h5>
-                  <p className="text-muted">You don't have any caregiver assigned to you yet.</p>
-                  <Link to="/dashboard" className="btn btn-primary">
-                    Back to Dashboard
-                  </Link>
-                </div>
-              )}
-            </div>
+
+        <div className="mini-badges">
+          <span className={pillClass(cg.status)}>{cg.status}</span>
+          <span className="pill">
+            <i className="fas fa-calendar-alt me" />
+            {cg.joinDate}
+          </span>
+          <span className="pill">
+            <i className="fas fa-history me" />
+            {cg.yearsExperience} yrs
+          </span>
+        </div>
+
+        <div className="mini-info">
+          <div className="rowi">
+            <span className="ico"><i className="fas fa-envelope" /></span>
+            <span className="val">{cg.email}</span>
+          </div>
+          <div className="rowi">
+            <span className="ico"><i className="fas fa-phone" /></span>
+            <span className="val">{normalizePhone(cg.mobile)}</span>
+          </div>
+          <div className="rowi">
+            <span className="ico"><i className="fas fa-calendar-check" /></span>
+            <span className="val">Assigned: {asn.dateAssigned}</span>
           </div>
         </div>
+
+        <div className="mini-actions">
+          <button className="btn btn-orange btn-sm" onClick={() => openDetail(asn)}>
+            <i className="fas fa-eye me" /> View
+          </button>
+
+          {/* Call */}
+          <a className="btn btn-ghost-orange btn-sm" href={telHref}>
+            <i className="fas fa-phone me" /> Call
+          </a>
+
+          {/* WhatsApp */}
+          <a className="btn btn-ghost-orange btn-sm" href={waHref} target="_blank" rel="noreferrer">
+            <i className="fab fa-whatsapp me" /> WhatsApp
+          </a>
+        </div>
       </div>
-      
-      {/* Caregiver Details Modal */}
-      {showCaregiverModal && selectedCaregiver && (
-        <div
-          className="modal fade show d-block"
-          style={{ backgroundColor: "rgba(0,0,0,0.5)" }}
-        >
-          <div className="modal-dialog modal-lg">
-            <div className="modal-content">
-              <div className="modal-header">
-                <h5 className="modal-title">Caregiver Details</h5>
-                <button
-                  type="button"
-                  className="btn-close"
-                  onClick={() => setShowCaregiverModal(false)}
-                ></button>
-              </div>
-              <div className="modal-body">
-                <div className="d-flex align-items-center mb-4">
-                  {selectedCaregiver.profilePicture ? (
-                    <img 
-                      src={selectedCaregiver.profilePicture} 
-                      alt={selectedCaregiver.name}
-                      className="rounded-circle me-3"
-                      style={{ width: '100px', height: '100px', objectFit: 'cover' }}
-                    />
-                  ) : (
-                    <div className="bg-secondary rounded-circle d-flex align-items-center justify-content-center me-3" 
-                         style={{ width: '100px', height: '100px' }}>
-                      <span className="text-white fw-bold fs-2">
-                        {selectedCaregiver.name.charAt(0)}
-                      </span>
-                    </div>
-                  )}
-                  <div>
-                    <h4 className="mb-1">{selectedCaregiver.name}</h4>
-                    <p className="mb-0">{selectedCaregiver.certification}</p>
-                    <span className={`badge ${getStatusClass(selectedCaregiver.status)} mt-2`}>
-                      {selectedCaregiver.status}
-                    </span>
-                  </div>
-                </div>
-                
-                <div className="row mb-4">
-                  <div className="col-md-6">
-                    <h6 className="mb-3 border-bottom pb-2">Contact Information</h6>
-                    <div className="card mb-3">
-                      <div className="card-body">
-                        <div className="mb-3">
-                          <div className="d-flex align-items-center mb-2">
-                            <i className="fas fa-envelope me-2 text-primary"></i>
-                            <strong>Email:</strong>
-                          </div>
-                          <div className="ms-4">{selectedCaregiver.email}</div>
-                        </div>
-                        <div className="mb-3">
-                          <div className="d-flex align-items-center mb-2">
-                            <i className="fas fa-phone me-2 text-primary"></i>
-                            <strong>Mobile:</strong>
-                          </div>
-                          <div className="ms-4">{selectedCaregiver.mobile}</div>
-                        </div>
-                        <div className="mb-3">
-                          <div className="d-flex align-items-center mb-2">
-                            <i className="fas fa-map-marker-alt me-2 text-primary"></i>
-                            <strong>Address:</strong>
-                          </div>
-                          <div className="ms-4">{selectedCaregiver.address}</div>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                  <div className="col-md-6">
-                    <h6 className="mb-3 border-bottom pb-2">Professional Information</h6>
-                    <div className="card mb-3">
-                      <div className="card-body">
-                        <div className="mb-3">
-                          <div className="d-flex align-items-center mb-2">
-                            <i className="fas fa-certificate me-2 text-primary"></i>
-                            <strong>Certification:</strong>
-                          </div>
-                          <div className="ms-4">{selectedCaregiver.certification}</div>
-                        </div>
-                        <div className="mb-3">
-                          <div className="d-flex align-items-center mb-2">
-                            <i className="fas fa-history me-2 text-primary"></i>
-                            <strong>Experience:</strong>
-                          </div>
-                          <div className="ms-4">{selectedCaregiver.yearsExperience} years</div>
-                        </div>
-                        <div className="mb-3">
-                          <div className="d-flex align-items-center mb-2">
-                            <i className="fas fa-calendar-alt me-2 text-primary"></i>
-                            <strong>Join Date:</strong>
-                          </div>
-                          <div className="ms-4">{selectedCaregiver.joinDate}</div>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-                
-                <div className="row mb-4">
-                  <div className="col-12">
-                    <h6 className="mb-3 border-bottom pb-2">Skills</h6>
-                    <div className="card mb-3">
-                      <div className="card-body">
-                        <div className="d-flex align-items-start">
-                          <i className="fas fa-tools me-2 mt-1 text-primary"></i>
-                          <div>
-                            {selectedCaregiver.skills}
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-                
-                {selectedCaregiver.documents && selectedCaregiver.documents.length > 0 && (
-                  <div className="row">
-                    <div className="col-12">
-                      <h6 className="mb-3 border-bottom pb-2">Documents</h6>
-                      <div className="card">
-                        <div className="card-body">
-                          <ul className="list-group">
-                            {selectedCaregiver.documents.map((doc, index) => (
-                              <li key={index} className="list-group-item d-flex justify-content-between align-items-center">
-                                <div className="d-flex align-items-center">
-                                  <i className="fas fa-file-pdf text-danger me-2"></i>
-                                  <span>{doc.name}</span>
-                                </div>
-                                <a href={doc.url} target="_blank" rel="noopener noreferrer" className="btn btn-sm btn-outline-primary">
-                                  <i className="fas fa-download"></i> Download
-                                </a>
-                              </li>
-                            ))}
-                          </ul>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
+    );
+  };
+
+  // ---------- Detail Modal Component ----------
+  const DetailModal = () => {
+    if (!detailOpen || !detailCaregiver) return null;
+    const cg = detailCaregiver;
+    const asn = detailAssignment;
+
+    const telHref = buildTelLink(cg.mobile);
+    const waText = `Hello ${cg.name}, this is ${currentPatient?.name || "your patient"}.`;
+    const waHref = buildWhatsAppLink(cg.mobile, waText);
+
+    return (
+      <div className="modal-backdrop" role="dialog" aria-modal="true">
+        <div className="modal-card">
+          <div className="modal-head">
+            <div className="mh-left">
+              <i className="fas fa-user-nurse me"></i>
+              <strong>Caregiver Details</strong>
+            </div>
+            <button className="btn-close-white" onClick={closeDetail} aria-label="Close">
+              &times;
+            </button>
+          </div>
+
+          <div className="modal-body">
+            {/* Header row with avatar + meta */}
+            <div className="modal-header-row">
+              <div className="modal-avatar">
+                {cg.profilePicture ? (
+                  <img src={cg.profilePicture} alt={cg.name} />
+                ) : (
+                  <div className="placeholder">{cg.name.charAt(0)}</div>
                 )}
               </div>
-              <div className="modal-footer">
-                <button
-                  type="button"
-                  className="btn btn-secondary"
-                  onClick={() => setShowCaregiverModal(false)}
-                >
-                  Close
-                </button>
-                <button
-                  type="button"
-                  className="btn btn-primary"
-                >
-                  <i className="fas fa-phone me-1"></i> Contact Caregiver
-                </button>
+              <div className="mh-meta">
+                <h3 className="mh-name">{cg.name}</h3>
+                <div className="mh-role">{cg.certification}</div>
+                <div className="mh-pills">
+                  <span className={pillClass(cg.status)}>{cg.status}</span>
+                  <span className="pill">
+                    <i className="fas fa-calendar-alt me" /> Joined: {cg.joinDate}
+                  </span>
+                  <span className="pill">
+                    <i className="fas fa-history me" /> {cg.yearsExperience} years
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            <div className="modal-grid">
+              {/* Contact */}
+              <div className="card block">
+                <div className="block-head">
+                  <h6>Contact Information</h6>
+                </div>
+                <div className="block-body">
+                  <div className="rowi">
+                    <span className="ico"><i className="fas fa-envelope" /></span>
+                    <div>
+                      <div className="label">Email</div>
+                      <div className="val">{cg.email}</div>
+                    </div>
+                  </div>
+                  <div className="rowi">
+                    <span className="ico"><i className="fas fa-phone" /></span>
+                    <div>
+                      <div className="label">Mobile</div>
+                      <div className="val">{normalizePhone(cg.mobile)}</div>
+                    </div>
+                  </div>
+                  <div className="rowi">
+                    <span className="ico"><i className="fas fa-map-marker-alt" /></span>
+                    <div>
+                      <div className="label">Address</div>
+                      <div className="val">{cg.address}</div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Professional */}
+              <div className="card block">
+                <div className="block-head">
+                  <h6>Professional</h6>
+                </div>
+                <div className="block-body">
+                  <div className="rowi">
+                    <span className="ico"><i className="fas fa-certificate" /></span>
+                    <div>
+                      <div className="label">Certification</div>
+                      <div className="val">{cg.certification}</div>
+                    </div>
+                  </div>
+                  <div className="rowi">
+                    <span className="ico"><i className="fas fa-tools" /></span>
+                    <div>
+                      <div className="label">Skills</div>
+                      <div className="val">{cg.skills}</div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Assignment */}
+              <div className="card block">
+                <div className="block-head">
+                  <h6>Assignment</h6>
+                </div>
+                <div className="block-body">
+                  <div className="rowi">
+                    <span className="ico"><i className="fas fa-calendar-check" /></span>
+                    <div>
+                      <div className="label">Assigned Date</div>
+                      <div className="val">{asn?.dateAssigned}</div>
+                    </div>
+                  </div>
+                  <div className="rowi">
+                    <span className="ico"><i className="fas fa-info-circle" /></span>
+                    <div>
+                      <div className="label">Status</div>
+                      <div className="val"><span className={pillClass(asn?.status)}>{asn?.status}</span></div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Documents */}
+              <div className="card block">
+                <div className="block-head">
+                  <h6>Documents</h6>
+                </div>
+                <div className="block-body">
+                  {cg.documents?.length ? (
+                    <ul className="doc-list">
+                      {cg.documents.map((d, i) => (
+                        <li key={i} className="doc-item">
+                          <div className="doc-left">
+                            <span className="icon-dot"><i className="fas fa-file-pdf" /></span>
+                            <span className="doc-name">{d.name}</span>
+                          </div>
+                          <a
+                            href={d.url}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="btn btn-ghost-orange btn-sm"
+                          >
+                            <i className="fas fa-download me" /> Download
+                          </a>
+                        </li>
+                      ))}
+                    </ul>
+                  ) : (
+                    <div className="muted">No documents uploaded.</div>
+                  )}
+                </div>
               </div>
             </div>
           </div>
+
+          <div className="modal-footer">
+            <button className="btn btn-ghost-orange" onClick={closeDetail}>
+              Close
+            </button>
+            {/* Call */}
+            <a className="btn btn-ghost-orange" href={telHref}>
+              <i className="fas fa-phone me" /> Call
+            </a>
+            {/* WhatsApp */}
+            <a className="btn btn-orange" href={waHref} target="_blank" rel="noreferrer">
+              <i className="fab fa-whatsapp me" /> WhatsApp
+            </a>
+          </div>
         </div>
-      )}
+      </div>
+    );
+  };
+
+  return (
+    <div className="container cg-wrap">
+      {/* HERO */}
+      <div className="hero card">
+        <div className="hero-inner">
+          <div className="hero-left">
+            <div className="ring-avatar">{currentPatient?.name?.charAt(0) || "P"}</div>
+            <div>
+              <h2 className="hero-title">My Caregiver</h2>
+              <div className="hero-sub">View your assigned caregiver information</div>
+            </div>
+          </div>
+          <Link to="/dashboard" className="btn btn-ghost-orange">
+            <i className="fas fa-arrow-left me"></i> Back to Dashboard
+          </Link>
+        </div>
+      </div>
+
+      {/* Multiple caregivers in small cards */}
+      <div className="card section-card">
+        <div className="section-head">
+          <h5>Assigned Caregivers</h5>
+        </div>
+
+        {myAssignments.length ? (
+          <div className="grid-cards">
+            {myAssignments.map((asn) => (
+              <CompactCard key={asn.id} asn={asn} />
+            ))}
+          </div>
+        ) : (
+          <div className="empty">
+            <i className="fas fa-user-nurse empty-icon" />
+            <h5>No Caregiver Assigned</h5>
+            <p className="muted">You don't have any caregiver assigned to you yet.</p>
+            <Link to="/dashboard" className="btn btn-orange">
+              Back to Dashboard
+            </Link>
+          </div>
+        )}
+      </div>
+
+      {/* Detail Component (Modal) */}
+      <DetailModal />
+
+      {/* ---------- INLINE STYLES ---------- */}
+      <style>{`
+        :root { 
+          --orange:${BRAND_ORANGE}; 
+          --muted:#6b7280; 
+          --line:#eef0f2; 
+          --shadow:0 6px 18px rgba(16,24,40,.08); 
+        }
+
+        * { box-sizing: border-box; }
+        .cg-wrap{ padding:8px 0 20px; max-width: 1200px; margin: 0 auto; }
+
+        .btn{ border:1px solid transparent; border-radius:12px; padding:.6rem 1rem; font-weight:600; display:inline-flex; align-items:center; gap:.5rem; text-decoration: none; transition: all .2s; }
+        .btn-sm{ padding:.45rem .75rem; border-radius:10px; }
+        .btn-orange{ background:var(--orange); color:#fff; border-color:var(--orange); box-shadow:0 6px 16px rgba(255,107,0,.22); }
+        .btn-ghost-orange{ background:#fff; color:var(--orange); border-color:var(--orange); }
+        .btn-orange:hover{ filter:brightness(.97); }
+        .btn-ghost-orange:hover{ background:rgba(255,107,0,.08); }
+        .me{ margin-right:.5rem; }
+        .muted{ color:var(--muted); }
+
+        .card{ background:#fff; border:1px solid #edf0f4; border-radius:16px; box-shadow:var(--shadow); margin-bottom:16px; overflow:hidden; }
+        .section-card{ padding:0; }
+        .section-head{ padding:16px 20px; border-bottom:1px solid var(--line); }
+        .section-head h5{ margin:0; font-weight:800; }
+
+        .hero{ background:linear-gradient(180deg, rgba(255,107,0,.09), #fff 60%); }
+        .hero-inner{ display:flex; align-items:center; justify-content:space-between; padding:18px 20px; gap:16px; flex-wrap: wrap; }
+        .hero-left{ display:flex; align-items:center; gap:14px; }
+        .ring-avatar{ width:54px; height:54px; border-radius:50%; border:3px solid var(--orange); color:var(--orange); display:flex; align-items:center; justify-content:center; font-weight:800; background:#fff; box-shadow:0 4px 14px rgba(255,107,0,.18); }
+        .hero-title{ margin:0; font-weight:800; }
+        .hero-sub{ font-size:.9rem; color:var(--muted); }
+
+        /* GRID of mini cards */
+        .grid-cards{
+          padding:16px;
+          display:grid;
+          grid-template-columns: repeat(3, minmax(0, 1fr));
+          gap:16px;
+        }
+
+        .mini-card{
+          border:1px solid var(--line);
+          border-radius:16px;
+          padding:14px;
+          box-shadow: var(--shadow);
+          display:flex; 
+          flex-direction:column;
+          gap:12px;
+          background:#fff;
+        }
+
+        .mini-top{ display:flex; align-items:center; gap:12px; }
+        .mini-avatar{
+          width:64px; height:64px; border-radius:50%; overflow:hidden; background:var(--orange);
+          box-shadow:0 8px 18px rgba(255,107,0,.22); flex-shrink:0;
+          display:flex; align-items:center; justify-content:center;
+        }
+        .mini-avatar img, .mini-avatar .placeholder{
+          width:100%; height:100%; object-fit:cover; color:#fff; font-weight:800; font-size:24px; display:flex; align-items:center; justify-content:center;
+        }
+        .mini-meta{ min-width:0; }
+        .mini-name{ font-weight:800; line-height:1.2; }
+        .mini-role{ color:var(--muted); font-weight:600; font-size:.9rem; }
+
+        .mini-badges{ display:flex; flex-wrap:wrap; gap:8px; }
+        .pill{ display:inline-flex; align-items:center; gap:.4rem; padding:.35rem .6rem; border-radius:999px; font-weight:700; font-size:.78rem; border:1px solid var(--line); background:#fff; }
+        .pill-success{ background:rgba(25,135,84,.12); color:#198754; border-color:transparent; }
+        .pill-muted{ background:#f1f3f5; color:#6c757d; border-color:transparent; }
+
+        .mini-info{ display:flex; flex-direction:column; gap:8px; }
+        .rowi{ display:flex; align-items:flex-start; gap:8px; }
+        .ico{ min-width:28px; height:28px; border-radius:10px; background:rgba(255,107,0,.12); color:var(--orange); display:flex; align-items:center; justify-content:center; }
+        .val{ font-weight:700; word-break: break-word; }
+
+        .mini-actions{ display:flex; gap:8px; margin-top:4px; flex-wrap: wrap; }
+
+        .empty{ text-align:center; padding:40px 20px; }
+        .empty-icon{ font-size:44px; color:#cbd5e1; margin-bottom:10px; }
+
+        /* ===== Detail Modal ===== */
+        .modal-backdrop{
+          position: fixed;
+          inset: 0;
+          background: rgba(0,0,0,.5);
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          z-index: 1050;
+          padding: 16px;
+        }
+        .modal-card{
+          width: 100%;
+          max-width: 980px;
+          background: #fff;
+          border-radius: 16px;
+          overflow: hidden;
+          box-shadow: 0 24px 56px rgba(0,0,0,.22);
+          display: flex;
+          flex-direction: column;
+        }
+        .modal-head{
+          background: linear-gradient(90deg, var(--orange), #ff8a3a);
+          color: #fff;
+          padding: 14px 16px;
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+        }
+        .btn-close-white{
+          background: transparent;
+          border: none;
+          color: #fff;
+          font-size: 22px;
+          cursor: pointer;
+          line-height: 1;
+        }
+        .modal-body{ padding: 16px; }
+        .modal-footer{
+          padding: 12px 16px;
+          border-top: 1px solid var(--line);
+          display: flex;
+          justify-content: flex-end;
+          gap: 10px;
+          flex-wrap: wrap;
+        }
+
+        .modal-header-row{
+          display: flex;
+          align-items: center;
+          gap: 14px;
+          margin-bottom: 12px;
+          flex-wrap: wrap;
+        }
+        .modal-avatar{
+          width: 100px; height: 100px; border-radius: 50%; overflow: hidden; background: var(--orange);
+          box-shadow: 0 10px 20px rgba(255,107,0,.25);
+          display:flex; align-items:center; justify-content:center;
+          flex-shrink: 0;
+        }
+        .modal-avatar img, .modal-avatar .placeholder{
+          width:100%; height:100%; object-fit:cover; color:#fff; font-weight:800; font-size:40px; display:flex; align-items:center; justify-content:center;
+        }
+        .mh-name{ margin: 0; font-weight: 800; }
+        .mh-role{ color: var(--muted); font-weight: 600; }
+        .mh-pills{ display:flex; flex-wrap: wrap; gap: 8px; margin-top: 6px; }
+
+        .modal-grid{
+          display: grid;
+          grid-template-columns: repeat(2, minmax(0,1fr));
+          gap: 12px;
+        }
+        .block .block-head{ padding: 12px 12px 0; }
+        .block .block-head h6{ margin: 0; text-transform: uppercase; letter-spacing: .06em; font-weight: 800; }
+        .block .block-body{ padding: 10px 12px 14px; display: flex; flex-direction: column; gap: 10px; }
+        .label{ color: var(--muted); font-size: .85rem; }
+        .doc-list{ list-style:none; padding:0; margin:0; display:flex; flex-direction:column; gap:10px; }
+        .doc-item{ display:flex; justify-content:space-between; align-items:center; gap:10px; padding:10px; border:1px solid var(--line); border-radius:12px; flex-wrap: wrap; }
+        .doc-left{ display:flex; align-items:center; gap:10px; }
+        .doc-name{ font-weight:700; }
+        .icon-dot{ min-width:36px; height:36px; border-radius:12px; background:rgba(255,107,0,.12); color:var(--orange); display:flex; align-items:center; justify-content:center; }
+
+        /* Responsive */
+        @media (max-width: 992px){
+          .grid-cards{ grid-template-columns: repeat(2, minmax(0, 1fr)); }
+        }
+        @media (max-width: 768px){
+          .modal-grid{ grid-template-columns: 1fr; }
+        }
+        @media (max-width: 600px){
+          .grid-cards{ grid-template-columns: 1fr; }
+          .hero-inner{ flex-direction: column; align-items: flex-start; }
+          .btn{ width: 100%; justify-content:center; }
+          .modal-footer{ justify-content: center; }
+        }
+      `}</style>
     </div>
   );
 };
 
-export default MyCaregiver ;
+export default MyCaregiver;
