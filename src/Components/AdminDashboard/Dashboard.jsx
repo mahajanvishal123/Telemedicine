@@ -67,6 +67,24 @@ useEffect(() => {
       
       {/* Stats Cards Row */}
       <div className="row">
+
+
+        <div className="col-xl-3 col-md-6 mb-4">
+          <div className="card border-left-warning shadow h-100 py-2">
+            <div className="card-body">
+              <div className="row no-gutters align-items-center">
+                <div className="col mr-2">
+                  <div className="text-xs font-weight-bold text-warning text-uppercase mb-1">
+                    Total Users</div>
+                  <div className="h5 mb-0 font-weight-bold text-gray-800">{dashboardData.totalUsers}</div>
+                </div>
+                <div className="col-auto">
+                  <i className="fas fa-users fa-2x text-warning"></i>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
         {/* Total Doctors Card */}
         <div className="col-xl-3 col-md-6 mb-4">
           <div className="card border-left-primary shadow h-100 py-2">
@@ -122,22 +140,7 @@ useEffect(() => {
         </div>
         
         {/* Total Users Card */}
-        <div className="col-xl-3 col-md-6 mb-4">
-          <div className="card border-left-warning shadow h-100 py-2">
-            <div className="card-body">
-              <div className="row no-gutters align-items-center">
-                <div className="col mr-2">
-                  <div className="text-xs font-weight-bold text-warning text-uppercase mb-1">
-                    Total Users</div>
-                  <div className="h5 mb-0 font-weight-bold text-gray-800">{dashboardData.totalUsers}</div>
-                </div>
-                <div className="col-auto">
-                  <i className="fas fa-users fa-2x text-warning"></i>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
+        
       </div>
       
       {/* Recent Sign-ups Table */}

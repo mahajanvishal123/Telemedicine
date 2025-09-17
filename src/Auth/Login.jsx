@@ -54,6 +54,7 @@ const Login = () => {
           localStorage.setItem("accessToken", token);
         }
         localStorage.setItem("role", userData.role);
+        localStorage.setItem("user", JSON.stringify(userData));
 
         // ✅ Step 3: Set user
         setUser(userData);

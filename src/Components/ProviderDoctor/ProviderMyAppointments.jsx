@@ -1,3 +1,4 @@
+// src/pages/Provider/ProviderMyAppointments.jsx
 import React, { useEffect, useState } from "react";
 import axios from "axios";
 import API_URL from "../../Baseurl/Baseurl";
@@ -5,24 +6,62 @@ import API_URL from "../../Baseurl/Baseurl";
 const ProviderMyAppointments = () => {
   const BASE_URL = API_URL;
 
-  // API state
+  // ============ Resolve userId (NO TOKEN) ============
+  const safeJSON = (txt) => { try { return JSON.parse(txt); } catch { return null; } };
+  const pickId = (obj) => {
+    if (!obj || typeof obj !== "object") return null;
+    const keys = ["id", "_id", "userId", "uid", "sub"];
+    for (const k of keys) if (obj[k]) return obj[k];
+    for (const k of Object.keys(obj)) {
+      const v = obj[k];
+      if (v && typeof v === "object") {
+        const nested = pickId(v);
+        if (nested) return nested;
+      }
+    }
+    return null;
+  };
+  const resolveUserId = () => {
+    // 1) URL ?id=
+    try {
+      const params = new URLSearchParams(window.location.search);
+      const qid = params.get("id");
+      if (qid) return qid;
+    } catch {}
+    // 2) direct storage
+    const direct = localStorage.getItem("userId") || sessionStorage.getItem("userId");
+    if (direct) return direct;
+    // 3) JSON blobs in storage
+    const jsonKeys = ["user", "profile", "auth", "currentUser", "loginUser"];
+    for (const store of [localStorage, sessionStorage]) {
+      for (const key of jsonKeys) {
+        const obj = safeJSON(store.getItem(key));
+        const id = pickId(obj);
+        if (id) return id;
+      }
+    }
+    return null;
+  };
+
+  const userId = resolveUserId();
+
+  // ============ API/UI state ============
   const [appointments, setAppointments] = useState([]);
   const [loading, setLoading] = useState(false);
   const [apiError, setApiError] = useState(null);
 
-  // UI state
   const [showNotesModal, setShowNotesModal] = useState(false);
   const [currentAppointment, setCurrentAppointment] = useState(null);
   const [notesText, setNotesText] = useState("");
   const [savingNotes, setSavingNotes] = useState(false);
   const [cancellingId, setCancellingId] = useState(null);
-  const [deletingId, setDeletingId] = useState(null); // <-- NEW: delete spinner
+  const [deletingId, setDeletingId] = useState(null);
 
   const [filter, setFilter] = useState("all"); // all | scheduled | confirmed | completed
   const [searchTerm, setSearchTerm] = useState("");
   const [buttonAnimations, setButtonAnimations] = useState({});
 
-  // ---- utils ----
+  // ============ utils ============
   const properCase = (s) =>
     typeof s === "string" && s.length
       ? s.charAt(0).toUpperCase() + s.slice(1).toLowerCase()
@@ -41,9 +80,9 @@ const ProviderMyAppointments = () => {
     }
   };
 
-  // API -> UI mapping
+  // ============ API -> UI mapping ============
   const mapApiAppointment = (a) => {
-    const rawStatus = String(a?.status || "").toLowerCase(); // scheduled
+    const rawStatus = String(a?.status || "").toLowerCase();
     const status = properCase(rawStatus) || "Scheduled";
     const date = formatDate(a?.appointmentDate);
     const time = (a?.appointmentTime || "").trim();
@@ -63,12 +102,18 @@ const ProviderMyAppointments = () => {
     };
   };
 
-  // GET: list
+  // ============ GET: list (by ID) ============
   const fetchAppointments = async () => {
+    if (!userId) {
+      setApiError("User ID not found. URL me ?id= pass karo ya localStorage me 'userId' set karo.");
+      return;
+    }
     setLoading(true);
     setApiError(null);
     try {
-      const res = await axios.get(`${BASE_URL}/appointment`);
+      const res = await axios.get(`${BASE_URL}/appointment`, {
+        params: { userId },
+      });
       const list = Array.isArray(res?.data)
         ? res.data
         : Array.isArray(res?.data?.data)
@@ -93,7 +138,7 @@ const ProviderMyAppointments = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // ---- filtering/search ----
+  // ============ filtering/search ============
   const filteredAppointments = appointments.filter((appointment) => {
     const matchesFilter =
       filter === "all" ||
@@ -106,7 +151,7 @@ const ProviderMyAppointments = () => {
     return matchesFilter && matchesSearch;
   });
 
-  // ---- actions ----
+  // ============ actions ============
   const handleStartCall = (appointment) => {
     setButtonAnimations((p) => ({ ...p, [`call-${appointment.id}`]: true }));
     setTimeout(() => {
@@ -115,8 +160,9 @@ const ProviderMyAppointments = () => {
     }, 300);
   };
 
-  // PUT: cancel -> status: 'cancelled'
+  // ============ PUT: cancel (by ID) ============
   const handleCancel = async (appointmentId) => {
+    if (!userId) return alert("User ID missing.");
     const appt = appointments.find((a) => a.id === appointmentId);
     if (!appt) return;
 
@@ -134,7 +180,7 @@ const ProviderMyAppointments = () => {
       const res = await axios.put(
         `${BASE_URL}/appointment/${idForApi}`,
         { status: "cancelled" },
-        { headers: { "Content-Type": "application/json" } }
+        { params: { userId }, headers: { "Content-Type": "application/json" } }
       );
 
       const updated =
@@ -174,9 +220,10 @@ const ProviderMyAppointments = () => {
     }, 300);
   };
 
-  // PUT: save notes -> { reason: notesText }
+  // ============ PUT: save notes (by ID) ============
   const handleSaveNotes = async () => {
     if (!currentAppointment) return;
+    if (!userId) return alert("User ID missing.");
     try {
       setSavingNotes(true);
       const idForApi =
@@ -185,7 +232,7 @@ const ProviderMyAppointments = () => {
       const res = await axios.put(
         `${BASE_URL}/appointment/${idForApi}`,
         { reason: notesText },
-        { headers: { "Content-Type": "application/json" } }
+        { params: { userId }, headers: { "Content-Type": "application/json" } }
       );
 
       const updated =
@@ -210,30 +257,27 @@ const ProviderMyAppointments = () => {
     }
   };
 
-  // DELETE: permanently delete appointment
+  // ============ DELETE: permanently delete (by ID) ============
   const handleDelete = async (appointmentId) => {
+    if (!userId) return alert("User ID missing.");
     const appt = appointments.find((a) => a.id === appointmentId);
     if (!appt) return;
 
-    if (
-      !window.confirm(
-        "This will permanently delete the appointment. Continue?"
-      )
-    )
+    if (!window.confirm("This will permanently delete the appointment. Continue?"))
       return;
 
     try {
       setDeletingId(appointmentId);
       const idForApi = appt._raw?._id || appointmentId;
 
-      // If you need auth, add headers here (e.g., Authorization)
-      const res = await axios.delete(`${BASE_URL}/appointment/${idForApi}`);
+      const res = await axios.delete(`${BASE_URL}/appointment/${idForApi}`, {
+        params: { userId },
+      });
 
-      // success: remove from UI (API may return 200/204)
+      // success → remove from UI
       if (res?.status === 200 || res?.status === 204 || res?.data) {
         setAppointments((prev) => prev.filter((a) => a.id !== appointmentId));
       } else {
-        // fallback if no clear success response structure
         setAppointments((prev) => prev.filter((a) => a.id !== appointmentId));
       }
     } catch (err) {
@@ -248,7 +292,7 @@ const ProviderMyAppointments = () => {
     }
   };
 
-  // ---- badges ----
+  // ============ badges ============
   const getStatusBadge = (status) => {
     let className = "badge ";
     switch (status) {
@@ -294,6 +338,7 @@ const ProviderMyAppointments = () => {
             className="btn btn-sm btn-outline-secondary"
             onClick={fetchAppointments}
             title="Refresh"
+            disabled={!userId}
           >
             <i className="fas fa-sync-alt me-1" />
             Refresh
@@ -304,13 +349,20 @@ const ProviderMyAppointments = () => {
         </p>
       </div>
 
+      {!userId && (
+        <div className="alert alert-warning">
+          User ID not found. URL me <code>?id=YOUR_ID</code> pass karo ya{" "}
+          <code>localStorage.setItem('userId','YOUR_ID')</code> set karo.
+        </div>
+      )}
+
       {loading && (
         <div className="alert alert-info py-2">Loading appointments…</div>
       )}
       {apiError && (
         <div className="alert alert-danger d-flex justify-content-between align-items-center">
           <span>{apiError}</span>
-          <button className="btn btn-sm btn-light" onClick={fetchAppointments}>
+          <button className="btn btn-sm btn-light" onClick={fetchAppointments} disabled={!userId}>
             Retry
           </button>
         </div>
@@ -338,33 +390,25 @@ const ProviderMyAppointments = () => {
             <div className="col-md-6 mt-3">
               <div className="d-flex flex-wrap justify-content-md-end gap-2">
                 <button
-                  className={`btn btn-sm ${
-                    filter === "all" ? "btn-primary" : "btn-outline-primary"
-                  }`}
+                  className={`btn btn-sm ${filter === "all" ? "btn-primary" : "btn-outline-primary"}`}
                   onClick={() => setFilter("all")}
                 >
                   All
                 </button>
                 <button
-                  className={`btn btn-sm ${
-                    filter === "scheduled" ? "btn-info text-white" : "btn-outline-info"
-                  }`}
+                  className={`btn btn-sm ${filter === "scheduled" ? "btn-info text-white" : "btn-outline-info"}`}
                   onClick={() => setFilter("scheduled")}
                 >
                   Scheduled
                 </button>
                 <button
-                  className={`btn btn-sm ${
-                    filter === "confirmed" ? "btn-primary" : "btn-outline-primary"
-                  }`}
+                  className={`btn btn-sm ${filter === "confirmed" ? "btn-primary" : "btn-outline-primary"}`}
                   onClick={() => setFilter("confirmed")}
                 >
                   Confirmed
                 </button>
                 <button
-                  className={`btn btn-sm ${
-                    filter === "completed" ? "btn-success" : "btn-outline-success"
-                  }`}
+                  className={`btn btn-sm ${filter === "completed" ? "btn-success" : "btn-outline-success"}`}
                   onClick={() => setFilter("completed")}
                 >
                   Completed
@@ -442,15 +486,16 @@ const ProviderMyAppointments = () => {
                           style={{ backgroundColor: "#F95918" }}
                           onClick={() => handleStartCall(appointment)}
                           disabled={
-                            appointment.status !== "Confirmed" &&
-                            appointment.status !== "Scheduled"
+                            (!userId) ||
+                            (appointment.status !== "Confirmed" &&
+                             appointment.status !== "Scheduled")
                           }
                         >
                           <i className="fas fa-video me-1"></i>
                           Start Call
                         </button>
 
-                        {/* Cancel (PUT) */}
+                        {/* Cancel (PUT by ID) */}
                         <button
                           className={`btn btn-outline-danger btn-sm ${
                             buttonAnimations[`cancel-${appointment.id}`]
@@ -458,7 +503,7 @@ const ProviderMyAppointments = () => {
                               : ""
                           }`}
                           onClick={() => handleCancel(appointment.id)}
-                          disabled={cancellingId === appointment.id}
+                          disabled={cancellingId === appointment.id || !userId}
                           title="Cancel appointment"
                         >
                           {cancellingId === appointment.id ? (
@@ -468,7 +513,7 @@ const ProviderMyAppointments = () => {
                           )}
                         </button>
 
-                        {/* Notes (PUT reason) */}
+                        {/* Notes (PUT reason by ID) */}
                         <button
                           className={`btn btn-outline-secondary btn-sm ${
                             buttonAnimations[`notes-${appointment.id}`]
@@ -477,15 +522,16 @@ const ProviderMyAppointments = () => {
                           }`}
                           onClick={() => handleAddNotes(appointment)}
                           title="Edit notes"
+                          disabled={!userId}
                         >
                           <i className="fas fa-edit"></i>
                         </button>
 
-                        {/* Delete (DELETE) */}
+                        {/* Delete (DELETE by ID) */}
                         <button
                           className="btn btn-outline-dark btn-sm"
                           onClick={() => handleDelete(appointment.id)}
-                          disabled={deletingId === appointment.id}
+                          disabled={deletingId === appointment.id || !userId}
                           title="Delete appointment permanently"
                         >
                           {deletingId === appointment.id ? (
@@ -562,7 +608,7 @@ const ProviderMyAppointments = () => {
                 className="btn text-white"
                 style={{ backgroundColor: "#F95918" }}
                 onClick={handleSaveNotes}
-                disabled={savingNotes}
+                disabled={savingNotes || !userId}
               >
                 {savingNotes ? "Saving..." : "Save Notes"}
               </button>

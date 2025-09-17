@@ -1,11 +1,9 @@
 import React, { useState, useEffect } from "react";
-import { Container, Row, Col, Card, Button, Badge, Form } from "react-bootstrap";
+import { Container, Row, Col, Card, Button, Badge, Form, Modal, Spinner } from "react-bootstrap";
 import { FaUserMd, FaStar, FaCheckCircle, FaCalendarAlt, FaChevronRight, FaChevronLeft } from "react-icons/fa";
 import "./BookAppointment.css";
 import Base_Url from "../../../Baseurl/Baseurl";
 import axios from "axios";
-
-// ❌ REMOVED STATIC DATES & TIME SLOTS — NO LONGER USED
 
 const steps = [
   { label: "Select Specialty", icon: <FaUserMd /> },
@@ -18,21 +16,21 @@ export default function BookAppointment() {
   const [step, setStep] = useState(0);
   const [selectedSpecialty, setSelectedSpecialty] = useState(null);
   const [selectedDoctor, setSelectedDoctor] = useState(null);
-  // ❌ Removed: selectedDate, selectedTime
-  const [selectedSlot, setSelectedSlot] = useState(null); // ✅ New: holds full slot object
+  const [selectedSlot, setSelectedSlot] = useState(null);
   const [notes, setNotes] = useState("");
   const [specialties, setSpecialties] = useState([]);
   const [doctors, setDoctors] = useState([]);
   const [loadingSpecialties, setLoadingSpecialties] = useState(true);
   const [loadingDoctors, setLoadingDoctors] = useState(false);
-  const [loadingSlots, setLoadingSlots] = useState(false); // ✅ New
-  const [slots, setSlots] = useState({}); // ✅ New: grouped by date string
+  const [loadingSlots, setLoadingSlots] = useState(false);
+  const [slots, setSlots] = useState({});
   const [error, setError] = useState(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [paymentProcessing, setPaymentProcessing] = useState(false);
   const [paymentSuccess, setPaymentSuccess] = useState(false);
   const [appointmentData, setAppointmentData] = useState(null);
+
   // ✅ FETCH SPECIALTIES — STEP 1
   useEffect(() => {
     const fetchSpecialties = async () => {
@@ -100,7 +98,7 @@ export default function BookAppointment() {
           gender: doc.gender,
           licenseNo: doc.licenseNo,
           specialty: doc.specialty,
-          fee: doc.fee, // ✅ Include fee for Step 4
+          fee: doc.fee,
         }));
 
         setDoctors(transformedDoctors);
@@ -116,7 +114,7 @@ export default function BookAppointment() {
     fetchDoctors();
   }, [selectedSpecialty, step]);
 
-  // ✅ FETCH SLOTS — STEP 3 (when doctor selected)
+  // ✅ FETCH SLOTS — STEP 3
   useEffect(() => {
     if (step !== 2 || !selectedDoctor?._id) return;
 
@@ -129,10 +127,8 @@ export default function BookAppointment() {
           params: { doctorId: selectedDoctor._id }
         });
 
-        // Filter only available slots
         const availableSlots = response.data.filter(slot => !slot.isBooked);
 
-        // Group by date (string for key)
         const grouped = availableSlots.reduce((acc, slot) => {
           const dateStr = new Date(slot.date).toDateString();
           if (!acc[dateStr]) acc[dateStr] = [];
@@ -153,7 +149,6 @@ export default function BookAppointment() {
     fetchSlots();
   }, [step, selectedDoctor]);
 
-  // Filter specialties based on search
   const filteredSpecialties = specialties.filter(spec =>
     spec.name.toLowerCase().includes(searchTerm.toLowerCase())
   );
@@ -161,14 +156,78 @@ export default function BookAppointment() {
   function handleBack() {
     if (step > 0) setStep(step - 1);
   }
+
   function handleNext() {
     if (step === steps.length - 1) {
-      // Final Step: Open Payment Modal
+      if (!selectedDoctor || !selectedSlot) {
+        alert("Please select a doctor and time slot before proceeding.");
+        return;
+      }
       setShowPaymentModal(true);
       return;
     }
     if (step < steps.length - 1) setStep(step + 1);
   }
+
+  // ✅ REAL PAYMENT INTEGRATION — NO MOCK, NO TIMEOUT, NO FAKE DATA
+  const handlePayment = async () => {
+    if (!selectedDoctor || !selectedSlot) {
+      alert("Missing appointment data. Please restart booking.");
+      return;
+    }
+
+    setPaymentProcessing(true);
+
+    try {
+      const patientId = localStorage.getItem("patientId");
+      if (!patientId) {
+        throw new Error("Patient ID not found. Please log in.");
+      }
+
+      // 🚀 STEP 1: POST to /payment
+      const paymentResponse = await axios.post(`${Base_Url}/payment`, {
+        paymentAmount: selectedDoctor.fee ? parseInt(selectedDoctor.fee) + 25 : 25,
+        patientId: patientId,
+        doctorId: selectedDoctor._id,
+      });
+
+      // 🚀 STEP 2: GET /payment?patientId=... to fetch populated data
+      const fetchResponse = await axios.get(`${Base_Url}/payment`, {
+        params: { patientId: patientId }
+      });
+
+      const paymentRecords = fetchResponse.data;
+
+      if (!paymentRecords.success || !Array.isArray(paymentRecords.data) || paymentRecords.data.length === 0) {
+        throw new Error("No payment records found.");
+      }
+
+      // Get the latest payment (assuming backend appends newest at end)
+      const latestRecord = paymentRecords.data[paymentRecords.data.length - 1];
+
+      // ✅ Set real data including PAYMENT ID (which is _id from backend)
+      setAppointmentData({
+        paymentId: latestRecord._id || "N/A", // ✅ Payment ID from backend
+        appointmentId: latestRecord.appointmentId?._id || "N/A",
+        patientId: latestRecord.patientId?._id || patientId,
+        patientName: latestRecord.patientId?.name || "N/A",
+        doctorId: latestRecord.doctorId?._id || selectedDoctor._id,
+        doctorName: latestRecord.doctorId?.name || selectedDoctor.name,
+        paymentAmount: latestRecord.paymentAmount || "N/A",
+        date: selectedSlot.date,
+        time: selectedSlot.startTime,
+      });
+
+      setPaymentSuccess(true);
+
+    } catch (err) {
+      console.error("Payment failed:", err);
+      alert("Payment failed. Please try again. " + (err.response?.data?.message || err.message));
+    } finally {
+      setPaymentProcessing(false);
+    }
+  };
+
   return (
     <div className="">
       <div>
@@ -279,7 +338,6 @@ export default function BookAppointment() {
                 >
                   <Card.Body>
                     <Row>
-                      {/* Profile Image or Icon */}
                       <Col xs={2} className="d-flex align-items-center justify-content-center">
                         <div className="book-doctor-avatar" style={{ position: 'relative', width: '50px', height: '50px' }}>
                           {doc.profile && doc.profile.trim() !== "" ? (
@@ -335,7 +393,6 @@ export default function BookAppointment() {
                         </div>
                       </Col>
 
-                      {/* Doctor Info */}
                       <Col xs={7}>
                         <div className="fw-bold">{doc.name}</div>
                         {doc.experience && (
@@ -356,7 +413,6 @@ export default function BookAppointment() {
                         )}
                       </Col>
 
-                      {/* Fee Display */}
                       <Col xs={3} className="text-end d-flex flex-column justify-content-center">
                         {doc.fee ? (
                           <>
@@ -380,7 +436,7 @@ export default function BookAppointment() {
           </>
         )}
 
-        {/* Step 3: Select Date & Time — DYNAMIC FROM API */}
+        {/* Step 3: Select Date & Time */}
         {step === 2 && selectedDoctor && (
           <>
             <h4 className="mb-3 mt-4 fw-bold">Select Date & Time</h4>
@@ -469,7 +525,6 @@ export default function BookAppointment() {
               <div className="alert alert-info text-center">No available slots for this doctor.</div>
             )}
 
-            {/* Appointment Summary */}
             {selectedSlot && (
               <Card className="mt-4">
                 <Card.Body>
@@ -492,7 +547,7 @@ export default function BookAppointment() {
                       {(() => {
                         const start = new Date(`1970-01-01T${selectedSlot.startTime.replace(' ', '').toLowerCase()}`);
                         const end = new Date(`1970-01-01T${selectedSlot.endTime.replace(' ', '').toLowerCase()}`);
-                        const diff = (end - start) / (1000 * 60); // in minutes
+                        const diff = (end - start) / (1000 * 60);
                         return `${diff} minutes`;
                       })()}
                     </Col>
@@ -643,18 +698,184 @@ export default function BookAppointment() {
             disabled={
               (step === 0 && !selectedSpecialty) ||
               (step === 1 && !selectedDoctor) ||
-              (step === 2 && !selectedSlot) // ✅ Updated
+              (step === 2 && !selectedSlot)
             }
           >
             {step === steps.length - 1 ? "Finish" : "Next"} <FaChevronRight />
           </Button>
         </div>
       </div>
+
+      {/* PAYMENT MODAL */}
+      <Modal
+        show={showPaymentModal}
+        onHide={() => setShowPaymentModal(false)}
+        centered
+        size="lg"
+      >
+        <Modal.Header closeButton>
+          <Modal.Title>Complete Payment</Modal.Title>
+        </Modal.Header>
+        <Modal.Body>
+          {!paymentSuccess ? (
+            selectedDoctor && selectedSlot ? (
+              <>
+                <div className="text-center mb-4">
+                  <h4>Pay ${selectedDoctor?.fee ? parseInt(selectedDoctor.fee) + 25 : 25}</h4>
+                  <p className="text-muted">Secure payment via Stripe</p>
+                </div>
+
+                <Card className="mb-4">
+                  <Card.Body>
+                    <Row>
+                      <Col>Doctor</Col>
+                      <Col className="fw-bold">{selectedDoctor?.name || "N/A"}</Col>
+                    </Row>
+                    <Row>
+                      <Col>Date</Col>
+                      <Col>
+                        {selectedSlot?.date
+                          ? new Date(selectedSlot.date).toLocaleDateString('en-US', {
+                              weekday: 'long',
+                              year: 'numeric',
+                              month: 'long',
+                              day: 'numeric'
+                            })
+                          : "N/A"}
+                      </Col>
+                    </Row>
+                    <Row>
+                      <Col>Time</Col>
+                      <Col className="fw-bold">{selectedSlot?.startTime || "N/A"}</Col>
+                    </Row>
+                    <Row className="mt-3">
+                      <Col>Consultation Fee</Col>
+                      <Col className="text-end">${selectedDoctor?.fee || 0}</Col>
+                    </Row>
+                    <Row>
+                      <Col>Service Fee</Col>
+                      <Col className="text-end">$25</Col>
+                    </Row>
+                    <hr />
+                    <Row>
+                      <Col className="fw-bold">Total</Col>
+                      <Col className="fw-bold text-end" style={{ color: "#FF6A00" }}>
+                        ${selectedDoctor?.fee ? parseInt(selectedDoctor.fee) + 25 : 25}
+                      </Col>
+                    </Row>
+                  </Card.Body>
+                </Card>
+
+                <div className="text-center">
+                  <Button
+                    variant="success"
+                    size="lg"
+                    disabled={paymentProcessing}
+                    onClick={handlePayment}
+                  >
+                    {paymentProcessing ? (
+                      <>
+                        <Spinner size="sm" /> Processing...
+                      </>
+                    ) : (
+                      "Pay Now"
+                    )}
+                  </Button>
+                </div>
+              </>
+            ) : (
+              <div className="text-center py-5">
+                <div className="text-danger">⚠️ Doctor or time slot not selected. Please go back and complete your selection.</div>
+                <Button variant="secondary" className="mt-3" onClick={() => setShowPaymentModal(false)}>
+                  Close
+                </Button>
+              </div>
+            )
+          ) : (
+            <div className="text-center py-4">
+              <div className="text-success mb-3">
+                <FaCheckCircle size={60} />
+              </div>
+              <h4>Payment Successful!</h4>
+              <p className="text-muted">Your appointment is confirmed.</p>
+
+              <Card className="mt-4">
+                <Card.Body>
+                  <div className="fw-bold mb-3">Payment & Appointment Details</div>
+                  <Row>
+                    <Col>Payment ID</Col>
+                    <Col className="fw-bold text-primary">{appointmentData?.paymentId || "N/A"}</Col>
+                  </Row>
+                  <Row>
+                    <Col>Appointment ID</Col>
+                    <Col className="fw-bold text-primary">{appointmentData?.appointmentId || "N/A"}</Col>
+                  </Row>
+                  <Row>
+                    <Col>Patient ID</Col>
+                    <Col>{appointmentData?.patientId || "N/A"}</Col>
+                  </Row>
+                  <Row>
+                    <Col>Patient Name</Col>
+                    <Col>{appointmentData?.patientName || "N/A"}</Col>
+                  </Row>
+                  <Row>
+                    <Col>Doctor ID</Col>
+                    <Col>{appointmentData?.doctorId || "N/A"}</Col>
+                  </Row>
+                  <Row>
+                    <Col>Doctor Name</Col>
+                    <Col>{appointmentData?.doctorName || "N/A"}</Col>
+                  </Row>
+                  <Row>
+                    <Col>Amount Paid</Col>
+                    <Col className="fw-bold" style={{ color: "#FF6A00" }}>
+                      ${appointmentData?.paymentAmount || "N/A"}
+                    </Col>
+                  </Row>
+                  <Row className="mt-3">
+                    <Col>Date</Col>
+                    <Col>
+                      {selectedSlot?.date
+                        ? new Date(selectedSlot.date).toLocaleDateString('en-US', {
+                            weekday: 'long',
+                            year: 'numeric',
+                            month: 'long',
+                            day: 'numeric'
+                          })
+                        : "N/A"}
+                    </Col>
+                  </Row>
+                  <Row>
+                    <Col>Time</Col>
+                    <Col className="fw-bold">{selectedSlot?.startTime || "N/A"}</Col>
+                  </Row>
+                </Card.Body>
+              </Card>
+
+              <Button
+                variant="primary"
+                className="mt-4"
+                onClick={() => {
+                  setShowPaymentModal(false);
+                  setStep(0);
+                  setSelectedSpecialty(null);
+                  setSelectedDoctor(null);
+                  setSelectedSlot(null);
+                  setNotes("");
+                  setPaymentSuccess(false);
+                  setAppointmentData(null);
+                }}
+              >
+                Done
+              </Button>
+            </div>
+          )}
+        </Modal.Body>
+      </Modal>
     </div>
   );
 }
 
-// Stepper Header
 function Header({ step }) {
   return (
     <div className="mb-3">
