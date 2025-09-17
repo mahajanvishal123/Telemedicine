@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import axios from "axios";
 import API_URL from "../../Baseurl/Baseurl";
 
+
 const AddCaregiver = () => {
   // ====== CONFIG ======
   const BASE_URL = API_URL;
@@ -463,7 +464,7 @@ const AddCaregiver = () => {
                           <td>{index+1}</td>
                           <td>{caregiver.name}</td>
                           <td>{caregiver.email}</td>
-                          <td>{caregiver.mobile}</td>
+                          <td>{caregiver.phone}</td>
                           <td>{caregiver.role}</td>
                           <td>
                             <span className={`badge ${getStatusClass(caregiver.status)}`}>

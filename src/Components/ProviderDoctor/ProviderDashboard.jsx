@@ -8,9 +8,6 @@ const ProviderDashboard = () => {
   const [dashboardData, setDashboardData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-
-  // New state for export and details functionality
-  const [showEarningsDetails, setShowEarningsDetails] = useState(false);
   const [exportFormat, setExportFormat] = useState(null);
 
   // Animation variants
@@ -46,11 +43,22 @@ const ProviderDashboard = () => {
     }
   };
 
-  // Fetch dashboard data (with doctorId)
+  // Fetch dashboard data using logged-in doctor's ID
   useEffect(() => {
     const fetchDashboardData = async () => {
       try {
-        const doctorId = "68c53ce6628a1d6fce6ee726"; // Replace with dynamic value if needed (e.g., from auth context)
+        // Get user from localStorage
+        const userJson = localStorage.getItem("user");
+        if (!userJson) {
+          throw new Error("User not logged in");
+        }
+
+        const user = JSON.parse(userJson);
+        const doctorId = user._id; // ✅ Dynamic ID from logged-in user
+
+        if (!doctorId) {
+          throw new Error("Doctor ID not found");
+        }
 
         const response = await axios.get(`${API_URL}/dashboard/doctor`, {
           params: { doctorId }
@@ -102,11 +110,6 @@ const ProviderDashboard = () => {
     alert(`Earnings data exported as ${format.toUpperCase()} successfully!`);
   };
 
-  // Toggle earnings details view
-  const toggleEarningsDetails = () => {
-    setShowEarningsDetails(!showEarningsDetails);
-  };
-
   if (loading) {
     return (
       <div className="d-flex justify-content-center align-items-center" style={{ height: '100vh' }}>
@@ -140,11 +143,6 @@ const ProviderDashboard = () => {
     day: day.day,
     amount: day.amount
   }));
-
-  // Recent signups placeholder — assuming not available in this API
-  const recentSignups = [
-    
-  ];
 
   return (
     <div className="">
@@ -245,9 +243,6 @@ const ProviderDashboard = () => {
         </motion.div>
       </motion.div>
 
-      {/* Recent Signups */}
-     
-
       {/* Earnings Overview */}
       <motion.div
         className="row mb-4"
@@ -261,208 +256,148 @@ const ProviderDashboard = () => {
             style={{ position: "relative", overflow: "visible" }}
           >
             <div className="card-header d-flex flex-column flex-sm-row justify-content-between align-items-start align-items-sm-center">
-              <h5 className="mb-2 mb-sm-0">Earnings Overview (This Week)</h5>
-              <div>
-                <span className="badge bg-light text-dark">Total: ${totalWeeklyEarnings}</span>
+              <h5 className="mb-0">Weekly Earnings</h5>
+              <div className="d-flex gap-2 mt-2 mt-sm-0">
+                <div className="dropdown d-inline-block">
+                  <button
+                    className="btn btn-outline-secondary dropdown-toggle"
+                    type="button"
+                    id="exportDropdown"
+                    data-bs-toggle="dropdown"
+                    aria-expanded="false"
+                  >
+                    <i className="fas fa-download me-2"></i>Export
+                  </button>
+                  <ul className="dropdown-menu" aria-labelledby="exportDropdown">
+                    <li>
+                      <button
+                        className="dropdown-item"
+                        onClick={() => setExportFormat("csv")}
+                      >
+                        CSV Format
+                      </button>
+                    </li>
+                    <li>
+                      <button
+                        className="dropdown-item"
+                        onClick={() => setExportFormat("pdf")}
+                      >
+                        PDF Format
+                      </button>
+                    </li>
+                    <li>
+                      <button
+                        className="dropdown-item"
+                        onClick={() => setExportFormat("excel")}
+                      >
+                        Excel Format
+                      </button>
+                    </li>
+                  </ul>
+                </div>
               </div>
             </div>
 
             <div className="card-body" style={{ position: "relative", overflow: "visible" }}>
-              {showEarningsDetails ? (
-                // Detailed View
-                <motion.div
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  transition={{ duration: 0.5 }}
-                >
-                  <h5>Detailed Earnings Breakdown</h5>
-                  <div className="row gy-3">
-                    <div className="col-12 col-md-6">
-                      <ul className="list-group">
-                        {dailyEarnings.slice(0, 4).map((day, i) => (
-                          <li key={i} className="list-group-item d-flex justify-content-between align-items-center">
-                            {day.day}
-                            <span className="badge bg-primary rounded-pill">${day.amount}</span>
-                          </li>
-                        ))}
-                      </ul>
-                    </div>
-                    <div className="col-12 col-md-6">
-                      <ul className="list-group">
-                        {dailyEarnings.slice(4).map((day, i) => (
-                          <li key={i} className="list-group-item d-flex justify-content-between align-items-center">
-                            {day.day}
-                            <span className="badge bg-primary rounded-pill">${day.amount}</span>
-                          </li>
-                        ))}
-                        <li className="list-group-item d-flex justify-content-between align-items-center">
-                          Total
-                          <span className="badge bg-success rounded-pill">${totalWeeklyEarnings}</span>
-                        </li>
-                      </ul>
-                    </div>
-                  </div>
-                  <div className="mt-3 text-center">
-                    <motion.button
-                      className="btn btn-outline-secondary"
-                      onClick={toggleEarningsDetails}
-                      whileHover={{ scale: 1.05 }}
-                      whileTap={{ scale: 0.95 }}
+              <div className="row gy-4">
+                {/* Chart */}
+                <div className="col-12 col-lg-8">
+                  <div className="chart-container" style={{ height: "200px" }}>
+                    <div
+                      className="d-flex align-items-end h-100"
+                      style={{ gap: "12px" }}
                     >
-                      <i className="fas fa-arrow-left me-2"></i>Back to Chart
-                    </motion.button>
-                  </div>
-                </motion.div>
-              ) : (
-                // Chart View
-                <>
-                  <div className="row gy-4">
-                    {/* Chart */}
-                    <div className="col-12 col-lg-8">
-                      <div className="chart-container" style={{ height: "250px" }}>
-                        <div
-                          className="d-flex align-items-end h-100"
-                          style={{ gap: "12px" }}
-                        >
-                          {dailyEarnings.map((day, index) => {
-                            const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-                            const dayName = days.find(d => d.toLowerCase() === day.day.toLowerCase()) || day.day;
-                            return (
-                              <motion.div
-                                key={index}
-                                className="d-flex flex-column align-items-center"
-                                style={{ flex: 1 }}
-                                initial={{ height: 0 }}
-                                animate={{ height: `${(day.amount / 1000) * 100}%` }}
-                                transition={{
-                                  delay: index * 0.1 + 0.5,
-                                  duration: 0.8,
-                                  type: "spring",
-                                }}
-                              >
-                                <motion.div
-                                  className="rounded"
-                                  style={{
-                                    width: "100%",
-                                    height: "100%",
-                                    backgroundColor: "#F95918",
-                                    minHeight: "10px",
-                                  }}
-                                  whileHover={{ backgroundColor: "#e14a12" }}
-                                ></motion.div>
-                                <small className="mt-2">{dayName}</small>
-                                <small className="fw-bold">${day.amount}</small>
-                              </motion.div>
-                            );
-                          })}
-                        </div>
-                      </div>
-                    </div>
+                      {dailyEarnings.map((day, index) => {
+                        const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+                        const dayName = days.find(d => d.toLowerCase() === day.day.toLowerCase()) || day.day;
+                        const heightPercentage = Math.min(100, (day.amount / 2800) * 100);
 
-                    {/* Stats */}
-                    <div className="col-12 col-lg-4">
-                      <div className="d-flex justify-content-between mb-3">
-                        <span>Weekly Goal:</span>
-                        <span className="fw-bold">$2,800</span>
-                      </div>
-                      <div className="progress mb-4" style={{ height: "10px" }}>
-                        <motion.div
-                          className="progress-bar"
-                          initial={{ width: 0 }}
-                          animate={{
-                            width: `${totalWeeklyEarnings / 2800 * 100 > 100 ? 100 : (totalWeeklyEarnings / 2800) * 100
-                              }%`,
-                          }}
-                          transition={{ delay: 0.8, duration: 1.5 }}
-                          style={{ backgroundColor: "#F95918" }}
-                        ></motion.div>
-                      </div>
-
-                      <motion.div
-                        className="d-flex justify-content-between mb-2"
-                        initial={{ opacity: 0, x: 20 }}
-                        animate={{ opacity: 1, x: 0 }}
-                        transition={{ delay: 1 }}
-                      >
-                        <span>
-                          <i className="fas fa-circle text-success me-2"></i>Consultations
-                        </span>
-                        <span>$1,840</span>
-                      </motion.div>
-                      <motion.div
-                        className="d-flex justify-content-between mb-2"
-                        initial={{ opacity: 0, x: 20 }}
-                        animate={{ opacity: 1, x: 0 }}
-                        transition={{ delay: 1.1 }}
-                      >
-                        <span>
-                          <i className="fas fa-circle text-primary me-2"></i>Procedures
-                        </span>
-                        <span>$980</span>
-                      </motion.div>
-                      <motion.div
-                        className="d-flex justify-content-between mb-2"
-                        initial={{ opacity: 0, x: 20 }}
-                        animate={{ opacity: 1, x: 0 }}
-                        transition={{ delay: 1.2 }}
-                      >
-                        <span>
-                          <i className="fas fa-circle text-warning me-2"></i>Follow-ups
-                        </span>
-                        <span>$200</span>
-                      </motion.div>
+                        return (
+                          <motion.div
+                            key={index}
+                            className="d-flex flex-column align-items-center"
+                            style={{ flex: 1 }}
+                            initial={{ height: 0 }}
+                            animate={{ height: `${heightPercentage}%` }}
+                            transition={{
+                              delay: index * 0.1 + 0.5,
+                              duration: 0.8,
+                              type: "spring",
+                            }}
+                          >
+                            <motion.div
+                              className="rounded"
+                              style={{
+                                width: "100%",
+                                height: "100%",
+                                backgroundColor: "#F95918",
+                                minHeight: "10px",
+                              }}
+                              whileHover={{ backgroundColor: "#e14a12" }}
+                            ></motion.div>
+                            <small className="mt-2">{dayName}</small>
+                            <small className="fw-bold">${day.amount}</small>
+                          </motion.div>
+                        );
+                      })}
                     </div>
                   </div>
+                </div>
 
-                  {/* Buttons */}
-                  <div className="mt-4 d-flex flex-column flex-md-row justify-content-center align-items-center gap-2 text-center">
-                    <div className="dropdown d-inline-block me-2">
-                      <button
-                        className="btn btn-outline-secondary dropdown-toggle"
-                        type="button"
-                        id="exportDropdown"
-                        data-bs-toggle="dropdown"
-                        aria-expanded="false"
-                      >
-                        <i className="fas fa-download me-2"></i>Export
-                      </button>
-                      <ul className="dropdown-menu" aria-labelledby="exportDropdown">
-                        <li>
-                          <button
-                            className="dropdown-item"
-                            onClick={() => setExportFormat("csv")}
-                          >
-                            CSV Format
-                          </button>
-                        </li>
-                        <li>
-                          <button
-                            className="dropdown-item"
-                            onClick={() => setExportFormat("pdf")}
-                          >
-                            PDF Format
-                          </button>
-                        </li>
-                        <li>
-                          <button
-                            className="dropdown-item"
-                            onClick={() => setExportFormat("excel")}
-                          >
-                            Excel Format
-                          </button>
-                        </li>
-                      </ul>
-                    </div>
-                    <button
-                      className="btn"
-                      style={{ backgroundColor: "#F95918", color: "white" }}
-                      onClick={toggleEarningsDetails}
-                    >
-                      <i className="fas fa-chart-line me-2"></i>Details
-                    </button>
+                {/* Stats */}
+                <div className="col-12 col-lg-4">
+                  <div className="d-flex justify-content-between mb-3">
+                    <span>Weekly Goal:</span>
+                    <span className="fw-bold">$2,800</span>
                   </div>
-                </>
-              )}
+                  <div className="progress mb-4" style={{ height: "10px" }}>
+                    <motion.div
+                      className="progress-bar"
+                      initial={{ width: 0 }}
+                      animate={{
+                        width: `${totalWeeklyEarnings / 2800 * 100 > 100 ? 100 : (totalWeeklyEarnings / 2800) * 100
+                          }%`,
+                      }}
+                      transition={{ delay: 0.8, duration: 1.5 }}
+                      style={{ backgroundColor: "#F95918" }}
+                    ></motion.div>
+                  </div>
+
+                  <motion.div
+                    className="d-flex justify-content-between mb-2"
+                    initial={{ opacity: 0, x: 20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ delay: 1 }}
+                  >
+                    <span>
+                      <i className="fas fa-circle text-success me-2"></i>Consultations
+                    </span>
+                    <span>$1,840</span>
+                  </motion.div>
+                  <motion.div
+                    className="d-flex justify-content-between mb-2"
+                    initial={{ opacity: 0, x: 20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ delay: 1.1 }}
+                  >
+                    <span>
+                      <i className="fas fa-circle text-primary me-2"></i>Procedures
+                    </span>
+                    <span>$980</span>
+                  </motion.div>
+                  <motion.div
+                    className="d-flex justify-content-between mb-2"
+                    initial={{ opacity: 0, x: 20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ delay: 1.2 }}
+                  >
+                    <span>
+                      <i className="fas fa-circle text-warning me-2"></i>Follow-ups
+                    </span>
+                    <span>$200</span>
+                  </motion.div>
+                </div>
+              </div>
             </div>
           </motion.div>
         </div>
