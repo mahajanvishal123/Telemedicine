@@ -4,8 +4,11 @@ import 'bootstrap/dist/css/bootstrap.min.css';
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faCamera, faUserCircle, faTimes, faEye, faEyeSlash } from "@fortawesome/free-solid-svg-icons";
 import axios from "axios";
+<<<<<<< HEAD
+=======
 // import Swal from "sweetalert2";
 // import 'sweetalert2/dist/sweetalert2.min.css';
+>>>>>>> 8bdc9c13d8d47cda1033252c2394f59adfd6a5fa
 import API_URL from "../../../Baseurl/Baseurl";
 
 // ---------- Theme ----------

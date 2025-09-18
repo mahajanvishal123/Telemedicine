@@ -26,6 +26,7 @@ import MyCalendar from "./Components/ProviderDoctor/MyCalendar";
 import AssignCaregiver from "./Components/ProviderDoctor/AssignCaregiver";
 import ProviderMyAppointments from "./Components/ProviderDoctor/ProviderMyAppointments";
 import Visitlog from "./Components/CaregiverDashboard/Visitlog";
+import ViewVisitlog from "./Components/CaregiverDashboard/ViewVisitlog";
 import Landing from "./Webiste/Pages/Landing";
 import InvestorsPage from "./Webiste/Pages/InvestorsPage";
 import Caregiver from "./Components/AdminDashboard/Caregiver";
@@ -121,6 +122,7 @@ function App() {
                 <Route path="/caregiver/dashboard" element={<Dashboard />} />
                 <Route path="/caregiver/clients" element={<Clients />} />
                 <Route path="/caregiver/visit-log" element={<Visitlog />} />
+                <Route path="/caregiver/view-visit-log" element={<ViewVisitlog />} />
                 <Route path="/caregiver/profile" element={<CaregiverProfile />} />
                 <Route path="/admin/dashboard" element={<Dashobard />} />
                 <Route
