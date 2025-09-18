@@ -215,7 +215,6 @@ const Appointments = () => {
         <h3 className="dashboard-heading">Appointments</h3>
       </div>
 
-
       {/* Info Card */}
       <div className="row mb-4">
         <div className="col-12">
@@ -233,79 +232,76 @@ const Appointments = () => {
         </div>
       </div>
 
-    
-<div className="row">
- {/* Entries dropdown */}
-      <div className="d-flex justify-content-between align-items-center mb-3 col-md-3">
-        <div>
-          <label className="me-2">Show</label>
-          <select
-            className="form-select d-inline-block w-auto"
-            value={rowsPerPage}
-            onChange={(e) => {
-              setRowsPerPage(e.target.value === "All" ? "All" : parseInt(e.target.value));
-              setCurrentPage(1); // reset to page 1
-            }}
-          >
-            <option value="3">3</option>
-            <option value="5">5</option>
-            <option value="8">8</option>
-            <option value="10">10</option>
-            <option value="25">25</option>
-            <option value="All">All</option>
-          </select>
-          <span className="ms-2">Entries</span>
+      <div className="row">
+        {/* Entries dropdown */}
+        <div className="d-flex justify-content-between align-items-center mb-3 col-md-3">
+          <div>
+            <label className="me-2">Show</label>
+            <select
+              className="form-select d-inline-block w-auto"
+              value={rowsPerPage}
+              onChange={(e) => {
+                setRowsPerPage(e.target.value === "All" ? "All" : parseInt(e.target.value));
+                setCurrentPage(1); // reset to page 1
+              }}
+            >
+              <option value="3">3</option>
+              <option value="5">5</option>
+              <option value="8">8</option>
+              <option value="10">10</option>
+              <option value="25">25</option>
+              <option value="All">All</option>
+            </select>
+            <span className="ms-2">Entries</span>
+          </div>
+        </div>
+
+        {/* Filters Section */}
+        <div className="row mb-4 col-md-9">
+          <div className="card-body">
+            <div className="row">
+              <div className="col-md-5">
+                <div className="form-group">
+                  <input
+                    type="date"
+                    className="form-control"
+                    id="dateFilter"
+                    name="date"
+                    value={filters.date}
+                    onChange={handleFilterChange}
+                  />
+                </div>
+              </div>
+              <div className="col-md-5">
+                <div className="form-group">
+                  <select
+                    className="form-control"
+                    id="statusFilter"
+                    name="status"
+                    value={filters.status}
+                    onChange={handleFilterChange}
+                  >
+                    <option value="all">All Statuses</option>
+                    <option value="confirmed">Confirmed</option>
+                    <option value="pending">Pending</option>
+                    <option value="completed">Completed</option>
+                    <option value="cancelled">Cancelled</option>
+                  </select>
+                </div>
+              </div>
+              <div className="d-flex justify-content-between align-items-center col-md-2">
+                <button
+                  className="btn border"
+                  onClick={resetFilters}
+                >
+                  Reset Filters
+                </button>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
 
-        {/* Filters Section */}
-      <div className="row mb-4 col-md-9">
-            <div className="card-body">
-              <div className="row">
-                <div className="col-md-5">
-                  <div className="form-group">
-                    <input
-                      type="date"
-                      className="form-control"
-                      id="dateFilter"
-                      name="date"
-                      value={filters.date}
-                      onChange={handleFilterChange}
-                    />
-                  </div>
-                </div>
-                <div className="col-md-5">
-                  <div className="form-group">
-                    <select
-                      className="form-control"
-                      id="statusFilter"
-                      name="status"
-                      value={filters.status}
-                      onChange={handleFilterChange}
-                    >
-                      <option value="all">All Statuses</option>
-                      <option value="confirmed">Confirmed</option>
-                      <option value="pending">Pending</option>
-                      <option value="completed">Completed</option>
-                      <option value="cancelled">Cancelled</option>
-                    </select>
-                  </div>
-                </div>
-                 <div className="d-flex justify-content-between align-items-center col-md-2">
-                <button
-                  className="btn border"
-                 
-                  onClick={resetFilters}
-                >
-                Reset Filters
-                </button>
-            
-              </div>
-              </div>
-            </div>
-      </div>
-</div>
-     
       {/* Appointments Table */}
       <div className="row">
         <div className="col-12">
@@ -343,7 +339,7 @@ const Appointments = () => {
                         <th>Type</th>
                         <th>Reason</th>
                         <th>Status</th>
-                        <th>Actions</th>
+                        <th className="text-center">Actions</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -373,30 +369,15 @@ const Appointments = () => {
                                 {statusInfo.text}
                               </span>
                             </td>
-                            <td>
-                              <div className="d-flex gap-2">
+                            <td className="text-center">
+                              <div className="d-flex justify-content-center">
                                 <button
-                                  className="btn-sm"style={{ color: '#FF3500' }}
+                                  className="btn-sm"
+                                  style={{ color: '#FF3500' }}
                                   title="View Details"
                                   onClick={() => openDetailModal(app)}
                                 >
                                   <i className="fas fa-eye"></i>
-                                </button>
-                                <button
-                                  className="btn-sm"style={{ color: '#FF3500' }}
-                                  title="Reschedule"
-                                  onClick={() => openRescheduleModal(app)}
-                                  disabled={app.status === 'cancelled' || app.status === 'completed'}
-                                >
-                                  <i className="fas fa-calendar-alt"></i>
-                                </button>
-                                <button
-                                  className="btn-sm" style={{ color: '#FF3500' }}
-                                  title="Cancel Appointment"
-                                  onClick={() => openCancelModal(app)}
-                                  disabled={app.status === 'cancelled' || app.status === 'completed'}
-                                >
-                                  <i className="fas fa-times"></i>
                                 </button>
                               </div>
                             </td>
@@ -409,43 +390,44 @@ const Appointments = () => {
               )}
             </div>
 
-          
           </div>
         </div>
       </div>
-  {/* ✅ FOOTER: Always show pagination if not "All" */}
-            <div className="card-footer bg-light d-flex justify-content-between align-items-center py-3">
-              <div className="text-muted small">
-                Showing {(currentPage - 1) * rowsPerPage + 1} to {Math.min(currentPage * rowsPerPage, filteredAppointments.length)} of {filteredAppointments.length} entries
-              </div>
 
-              {rowsPerPage !== "All" && (
-                <nav>
-                  <ul className="pagination mb-0">
-                    <li className={`page-item ${currentPage === 1 ? "disabled" : ""}`}>
-                      <button className="page-link" onClick={() => paginate(currentPage - 1)}>
-                        Prev
-                      </button>
-                    </li>
-                    {[...Array(totalPages)].map((_, i) => (
-                      <li
-                        key={i}
-                        className={`page-item ${currentPage === i + 1 ? "active" : ""}`}
-                      >
-                        <button className="page-link" onClick={() => paginate(i + 1)}>
-                          {i + 1}
-                        </button>
-                      </li>
-                    ))}
-                    <li className={`page-item ${currentPage === totalPages ? "disabled" : ""}`}>
-                      <button className="page-link" onClick={() => paginate(currentPage + 1)}>
-                        Next
-                      </button>
-                    </li>
-                  </ul>
-                </nav>
-              )}
-            </div>
+      {/* ✅ FOOTER: Always show pagination if not "All" */}
+      <div className="card-footer bg-light d-flex justify-content-between align-items-center py-3">
+        <div className="text-muted small">
+          Showing {(currentPage - 1) * rowsPerPage + 1} to {Math.min(currentPage * rowsPerPage, filteredAppointments.length)} of {filteredAppointments.length} entries
+        </div>
+
+        {rowsPerPage !== "All" && (
+          <nav>
+            <ul className="pagination mb-0">
+              <li className={`page-item ${currentPage === 1 ? "disabled" : ""}`}>
+                <button className="page-link" onClick={() => paginate(currentPage - 1)}>
+                  Prev
+                </button>
+              </li>
+              {[...Array(totalPages)].map((_, i) => (
+                <li
+                  key={i}
+                  className={`page-item ${currentPage === i + 1 ? "active" : ""}`}
+                >
+                  <button className="page-link" onClick={() => paginate(i + 1)}>
+                    {i + 1}
+                  </button>
+                </li>
+              ))}
+              <li className={`page-item ${currentPage === totalPages ? "disabled" : ""}`}>
+                <button className="page-link" onClick={() => paginate(currentPage + 1)}>
+                  Next
+                </button>
+              </li>
+            </ul>
+          </nav>
+        )}
+      </div>
+
       {/* Statistics Section */}
       <div className="row mt-4">
         <div className="col-12 col-sm-6 col-md-3 mb-3">

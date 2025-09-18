@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import axios from 'axios';
 import {
   FaCamera, FaUser, FaEnvelope, FaLock, FaVenusMars, FaCalendarAlt,
-  FaIdCard, FaSave, FaCheck, FaTimes
+  FaIdCard, FaSave, FaCheck, FaTimes, FaEye, FaEyeSlash
 } from 'react-icons/fa';
 import 'bootstrap/dist/css/bootstrap.min.css';
 import API_URL from '../../Baseurl/Baseurl';
@@ -32,6 +32,9 @@ const CaregiverProfile = () => {
   const [showToast, setShowToast] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [loadError, setLoadError] = useState(null);
+
+  // 👁️ Show/Hide password
+  const [showPassword, setShowPassword] = useState(false);
 
   // Refs
   const profileInputRef = useRef(null);
@@ -224,8 +227,6 @@ const CaregiverProfile = () => {
     };
 
     // Decide payload type:
-    // - If there is a file (certificate) or profile is a base64 image, use multipart/form-data.
-    // - Else send JSON.
     const isDataUrlProfile = (profileImage || caregiver.profile || '').startsWith('data:');
     const useMultipart = !!certificateFile || isDataUrlProfile;
 
@@ -234,7 +235,6 @@ const CaregiverProfile = () => {
 
       if (useMultipart) {
         const form = new FormData();
-        // Primitive fields
         form.append('name', caregiver.name || '');
         form.append('email', caregiver.email || '');
         if (caregiver.password && caregiver.password.trim() !== '') {
@@ -245,7 +245,6 @@ const CaregiverProfile = () => {
         form.append('dob', caregiver.dob || '');
         form.append('bloodGroup', caregiver.bloodGroup || '');
 
-        // Profile: if dataURL, send as file; else send as string/URL
         if (isDataUrlProfile) {
           const blob = dataURLtoBlob(profileImage || caregiver.profile);
           if (blob) form.append('profile', blob, 'profile.jpg');
@@ -253,11 +252,9 @@ const CaregiverProfile = () => {
           form.append('profile', caregiver.profile);
         }
 
-        // Certificate file (if chosen)
         if (certificateFile) {
           form.append('certificate', certificateFile, certificateFile.name);
         } else if (caregiver.certificate) {
-          // keep existing string value if backend expects it
           form.append('certificate', caregiver.certificate);
         }
 
@@ -268,7 +265,6 @@ const CaregiverProfile = () => {
           },
         });
       } else {
-        // JSON payload
         const payload = {
           name: caregiver.name || '',
           email: caregiver.email || '',
@@ -290,13 +286,10 @@ const CaregiverProfile = () => {
         });
       }
 
-      // Success UI
       const updatedDoc = pickFromAnyShapeById(res, targetId) || res?.data || {};
       try {
         mapAndSetByDoc(updatedDoc, targetId);
-      } catch {
-        // If server doesn't echo doc, at least keep current state
-      }
+      } catch { /* ignore if server doesn't echo */ }
 
       setIsSaving(false);
       setSaveSuccess(true);
@@ -336,7 +329,7 @@ const CaregiverProfile = () => {
     const file = e.target.files?.[0];
     if (file) {
       setCertificateFile(file);
-      setCaregiver(prev => ({ ...prev, certificate: file.name })); // show file name
+      setCaregiver(prev => ({ ...prev, certificate: file.name }));
     }
   };
 
@@ -478,20 +471,32 @@ const CaregiverProfile = () => {
                             </div>
                           </div>
 
-                          {/* Password */}
+                          {/* Password + Eye */}
                           <div className="col-md-6 mb-3">
                             <div className="form-group">
                               <label className="form-label">
                                 <FaLock className="me-2" /> Password
                               </label>
-                              <input
-                                type="password"
-                                className="form-control"
-                                name="password"
-                                value={caregiver.password}
-                                onChange={handleInputChange}
-                                placeholder="Enter your password"
-                              />
+                              <div className="pw-wrapper">
+                                <input
+                                  type={showPassword ? 'text' : 'password'}
+                                  className="form-control pw-input"
+                                  name="password"
+                                  value={caregiver.password}
+                                  onChange={handleInputChange}
+                                  placeholder="Enter your password"
+                                  autoComplete="new-password"
+                                />
+                                <button
+                                  type="button"
+                                  className="pw-toggle"
+                                  aria-label={showPassword ? 'Hide password' : 'Show password'}
+                                  onClick={() => setShowPassword(s => !s)}
+                                  title={showPassword ? 'Hide' : 'Show'}
+                                >
+                                  {showPassword ? <FaEyeSlash /> : <FaEye />}
+                                </button>
+                              </div>
                               <small className="text-muted">Leave blank to keep current password</small>
                             </div>
                           </div>
@@ -691,6 +696,29 @@ const CaregiverProfile = () => {
         .btn-choose-file:hover { background:#e04f15; border-color:#e04f15; transform: translateY(-2px); box-shadow:0 5px 15px rgba(249,89,24,.4); }
         .toast-container { z-index:1050; }
         .toast { border-radius:8px; box-shadow:0 5px 15px rgba(0,0,0,0.1); }
+
+        /* 👁️ Password field styles */
+        .pw-wrapper { position: relative; }
+        .pw-input { padding-right: 44px; } /* space for eye button */
+        .pw-toggle {
+          position: absolute;
+          right: 12px;
+          top: 50%;
+          transform: translateY(-50%);
+          border: none;
+          background: transparent;
+          width: 36px;
+          height: 36px;
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          cursor: pointer;
+          font-size: 18px;
+          color: #6c757d;
+          border-radius: 6px;
+        }
+        .pw-toggle:hover { background: #f1f3f5; color: #343a40; }
+
         @media (max-width: 991px) {
           .profile-right-column { padding-left:0; margin-top:30px; }
         }
