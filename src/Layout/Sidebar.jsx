@@ -1,6 +1,9 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import { faEye } from "@fortawesome/free-solid-svg-icons";
+
+
 import {
   faTachometerAlt,
   faCalendarAlt,
@@ -86,6 +89,7 @@ const Sidebar = ({ collapsed, setCollapsed }) => {
     { label: "Dashboard", path: "/caregiver/dashboard", icon: faTachometerAlt },
     { label: "My Clients", path: "/caregiver/clients", icon: faUsers },
     { label: "Visit Log", path: "/caregiver/visit-log", icon: faStethoscope },
+    { label: "View Visit Log", path: "/caregiver/view-visit-log", icon: faEye },
     { label: "My Profile", path: "/caregiver/profile", icon: faUser },
     
   ];

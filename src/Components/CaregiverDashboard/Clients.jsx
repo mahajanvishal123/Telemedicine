@@ -4,6 +4,8 @@ import { useNavigate } from "react-router-dom";
 const Clients = () => {
   const navigate = useNavigate();
   const [searchQuery, setSearchQuery] = useState("");
+  const [selectedPatient, setSelectedPatient] = useState(null);
+  const [showProfileModal, setShowProfileModal] = useState(false);
 
   // Patient data array - you can move this to a separate file or fetch from API
   const patientsData = [
@@ -14,7 +16,14 @@ const Clients = () => {
       contact: "+91 98765 43210",
       status: "active",
       statusClass: "healthcare-status-completed",
-      statusIcon: "fas fa-check"
+      statusIcon: "fas fa-check",
+      dob: "1985-03-15",
+      gender: "Male",
+      email: "john.doe@example.com",
+      address: "123 Main St, New York, NY 10001",
+      bloodType: "A+",
+      allergies: "Penicillin",
+      notes: "Patient requires insulin injections twice daily."
     },
     {
       id: 2,
@@ -23,7 +32,14 @@ const Clients = () => {
       contact: "+91 98765 43210",
       status: "active",
       statusClass: "healthcare-status-completed",
-      statusIcon: "fas fa-check"
+      statusIcon: "fas fa-check",
+      dob: "1978-11-22",
+      gender: "Female",
+      email: "jane.smith@example.com",
+      address: "456 Oak Ave, Los Angeles, CA 90210",
+      bloodType: "O+",
+      allergies: "None",
+      notes: "Patient is on medication for blood pressure control."
     },
     {
       id: 3,
@@ -32,7 +48,14 @@ const Clients = () => {
       contact: "+91 98765 43210",
       status: "pending",
       statusClass: "healthcare-status-pending",
-      statusIcon: "fas fa-clock"
+      statusIcon: "fas fa-clock",
+      dob: "1990-07-08",
+      gender: "Male",
+      email: "mike.johnson@example.com",
+      address: "789 Pine Rd, Chicago, IL 60601",
+      bloodType: "B-",
+      allergies: "Latex",
+      notes: "Newly diagnosed with Type 2 Diabetes."
     },
     {
       id: 4,
@@ -41,7 +64,14 @@ const Clients = () => {
       contact: "+91 98765 43210",
       status: "pending",
       statusClass: "healthcare-status-pending",
-      statusIcon: "fas fa-clock"
+      statusIcon: "fas fa-clock",
+      dob: "1982-05-30",
+      gender: "Female",
+      email: "sarah.wilson@example.com",
+      address: "321 Elm St, Houston, TX 77001",
+      bloodType: "AB+",
+      allergies: "Shellfish",
+      notes: "Patient has family history of heart disease."
     },
     {
       id: 5,
@@ -50,7 +80,14 @@ const Clients = () => {
       contact: "+91 98765 43210",
       status: "pending",
       statusClass: "healthcare-status-pending",
-      statusIcon: "fas fa-clock"
+      statusIcon: "fas fa-clock",
+      dob: "1975-09-12",
+      gender: "Male",
+      email: "robert.brown@example.com",
+      address: "654 Maple Dr, Phoenix, AZ 85001",
+      bloodType: "O-",
+      allergies: "Pollen, Dust",
+      notes: "Uses inhaler as needed for asthma symptoms."
     }
   ];
 
@@ -85,11 +122,7 @@ const Clients = () => {
                 <strong>Primary Condition:</strong> {patient.condition}
               </p>
               <p className="card-text mb-2">
-                <i class="bi bi-telephone me-2" style={{ color: "#f9591a" }}></i>
-                {/* <i
-                  className="fas fa-map-marker-alt me-2"
-                  style={{ color: "#f9591a" }}
-                /> */}
+                <i className="bi bi-telephone me-2" style={{ color: "#f9591a" }}></i>
                 <strong>Contact:</strong>
                 <small className="text-muted"> {patient.contact}</small>
               </p>
@@ -102,7 +135,10 @@ const Clients = () => {
               </span>
               <button
                 className="btn btn-sm text-white healthcare-btn-primary"
-                onClick={() => navigate(`/caregiver/clients/profile`)}
+                onClick={() => {
+                  setSelectedPatient(patient);
+                  setShowProfileModal(true);
+                }}
               >
                 View Profile
               </button>
@@ -110,7 +146,141 @@ const Clients = () => {
           </div>
         </div>
       </div>
+    );
+  };
 
+  // Patient Profile Modal Component
+  const PatientProfileModal = ({ patient, onClose }) => {
+    if (!patient) return null;
+
+    return (
+      <div className="modal fade show d-block" style={{ backgroundColor: "rgba(0,0,0,0.5)" }} tabIndex="-1">
+        <div className="modal-dialog modal-lg">
+          <div className="modal-content med-modal-content">
+            <div className="modal-header med-modal-header">
+              <div className="d-flex align-items-center">
+             
+                <h5 className="modal-title med-modal-title">
+               
+                  {patient.name}'s Profile
+                </h5>
+              </div>
+              <button
+                type="button"
+                className="btn-close"
+                onClick={onClose}
+                aria-label="Close"
+              />
+            </div>
+            <div className="modal-body med-modal-body">
+              <div className="row">
+                <div className="col-md-6">
+                  <h5 className="mb-3">
+                    <i className="fas fa-user-circle me-2" />
+                    Personal Information
+                  </h5>
+                  <div className="mb-3">
+                    <label className="form-label med-form-label">
+                      <strong>Full Name:</strong>
+                    </label>
+                    <p className="form-control-plaintext">{patient.name}</p>
+                  </div>
+                  <div className="row">
+                    <div className="col-md-6 mb-3">
+                      <label className="form-label med-form-label">
+                        <strong>Date of Birth:</strong>
+                      </label>
+                      <p className="form-control-plaintext">{patient.dob || "N/A"}</p>
+                    </div>
+                    <div className="col-md-6 mb-3">
+                      <label className="form-label med-form-label">
+                        <strong>Gender:</strong>
+                      </label>
+                      <p className="form-control-plaintext">{patient.gender || "N/A"}</p>
+                    </div>
+                  </div>
+                  <div className="mb-3">
+                    <label className="form-label med-form-label">
+                      <strong>Primary Condition:</strong>
+                    </label>
+                    <p className="form-control-plaintext">{patient.condition}</p>
+                  </div>
+                </div>
+                <div className="col-md-6">
+                  <h5 className="mb-3">
+                    <i className="fas fa-address-card me-2" />
+                    Contact Information
+                  </h5>
+                  <div className="mb-3">
+                    <label className="form-label med-form-label">
+                      <strong>Email Address:</strong>
+                    </label>
+                    <p className="form-control-plaintext">{patient.email || "N/A"}</p>
+                  </div>
+                  <div className="mb-3">
+                    <label className="form-label med-form-label">
+                      <strong>Phone Number:</strong>
+                    </label>
+                    <p className="form-control-plaintext">{patient.contact}</p>
+                  </div>
+                  <div className="mb-3">
+                    <label className="form-label med-form-label">
+                      <strong>Address:</strong>
+                    </label>
+                    <p className="form-control-plaintext">{patient.address || "N/A"}</p>
+                  </div>
+                </div>
+              </div>
+              <div className="row">
+                <div className="col-12">
+                  <h5 className="mb-3">
+                    <i className="fas fa-stethoscope me-2" />
+                    Medical Information
+                  </h5>
+                  <div className="row">
+                    <div className="col-md-6 mb-3">
+                      <label className="form-label med-form-label">
+                        <strong>Blood Type:</strong>
+                      </label>
+                      <p className="form-control-plaintext">{patient.bloodType || "N/A"}</p>
+                    </div>
+                    <div className="col-md-6 mb-3">
+                      <label className="form-label med-form-label">
+                        <strong>Allergies:</strong>
+                      </label>
+                      <p className="form-control-plaintext">{patient.allergies || "None"}</p>
+                    </div>
+                  </div>
+                  <div className="mb-3">
+                    <label className="form-label med-form-label">
+                      <strong>Additional Notes:</strong>
+                    </label>
+                    <p className="form-control-plaintext">{patient.notes || "No additional notes."}</p>
+                  </div>
+                  <div className="mb-3">
+                    <label className="form-label med-form-label">
+                      <strong>Status:</strong>
+                    </label>
+                    <span className={patient.statusClass}>
+                      <i className={patient.statusIcon + " me-1"} />
+                      {patient.status.charAt(0).toUpperCase() + patient.status.slice(1)}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div className="modal-footer med-modal-footer">
+              <button
+                type="button"
+                className="btn btn-secondary"
+                onClick={onClose}
+              >
+                <i className="fas fa-arrow-left me-1"></i> Back to List
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
     );
   };
 
@@ -122,15 +292,7 @@ const Clients = () => {
           <h3 className="dashboard-heading mb-3 mb-md-0">
             My Clients
           </h3>
-          <button
-            className="btn med-btn-primary text-white healthcare-btn-primary"
-            data-bs-toggle="modal"
-            data-bs-target="#newPatientModal"
-          >
-            <i className="fas fa-plus me-1"></i> New Patient
-          </button>
         </div>
-
 
         {/* New Patient Modal */}
         <div
@@ -397,6 +559,14 @@ const Clients = () => {
             </div>
           </div>
         </div>
+
+        {/* Patient Profile Modal */}
+        {showProfileModal && (
+          <PatientProfileModal 
+            patient={selectedPatient} 
+            onClose={() => setShowProfileModal(false)} 
+          />
+        )}
       </div>
     </>
   );
