@@ -2,10 +2,10 @@
 import React, { useState, useRef, useEffect } from 'react';
 import 'bootstrap/dist/css/bootstrap.min.css';
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faCamera, faUserCircle, faTimes } from "@fortawesome/free-solid-svg-icons";
+import { faCamera, faUserCircle, faTimes, faEye, faEyeSlash } from "@fortawesome/free-solid-svg-icons";
 import axios from "axios";
-import Swal from "sweetalert2";
-import 'sweetalert2/dist/sweetalert2.min.css';
+// import Swal from "sweetalert2";
+// import 'sweetalert2/dist/sweetalert2.min.css';
 import API_URL from "../../../Baseurl/Baseurl";
 
 // ---------- Theme ----------
@@ -181,6 +181,9 @@ const Profile = ({ userId: userIdProp }) => {
   const [dobError, setDobError] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const fileInputRef = useRef(null);
+
+  // 👁️ Password show/hide state (new)
+  const [showPassword, setShowPassword] = useState(false);
 
   // ---------------- Fetch by ID (GET /patient/:id) ----------------
   useEffect(() => {
@@ -584,17 +587,28 @@ const Profile = ({ userId: userIdProp }) => {
                     </select>
                   </div>
 
-                  {/* Password (Optional) */}
+                  {/* Password (Optional) + 👁️ toggle */}
                   <div className="col-12">
                     <label className="form-label fw-bold">Change Password (optional)</label>
-                    <input
-                      type="password"
-                      className="form-control form-control-lg"
-                      name="password"
-                      value={profileData.password || ""}
-                      onChange={handleInputChange}
-                      placeholder="••••••••"
-                    />
+                    <div className="input-group input-group-lg">
+                      <input
+                        type={showPassword ? "text" : "password"}
+                        className="form-control"
+                        name="password"
+                        value={profileData.password || ""}
+                        onChange={handleInputChange}
+                        placeholder="••••••••"
+                      />
+                      <button
+                        type="button"
+                        className="btn btn-outline-secondary"
+                        onClick={() => setShowPassword(s => !s)}
+                        aria-label={showPassword ? "Hide password" : "Show password"}
+                        title={showPassword ? "Hide password" : "Show password"}
+                      >
+                        <FontAwesomeIcon icon={showPassword ? faEyeSlash : faEye} />
+                      </button>
+                    </div>
                   </div>
                 </div>
 

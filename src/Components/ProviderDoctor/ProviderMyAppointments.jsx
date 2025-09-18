@@ -6,11 +6,13 @@ import API_URL from "../../Baseurl/Baseurl";
 const ProviderMyAppointments = () => {
   const BASE_URL = API_URL;
 
-  // ============ Resolve userId (NO TOKEN) ============
+  /* ===================== doctorId resolver (NO TOKEN, NO FIXED ID) ===================== */
   const safeJSON = (txt) => { try { return JSON.parse(txt); } catch { return null; } };
+
+  // Try to pick an "id" from any object (supports nested)
   const pickId = (obj) => {
     if (!obj || typeof obj !== "object") return null;
-    const keys = ["id", "_id", "userId", "uid", "sub"];
+    const keys = ["doctorId", "id", "_id", "userId", "uid", "sub"];
     for (const k of keys) if (obj[k]) return obj[k];
     for (const k of Object.keys(obj)) {
       const v = obj[k];
@@ -21,21 +23,30 @@ const ProviderMyAppointments = () => {
     }
     return null;
   };
-  const resolveUserId = () => {
-    // 1) URL ?id=
+
+  const resolveDoctorId = () => {
+    // 1) URL ?doctorId=
     try {
       const params = new URLSearchParams(window.location.search);
-      const qid = params.get("id");
+      const qid = params.get("doctorId");
       if (qid) return qid;
     } catch {}
-    // 2) direct storage
-    const direct = localStorage.getItem("userId") || sessionStorage.getItem("userId");
+    // 2) Direct storage keys
+    const direct =
+      localStorage.getItem("doctorId") ||
+      sessionStorage.getItem("doctorId");
     if (direct) return direct;
-    // 3) JSON blobs in storage
-    const jsonKeys = ["user", "profile", "auth", "currentUser", "loginUser"];
+
+    // 3) Common JSON blobs where doctor profile might be saved
+    const jsonKeys = ["doctor", "profile", "auth", "currentUser", "loginUser", "user"];
     for (const store of [localStorage, sessionStorage]) {
       for (const key of jsonKeys) {
         const obj = safeJSON(store.getItem(key));
+        // If an explicit doctor object: prefer its id
+        if (obj && (obj.role === "doctor" || obj.type === "doctor")) {
+          const did = pickId(obj);
+          if (did) return did;
+        }
         const id = pickId(obj);
         if (id) return id;
       }
@@ -43,10 +54,11 @@ const ProviderMyAppointments = () => {
     return null;
   };
 
-  const userId = resolveUserId();
+  const doctorId = resolveDoctorId();
 
-  // ============ API/UI state ============
+  /* ===================== UI / API state ===================== */
   const [appointments, setAppointments] = useState([]);
+  const [summary, setSummary] = useState({ total: 0, confirmed: 0, pending: 0, cancelled: 0 });
   const [loading, setLoading] = useState(false);
   const [apiError, setApiError] = useState(null);
 
@@ -57,11 +69,11 @@ const ProviderMyAppointments = () => {
   const [cancellingId, setCancellingId] = useState(null);
   const [deletingId, setDeletingId] = useState(null);
 
-  const [filter, setFilter] = useState("all"); // all | scheduled | confirmed | completed
+  const [filter, setFilter] = useState("all"); // all | pending | confirmed | cancelled | completed
   const [searchTerm, setSearchTerm] = useState("");
   const [buttonAnimations, setButtonAnimations] = useState({});
 
-  // ============ utils ============
+  /* ===================== helpers ===================== */
   const properCase = (s) =>
     typeof s === "string" && s.length
       ? s.charAt(0).toUpperCase() + s.slice(1).toLowerCase()
@@ -80,7 +92,6 @@ const ProviderMyAppointments = () => {
     }
   };
 
-  // ============ API -> UI mapping ============
   const mapApiAppointment = (a) => {
     const rawStatus = String(a?.status || "").toLowerCase();
     const status = properCase(rawStatus) || "Scheduled";
@@ -89,7 +100,9 @@ const ProviderMyAppointments = () => {
     const patientName =
       (a?.patientId?.name || a?.patient?.name || "").trim() || "Unknown";
     const reason = (a?.reason || "").trim();
-    const paymentStatus = status === "Completed" ? "Paid" : "Pending";
+
+    // Your payload doesn't include payment info; keep a simple heuristic
+    const paymentStatus = rawStatus === "completed" ? "Paid" : "Pending";
 
     return {
       id: a?._id || Date.now(),
@@ -98,27 +111,51 @@ const ProviderMyAppointments = () => {
       status,
       paymentStatus,
       notes: reason,
-      _raw: a, // keep original
+      _raw: a,
     };
   };
 
-  // ============ GET: list (by ID) ============
+  /* ===================== GET: /appointment?doctorId=xxx ===================== */
   const fetchAppointments = async () => {
-    if (!userId) {
-      setApiError("User ID not found. URL me ?id= pass karo ya localStorage me 'userId' set karo.");
+    if (!doctorId) {
+      setApiError("Doctor ID not found. localStorage me 'doctorId' set karein ya URL me ?doctorId= pass karein.");
       return;
     }
     setLoading(true);
     setApiError(null);
     try {
       const res = await axios.get(`${BASE_URL}/appointment`, {
-        params: { userId },
+        params: { doctorId },
       });
-      const list = Array.isArray(res?.data)
-        ? res.data
-        : Array.isArray(res?.data?.data)
-        ? res.data.data
+
+      // Expecting: { summary: {...}, appointments: [...] }
+      const payload = res?.data || {};
+      const list = Array.isArray(payload?.appointments)
+        ? payload.appointments
+        : Array.isArray(payload?.data?.appointments)
+        ? payload.data.appointments
+        : Array.isArray(payload)
+        ? payload
         : [];
+
+      // Fallback compute summary if backend didn't send it
+      const computeSummary = (items) => {
+        const norm = (s) => String(s || "").toLowerCase();
+        const total = items.length;
+        const confirmed = items.filter((x) => norm(x.status) === "confirmed").length;
+        const pending = items.filter((x) => norm(x.status) === "pending" || norm(x.status) === "scheduled").length;
+        const cancelled = items.filter((x) => norm(x.status) === "cancelled").length;
+        return { total, confirmed, pending, cancelled };
+        };
+      const apiSummary = payload?.summary || payload?.data?.summary || computeSummary(list);
+
+      setSummary({
+        total: Number(apiSummary.total || 0),
+        confirmed: Number(apiSummary.confirmed || 0),
+        pending: Number(apiSummary.pending || 0),
+        cancelled: Number(apiSummary.cancelled || 0),
+      });
+
       const mapped = list.map(mapApiAppointment);
       setAppointments(mapped);
     } catch (err) {
@@ -138,7 +175,7 @@ const ProviderMyAppointments = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // ============ filtering/search ============
+  /* ===================== filtering/search ===================== */
   const filteredAppointments = appointments.filter((appointment) => {
     const matchesFilter =
       filter === "all" ||
@@ -151,7 +188,7 @@ const ProviderMyAppointments = () => {
     return matchesFilter && matchesSearch;
   });
 
-  // ============ actions ============
+  /* ===================== actions ===================== */
   const handleStartCall = (appointment) => {
     setButtonAnimations((p) => ({ ...p, [`call-${appointment.id}`]: true }));
     setTimeout(() => {
@@ -160,9 +197,9 @@ const ProviderMyAppointments = () => {
     }, 300);
   };
 
-  // ============ PUT: cancel (by ID) ============
+  // PUT: cancel (passes doctorId as query param)
   const handleCancel = async (appointmentId) => {
-    if (!userId) return alert("User ID missing.");
+    if (!doctorId) return alert("Doctor ID missing.");
     const appt = appointments.find((a) => a.id === appointmentId);
     if (!appt) return;
 
@@ -171,8 +208,7 @@ const ProviderMyAppointments = () => {
       setButtonAnimations((p) => ({ ...p, [`cancel-${appointmentId}`]: false }));
     }, 300);
 
-    if (!window.confirm("Are you sure you want to cancel this appointment?"))
-      return;
+    if (!window.confirm("Are you sure you want to cancel this appointment?")) return;
 
     try {
       setCancellingId(appointmentId);
@@ -180,36 +216,25 @@ const ProviderMyAppointments = () => {
       const res = await axios.put(
         `${BASE_URL}/appointment/${idForApi}`,
         { status: "cancelled" },
-        { params: { userId }, headers: { "Content-Type": "application/json" } }
+        { params: { doctorId }, headers: { "Content-Type": "application/json" } }
       );
 
-      const updated =
-        res?.data?.appointment || res?.data?.data || res?.data || null;
+      const updated = res?.data?.appointment || res?.data?.data || res?.data || null;
       if (updated) {
         const mapped = mapApiAppointment(updated);
-        setAppointments((prev) =>
-          prev.map((a) => (a.id === appointmentId ? mapped : a))
-        );
+        setAppointments((prev) => prev.map((a) => (a.id === appointmentId ? mapped : a)));
       } else {
-        // fallback: just flip to Cancelled in UI
-        setAppointments((prev) =>
-          prev.map((a) =>
-            a.id === appointmentId ? { ...a, status: "Cancelled" } : a
-          )
-        );
+        setAppointments((prev) => prev.map((a) => (a.id === appointmentId ? { ...a, status: "Cancelled" } : a)));
       }
     } catch (err) {
       console.error(err);
-      alert(
-        err?.response?.data?.message ||
-          err?.message ||
-          "Failed to cancel appointment"
-      );
+      alert(err?.response?.data?.message || err?.message || "Failed to cancel appointment");
     } finally {
       setCancellingId(null);
     }
   };
 
+  // Notes modal open
   const handleAddNotes = (appointment) => {
     setButtonAnimations((p) => ({ ...p, [`notes-${appointment.id}`]: true }));
     setTimeout(() => {
@@ -220,61 +245,46 @@ const ProviderMyAppointments = () => {
     }, 300);
   };
 
-  // ============ PUT: save notes (by ID) ============
+  // PUT: save notes (passes doctorId as query param)
   const handleSaveNotes = async () => {
     if (!currentAppointment) return;
-    if (!userId) return alert("User ID missing.");
+    if (!doctorId) return alert("Doctor ID missing.");
     try {
       setSavingNotes(true);
-      const idForApi =
-        currentAppointment._raw?._id || currentAppointment.id;
-
+      const idForApi = currentAppointment._raw?._id || currentAppointment.id;
       const res = await axios.put(
         `${BASE_URL}/appointment/${idForApi}`,
         { reason: notesText },
-        { params: { userId }, headers: { "Content-Type": "application/json" } }
+        { params: { doctorId }, headers: { "Content-Type": "application/json" } }
       );
-
-      const updated =
-        res?.data?.appointment || res?.data?.data || res?.data || null;
-      const mapped = updated
-        ? mapApiAppointment(updated)
-        : { ...currentAppointment, notes: notesText };
-
-      setAppointments((prev) =>
-        prev.map((a) => (a.id === currentAppointment.id ? mapped : a))
-      );
+      const updated = res?.data?.appointment || res?.data?.data || res?.data || null;
+      const mapped = updated ? mapApiAppointment(updated) : { ...currentAppointment, notes: notesText };
+      setAppointments((prev) => prev.map((a) => (a.id === currentAppointment.id ? mapped : a)));
       setShowNotesModal(false);
     } catch (err) {
       console.error(err);
-      alert(
-        err?.response?.data?.message ||
-          err?.message ||
-          "Failed to update appointment"
-      );
+      alert(err?.response?.data?.message || err?.message || "Failed to update appointment");
     } finally {
       setSavingNotes(false);
     }
   };
 
-  // ============ DELETE: permanently delete (by ID) ============
+  // DELETE: permanently delete (passes doctorId as query param)
   const handleDelete = async (appointmentId) => {
-    if (!userId) return alert("User ID missing.");
+    if (!doctorId) return alert("Doctor ID missing.");
     const appt = appointments.find((a) => a.id === appointmentId);
     if (!appt) return;
 
-    if (!window.confirm("This will permanently delete the appointment. Continue?"))
-      return;
+    if (!window.confirm("This will permanently delete the appointment. Continue?")) return;
 
     try {
       setDeletingId(appointmentId);
       const idForApi = appt._raw?._id || appointmentId;
 
       const res = await axios.delete(`${BASE_URL}/appointment/${idForApi}`, {
-        params: { userId },
+        params: { doctorId },
       });
 
-      // success → remove from UI
       if (res?.status === 200 || res?.status === 204 || res?.data) {
         setAppointments((prev) => prev.filter((a) => a.id !== appointmentId));
       } else {
@@ -282,17 +292,13 @@ const ProviderMyAppointments = () => {
       }
     } catch (err) {
       console.error(err);
-      alert(
-        err?.response?.data?.message ||
-          err?.message ||
-          "Failed to delete appointment"
-      );
+      alert(err?.response?.data?.message || err?.message || "Failed to delete appointment");
     } finally {
       setDeletingId(null);
     }
   };
 
-  // ============ badges ============
+  /* ===================== badges ===================== */
   const getStatusBadge = (status) => {
     let className = "badge ";
     switch (status) {
@@ -305,6 +311,7 @@ const ProviderMyAppointments = () => {
       case "Cancelled":
         className += "bg-danger";
         break;
+      case "Pending":
       case "Scheduled":
         className += "bg-info text-dark";
         break;
@@ -333,12 +340,12 @@ const ProviderMyAppointments = () => {
     <div className="">
       <div className="">
         <div className="d-flex align-items-center gap-2">
-          <h3 className="dashboard-heading mb-0">My Appointment</h3>
+          <h3 className="dashboard-heading mb-0">My Appointments</h3>
           <button
             className="btn btn-sm btn-outline-secondary"
             onClick={fetchAppointments}
             title="Refresh"
-            disabled={!userId}
+            disabled={!doctorId}
           >
             <i className="fas fa-sync-alt me-1" />
             Refresh
@@ -349,24 +356,45 @@ const ProviderMyAppointments = () => {
         </p>
       </div>
 
-      {!userId && (
+      {!doctorId && (
         <div className="alert alert-warning">
-          User ID not found. URL me <code>?id=YOUR_ID</code> pass karo ya{" "}
-          <code>localStorage.setItem('userId','YOUR_ID')</code> set karo.
+          Doctor ID not found. URL me <code>?doctorId=YOUR_ID</code> pass karein ya{" "}
+          <code>localStorage.setItem('doctorId','YOUR_ID')</code> set karein.
         </div>
       )}
 
-      {loading && (
-        <div className="alert alert-info py-2">Loading appointments…</div>
-      )}
+      {loading && <div className="alert alert-info py-2">Loading appointments…</div>}
+
       {apiError && (
         <div className="alert alert-danger d-flex justify-content-between align-items-center">
           <span>{apiError}</span>
-          <button className="btn btn-sm btn-light" onClick={fetchAppointments} disabled={!userId}>
+          <button className="btn btn-sm btn-light" onClick={fetchAppointments} disabled={!doctorId}>
             Retry
           </button>
         </div>
       )}
+
+      {/* Summary strip */}
+      <div className="row g-3 mb-3">
+        {[
+          { label: "Total", value: summary.total },
+          { label: "Confirmed", value: summary.confirmed },
+          { label: "Pending", value: summary.pending },
+          { label: "Cancelled", value: summary.cancelled },
+        ].map((s) => (
+          <div key={s.label} className="col-6 col-md-3">
+            <div className="card border-0 shadow-sm">
+              <div className="card-body d-flex justify-content-between align-items-center">
+                <div>
+                  <div className="text-muted small">{s.label}</div>
+                  <div className="h5 mb-0">{s.value}</div>
+                </div>
+                <span className="badge bg-light text-dark">{s.label}</span>
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
 
       <div className="card shadow-lg border-0">
         <div className="card-body">
@@ -396,10 +424,10 @@ const ProviderMyAppointments = () => {
                   All
                 </button>
                 <button
-                  className={`btn btn-sm ${filter === "scheduled" ? "btn-info text-white" : "btn-outline-info"}`}
-                  onClick={() => setFilter("scheduled")}
+                  className={`btn btn-sm ${filter === "pending" ? "btn-info text-white" : "btn-outline-info"}`}
+                  onClick={() => setFilter("pending")}
                 >
-                  Scheduled
+                  Pending
                 </button>
                 <button
                   className={`btn btn-sm ${filter === "confirmed" ? "btn-primary" : "btn-outline-primary"}`}
@@ -412,6 +440,12 @@ const ProviderMyAppointments = () => {
                   onClick={() => setFilter("completed")}
                 >
                   Completed
+                </button>
+                <button
+                  className={`btn btn-sm ${filter === "cancelled" ? "btn-danger" : "btn-outline-danger"}`}
+                  onClick={() => setFilter("cancelled")}
+                >
+                  Cancelled
                 </button>
               </div>
             </div>
@@ -486,16 +520,17 @@ const ProviderMyAppointments = () => {
                           style={{ backgroundColor: "#F95918" }}
                           onClick={() => handleStartCall(appointment)}
                           disabled={
-                            (!userId) ||
+                            (!doctorId) ||
                             (appointment.status !== "Confirmed" &&
-                             appointment.status !== "Scheduled")
+                             appointment.status !== "Scheduled" &&
+                             appointment.status !== "Pending")
                           }
                         >
                           <i className="fas fa-video me-1"></i>
                           Start Call
                         </button>
 
-                        {/* Cancel (PUT by ID) */}
+                        {/* Cancel */}
                         <button
                           className={`btn btn-outline-danger btn-sm ${
                             buttonAnimations[`cancel-${appointment.id}`]
@@ -503,7 +538,7 @@ const ProviderMyAppointments = () => {
                               : ""
                           }`}
                           onClick={() => handleCancel(appointment.id)}
-                          disabled={cancellingId === appointment.id || !userId}
+                          disabled={cancellingId === appointment.id || !doctorId}
                           title="Cancel appointment"
                         >
                           {cancellingId === appointment.id ? (
@@ -513,7 +548,7 @@ const ProviderMyAppointments = () => {
                           )}
                         </button>
 
-                        {/* Notes (PUT reason by ID) */}
+                        {/* Notes */}
                         <button
                           className={`btn btn-outline-secondary btn-sm ${
                             buttonAnimations[`notes-${appointment.id}`]
@@ -522,16 +557,16 @@ const ProviderMyAppointments = () => {
                           }`}
                           onClick={() => handleAddNotes(appointment)}
                           title="Edit notes"
-                          disabled={!userId}
+                          disabled={!doctorId}
                         >
                           <i className="fas fa-edit"></i>
                         </button>
 
-                        {/* Delete (DELETE by ID) */}
+                        {/* Delete */}
                         <button
                           className="btn btn-outline-dark btn-sm"
                           onClick={() => handleDelete(appointment.id)}
-                          disabled={deletingId === appointment.id || !userId}
+                          disabled={deletingId === appointment.id || !doctorId}
                           title="Delete appointment permanently"
                         >
                           {deletingId === appointment.id ? (
@@ -608,7 +643,7 @@ const ProviderMyAppointments = () => {
                 className="btn text-white"
                 style={{ backgroundColor: "#F95918" }}
                 onClick={handleSaveNotes}
-                disabled={savingNotes || !userId}
+                disabled={savingNotes || !doctorId}
               >
                 {savingNotes ? "Saving..." : "Save Notes"}
               </button>

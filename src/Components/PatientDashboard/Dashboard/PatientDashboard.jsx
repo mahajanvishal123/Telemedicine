@@ -1,21 +1,106 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import API_URL from "../../../Baseurl/Baseurl";
 
 const PatientDashboard = () => {
   const [showModal, setShowModal] = useState(false);
   const [rescheduleDate, setRescheduleDate] = useState('');
   const [rescheduleTime, setRescheduleTime] = useState('');
 
+  // API Data States
+  const [dashboardData, setDashboardData] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  // ✅ GET PATIENT ID FROM LOCALSTORAGE (user._id) — NO HARDCODING!
+  const storedUser = localStorage.getItem('user'); // 👈 Adjust key if you used different name like 'patientUser'
+  let patientId = null;
+
+  if (storedUser) {
+    try {
+      const user = JSON.parse(storedUser);
+      patientId = user?._id || null;
+    } catch (e) {
+      console.error("Failed to parse user from localStorage", e);
+    }
+  }
+
+  // Fetch data on mount
+  useEffect(() => {
+    if (!patientId) {
+      setError("You are not logged in. Redirecting to login...");
+      setTimeout(() => {
+        window.location.href = '/login';
+      }, 2000);
+      setLoading(false);
+      return;
+    }
+
+    const fetchDashboardData = async () => {
+      try {
+        const response = await fetch(`${API_URL}/dashboard/patient?patientId=${patientId}`);
+        if (!response.ok) throw new Error('Network response was not ok');
+        const result = await response.json();
+        if (result.success) {
+          setDashboardData(result.data);
+        } else {
+          throw new Error(result.message || 'Failed to load dashboard');
+        }
+      } catch (err) {
+        setError(err.message);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchDashboardData();
+  }, [patientId]);
+  // Loading State
+  if (loading) {
+    return (
+      <div className="d-flex justify-content-center align-items-center vh-100">
+        <div className="spinner-border text-primary" role="status">
+          <span className="visually-hidden">Loading...</span>
+        </div>
+      </div>
+    );
+  }
+
+  // Error State
+  if (error) {
+    return (
+      <div className="container py-5">
+        <div className="alert alert-danger text-center">
+          <h5>⚠️ Error Loading Dashboard</h5>
+          <p>{error}</p>
+        </div>
+      </div>
+    );
+  }
+
+  // No Data State
+  if (!dashboardData) {
+    return (
+      <div className="container py-5">
+        <div className="alert alert-warning text-center">
+          <h5>📭 No Data Available</h5>
+          <p>Your dashboard is empty or not configured yet.</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Handle Reschedule
   const handleReschedule = () => {
-    // Handle the reschedule logic here
+    if (!rescheduleDate || !rescheduleTime) return;
     console.log('Rescheduling to:', rescheduleDate, rescheduleTime);
+    // TODO: Call PUT/POST API to update appointment
     setShowModal(false);
-    // Reset form
     setRescheduleDate('');
     setRescheduleTime('');
   };
 
   return (
-    <div>
+    <div className="container py-4">
       {/* Welcome Banner */}
       <div className="mb-4">
         <div
@@ -35,11 +120,16 @@ const PatientDashboard = () => {
           <div className="card-body p-3 p-md-4">
             <div className="d-flex align-items-center gap-2 mb-2">
               <span>☀️</span>
-              <small style={{ opacity: 0.9 }}>Good afternoon</small>
+              <small style={{ opacity: 0.9 }}>
+                {new Date().getHours() < 12 ? 'Good morning' : new Date().getHours() < 18 ? 'Good afternoon' : 'Good evening'}
+              </small>
             </div>
-            <h1 className="h5 h-md-4 mb-2">Welcome back, John!</h1>
+            <h1 className="h5 h-md-4 mb-2">Welcome back!</h1>
             <p className="mb-0" style={{ opacity: 0.95, fontSize: '0.95rem' }}>
-              You have 2 appointments scheduled for today. Stay healthy and take care!
+              You have <strong>{dashboardData.totalAppointments}</strong> appointment(s) scheduled.
+              {dashboardData.nextConfirmedAppointment
+                ? ' Your next appointment is coming up!'
+                : ' No confirmed appointments yet.'}
             </p>
           </div>
         </div>
@@ -50,27 +140,27 @@ const PatientDashboard = () => {
         {[
           {
             icon: 'fas fa-calendar-check',
-            value: '24',
+            value: dashboardData.totalAppointments,
             label: 'Total Appointments',
-            sub: '+3 this month',
+            sub: 'All time',
             color: '#3498db',
             bg: 'rgba(52, 152, 219, 0.1)',
           },
           {
-            icon: 'fas fa-check-circle',
-            value: '18',
-            label: 'Completed',
-            sub: 'This month',
-            color: '#2ecc71',
-            bg: 'rgba(46, 204, 113, 0.1)',
+            icon: 'fas fa-hourglass-start',
+            value: dashboardData.statusCount.pending || 0,
+            label: 'Pending',
+            sub: 'Awaiting confirmation',
+            color: '#f39c12',
+            bg: 'rgba(243, 156, 18, 0.1)',
           },
           {
-            icon: 'fas fa-hourglass-half',
-            value: '6',
-            label: 'Upcoming',
-            sub: 'Next 30 days',
-            color: '#e67e22',
-            bg: 'rgba(230, 126, 34, 0.1)',
+            icon: 'fas fa-check-circle',
+            value: dashboardData.statusCount.confirmed || 0,
+            label: 'Confirmed',
+            sub: 'Ready to attend',
+            color: '#27ae60',
+            bg: 'rgba(39, 174, 96, 0.1)',
           },
         ].map((stat, index) => (
           <div key={index} className="col-12 col-md-4">
@@ -83,13 +173,11 @@ const PatientDashboard = () => {
               }}
               onMouseEnter={(e) => {
                 e.currentTarget.style.transform = 'translateY(-5px)';
-                e.currentTarget.style.boxShadow =
-                  '0 12px 24px rgba(0,0,0,0.15)';
+                e.currentTarget.style.boxShadow = '0 12px 24px rgba(0,0,0,0.15)';
               }}
               onMouseLeave={(e) => {
                 e.currentTarget.style.transform = 'translateY(0)';
-                e.currentTarget.style.boxShadow =
-                  '0 4px 12px rgba(0,0,0,0.08)';
+                e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,0.08)';
               }}
             >
               <div className="card-body d-flex align-items-center p-4">
@@ -116,26 +204,22 @@ const PatientDashboard = () => {
         ))}
       </div>
 
-      {/* Main Content */}
-      <div className="">
-        {/* Left Column */}
-        <div className="">
-          {/* Next Appointment Card */}
+      {/* Next Appointment Section */}
+      {dashboardData.nextConfirmedAppointment ? (
+        <div className="mb-4">
           <div
-            className="card mb-4 border-0 rounded-3 overflow-hidden"
+            className="card border-0 rounded-3 overflow-hidden"
             style={{
               transition: 'transform 0.3s ease, box-shadow 0.3s ease',
               boxShadow: '0 4px 12px rgba(0,0,0,0.08)',
             }}
             onMouseEnter={(e) => {
               e.currentTarget.style.transform = 'translateY(-4px)';
-              e.currentTarget.style.boxShadow =
-                '0 12px 24px rgba(0,0,0,0.15)';
+              e.currentTarget.style.boxShadow = '0 12px 24px rgba(0,0,0,0.15)';
             }}
             onMouseLeave={(e) => {
               e.currentTarget.style.transform = 'translateY(0)';
-              e.currentTarget.style.boxShadow =
-                '0 4px 12px rgba(0,0,0,0.08)';
+              e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,0.08)';
             }}
           >
             <div className="card-body p-4">
@@ -161,25 +245,33 @@ const PatientDashboard = () => {
                   <i className="fas fa-user-md"></i>
                 </div>
                 <div>
-                  <h6 className="mb-0">Dr. Sarah Johnson</h6>
-                  <p className="text-muted small mb-0">Cardiologist</p>
+                  <h6 className="mb-0">{dashboardData.nextConfirmedAppointment.doctorName || 'Dr. Not Assigned'}</h6>
+                  <p className="text-muted small mb-0">{dashboardData.nextConfirmedAppointment.specialty || 'Specialist'}</p>
                 </div>
               </div>
 
-              {/* Details */}
+              {/* Appointment Details */}
               <div className="d-flex flex-wrap gap-3 mb-4">
-                <div className="d-flex align-items-center text-muted small">
-                  📅 <span className="ms-1">Today</span>
-                </div>
-                <div className="d-flex align-items-center text-muted small">
-                  🎥 <span className="ms-1">Video Consultation</span>
-                </div>
-                <div className="d-flex align-items-center text-muted small">
-                  ⏰ <span className="ms-1">2:30 PM</span>
-                </div>
-                <div className="d-flex align-items-center text-muted small">
-                  ⏱️ <span className="ms-1">30 min</span>
-                </div>
+                {dashboardData.nextConfirmedAppointment.date && (
+                  <div className="d-flex align-items-center text-muted small">
+                    📅 <span className="ms-1">{dashboardData.nextConfirmedAppointment.date}</span>
+                  </div>
+                )}
+                {dashboardData.nextConfirmedAppointment.type && (
+                  <div className="d-flex align-items-center text-muted small">
+                    🎥 <span className="ms-1">{dashboardData.nextConfirmedAppointment.type}</span>
+                  </div>
+                )}
+                {dashboardData.nextConfirmedAppointment.time && (
+                  <div className="d-flex align-items-center text-muted small">
+                    ⏰ <span className="ms-1">{dashboardData.nextConfirmedAppointment.time}</span>
+                  </div>
+                )}
+                {dashboardData.nextConfirmedAppointment.duration && (
+                  <div className="d-flex align-items-center text-muted small">
+                    ⏱️ <span className="ms-1">{dashboardData.nextConfirmedAppointment.duration} min</span>
+                  </div>
+                )}
               </div>
 
               {/* Action Buttons */}
@@ -190,14 +282,13 @@ const PatientDashboard = () => {
                     backgroundColor: '#ff500b',
                     color: 'white',
                     fontWeight: '500',
-                    transition:
-                      'background 0.3s ease, transform 0.2s ease',
+                    transition: 'background 0.3s ease, transform 0.2s ease',
                   }}
                 >
                   Join Call
                 </button>
                 <button 
-                  className="btn btn-sm btn-outline-secondary px-4" 
+                  className="btn btn-sm btn-outline-secondary px-4"
                   onClick={() => setShowModal(true)}
                 >
                   Reschedule
@@ -206,11 +297,14 @@ const PatientDashboard = () => {
             </div>
           </div>
         </div>
+      ) : (
+        <div className="alert alert-info text-center">
+          <i className="fas fa-calendar-times me-2"></i>
+          No confirmed upcoming appointments. Please wait for confirmation or book a new one.
+        </div>
+      )}
 
-   
-      </div>
-
-      {/* Reschedule Appointment Modal */}
+      {/* Reschedule Modal */}
       {showModal && (
         <div 
           className="modal fade show d-block" 
@@ -229,7 +323,7 @@ const PatientDashboard = () => {
                 ></button>
               </div>
               <div className="modal-body">
-                <p>Reschedule appointment with <strong>Dr. Sarah Johnson</strong></p>
+                <p>Reschedule appointment with <strong>{dashboardData.nextConfirmedAppointment?.doctorName || 'Doctor'}</strong></p>
                 <div className="mb-3">
                   <label htmlFor="rescheduleDate" className="form-label">New Date</label>
                   <input

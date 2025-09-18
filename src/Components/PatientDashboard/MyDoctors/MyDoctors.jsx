@@ -1,340 +1,453 @@
 // src/Components/PatientDashboard/MyDoctors.jsx
 import React, { useEffect, useMemo, useState } from "react";
 import axios from "axios";
-import { Row, Col, Card, Form, Nav, Modal, Button, Badge, Spinner } from "react-bootstrap";
-import { FaUserMd, FaStar, FaSearch, FaCalendarAlt, FaEnvelope, FaClock, FaCheckCircle } from "react-icons/fa";
+import { Row, Col, Card, Badge, Form, Nav, Modal, Button, Spinner } from "react-bootstrap";
+import { FaUserMd, FaStar, FaSearch, FaCalendarAlt } from "react-icons/fa";
 import API_URL from "../../../Baseurl/Baseurl";
 
-/** ---------- Config ---------- **/
-const BRAND_ORANGE = "#FF6A00";
-const BASE = (API_URL || "").endsWith("/") ? API_URL.slice(0, -1) : (API_URL || "");
+const BRAND_ORANGE = "#f9591a"; // Match MyAppointments
 
-/** ---------- Helpers ---------- **/
-const safeParse = (s) => { try { return JSON.parse(s); } catch { return null; } };
-
-const resolvePatientId = () => {
-  // 1) URL ?patientid=...
-  if (typeof window !== "undefined") {
-    const sp = new URLSearchParams(window.location.search);
-    const q = sp.get("patientid") || sp.get("patientId");
-    if (q) return String(q);
+/* ---------------- storage helpers ---------------- */
+const safeParse = (s) => {
+  try {
+    return JSON.parse(s);
+  } catch {
+    return null;
   }
-  // 2) localStorage
-  const direct =
-    localStorage.getItem("patientId") ||
-    localStorage.getItem("patientid") ||
-    localStorage.getItem("userId") ||
-    localStorage.getItem("id");
-  if (direct) return String(direct);
-
-  // 3) nested objects (optional)
-  for (const k of ["user","authUser","currentUser","userData","profile","patient","patient_info"]) {
-    const obj = safeParse(localStorage.getItem(k));
-    const id = obj?.patientId || obj?._id || obj?.id;
-    if (id) return String(id);
-  }
-  return null;
 };
 
-const coerceISO = (...cands) => {
-  for (const v of cands) {
-    if (!v) continue;
-    const d = new Date(v);
-    if (!isNaN(+d)) return d.toISOString();
-  }
-  return null;
+const getPatientIdFromStorage = () => {
+  const userStr = localStorage.getItem("user");
+  if (!userStr) return null;
+  const user = safeParse(userStr);
+  return user?._id || user?.id || null;
 };
 
-const normExp = (v) => {
-  if (v === null || v === undefined) return "";
-  const s = String(v).trim();
-  return /^\d+(\.\d+)?$/.test(s) ? `${s} yrs` : s;
-};
+/* ---------------- utils ---------------- */
+const fmtDate = (v) => (v ? new Date(v).toLocaleDateString() : "—");
+const fmtTime = (v) => (v ? v : "—");
 
-const toMoney = (v) => {
-  if (v === null || v === undefined || v === "") return "—";
-  const n = Number(v);
-  return isNaN(n) ? String(v) : `₹${n}`;
-};
-
-/** Merge appointments -> unique doctor cards with latest visit date */
-const buildDoctorList = (appointments = []) => {
-  const map = new Map(); // key = doctor._id
-  for (const appt of appointments) {
-    const doc = typeof appt?.doctorId === "object" ? appt.doctorId : null;
-    if (!doc || !doc._id) continue;
-
-    const lastConsult = coerceISO(
-      appt?.appointmentDate,
-      appt?.slotId?.date,
-      appt?.createdAt,
-      appt?.updatedAt
-    );
-
-    const existing = map.get(doc._id);
-    const existingTs = existing?.lastConsult ? +new Date(existing.lastConsult) : -Infinity;
-    const newTs = lastConsult ? +new Date(lastConsult) : -Infinity;
-
-    const merged = {
-      id: doc._id,
-      name: doc.name || "Doctor",
-      email: doc.email || "",
-      specialty: doc.specialty || "",
-      experience: normExp(doc.experience),
-      fee: doc.fee ?? appt?.fee ?? "",
-      openingTime: doc.openingTime || "",
-      closingTime: doc.closingTime || "",
-      availableDay: doc.availableDay || "",
-      gender: doc.gender || "",
-      isVerify: String(doc.isVerify || "0") === "1",
-      profile: doc.profile || doc.profileImage || "",
-      lastConsult: existing && existingTs > newTs ? existing.lastConsult : lastConsult
-    };
-
-    // keep latest consult
-    if (!existing || newTs >= existingTs) map.set(doc._id, merged);
-  }
-  return Array.from(map.values());
-};
-
-/** ---------- Component ---------- **/
+/* ---------------- component ---------------- */
 export default function MyDoctors() {
   const [activeTab, setActiveTab] = useState("All");
   const [search, setSearch] = useState("");
-  const [show, setShow] = useState(false);
-  const [picked, setPicked] = useState(null);
-  const [doctors, setDoctors] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [err, setErr] = useState(null);
+  const [loadErr, setLoadErr] = useState("");
+  const [appointments, setAppointments] = useState([]);
+
+  // Modal
+  const [showModal, setShowModal] = useState(false);
+  const [selectedDoctorId, setSelectedDoctorId] = useState(null);
 
   useEffect(() => {
-    let cancelled = false;
-    (async () => {
+    const fetchAppointments = async () => {
+      setLoading(true);
+      setLoadErr("");
+
       try {
-        setLoading(true);
-        setErr(null);
+        const patientId = getPatientIdFromStorage();
+        if (!patientId) throw new Error("Patient ID not found in localStorage");
 
-        const patientId = resolvePatientId();
-        if (!patientId) throw new Error("Patient ID not found. Please set localStorage.setItem('patientId', '<id>') at login.");
+        // ✅ Fetch appointments (same as MyAppointments)
+  const response = await axios.get(`${API_URL}/appointment`, {
+          params: { patientId },
+        });
 
-        const token = localStorage.getItem("authToken") || localStorage.getItem("token");
-        const headers = token ? { Authorization: `Bearer ${token}` } : undefined;
+        const data = response.data;
+        if (!data.appointments || !Array.isArray(data.appointments)) {
+          throw new Error("Invalid appointments data");
+        }
 
-        const url = `${BASE}/appointment?patientid=${encodeURIComponent(patientId)}`;
-        const { data } = await axios.get(url, { headers });
+        // ✅ Transform appointments (same structure as MyAppointments)
+        const transformed = data.appointments.map((appt) => ({
+          id: appt._id,
+          date: new Date(appt.appointmentDate).toLocaleDateString("en-US", {
+            month: "short",
+            day: "numeric",
+            year: "numeric",
+          }),
+          time: appt.appointmentTime,
+          status: appt.status.charAt(0).toUpperCase() + appt.status.slice(1), // "pending" → "Pending"
+          reason: appt.reason || "",
+          doctor: {
+            id: appt.doctorId?._id || "unknown",
+            name: appt.doctorId?.name || "Unknown Doctor",
+            specialty: appt.doctorId?.specialty || "General",
+            experience: appt.doctorId?.experience || "—",
+            fee: appt.doctorId?.fee || "—",
+            profile: appt.doctorId?.profile || "",
+            openingTime: appt.doctorId?.openingTime || "",
+            closingTime: appt.doctorId?.closingTime || "",
+          },
+          appointmentDate: appt.appointmentDate,
+        }));
 
-        const appts = Array.isArray(data?.appointments) ? data.appointments : [];
-        const list = buildDoctorList(appts);
-        if (!cancelled) setDoctors(list);
-      } catch (e) {
-        if (!cancelled) setErr(e?.response?.data?.message || e?.message || "Failed to fetch doctors");
+        setAppointments(transformed);
+      } catch (err) {
+        console.error("Error fetching appointments:", err);
+        setLoadErr(err.message || "Failed to load appointments.");
       } finally {
-        if (!cancelled) setLoading(false);
+        setLoading(false);
       }
-    })();
-    return () => { cancelled = true; };
+    };
+
+    fetchAppointments();
   }, []);
 
-  const tabs = useMemo(() => {
-    const set = new Set(["All"]);
-    doctors.forEach(d => d.specialty && set.add(d.specialty));
-    return Array.from(set);
-  }, [doctors]);
+  // ✅ Group by doctor
+  const doctorsMap = useMemo(() => {
+    const map = new Map();
 
-  const filtered = useMemo(() => {
-    const q = search.trim().toLowerCase();
-    return doctors.filter(d => {
-      const specOk = activeTab === "All" || d.specialty === activeTab;
-      if (!q) return specOk;
-      return specOk && (
-        (d.name || "").toLowerCase().includes(q) ||
-        (d.specialty || "").toLowerCase().includes(q) ||
-        (d.email || "").toLowerCase().includes(q)
-      );
+    appointments.forEach((appt) => {
+      const docId = appt.doctor.id;
+      if (!docId || docId === "unknown") return;
+
+      if (!map.has(docId)) {
+        map.set(docId, {
+          doctor: appt.doctor,
+          appts: [],
+          lastConsult: null,
+        });
+      }
+
+      const slot = map.get(docId);
+      slot.appts.push(appt);
+      const consultDate = appt.appointmentDate ? new Date(appt.appointmentDate) : null;
+      if (consultDate && (!slot.lastConsult || consultDate > slot.lastConsult)) {
+        slot.lastConsult = consultDate;
+      }
     });
-  }, [doctors, activeTab, search]);
+
+    return map;
+  }, [appointments]);
+
+  const allDoctors = useMemo(() => Array.from(doctorsMap.values()), [doctorsMap]);
+
+  // ✅ Tabs: All + Unique Specialties
+  const specialties = useMemo(() => {
+    const set = new Set(["All"]);
+    allDoctors.forEach(({ doctor }) => {
+      if (doctor.specialty) set.add(doctor.specialty);
+    });
+    return Array.from(set);
+  }, [allDoctors]);
+
+  // ✅ Filter
+  const filteredDoctors = useMemo(() => {
+    return allDoctors.filter(({ doctor }) => {
+      const matchesSpec = activeTab === "All" || doctor.specialty === activeTab;
+      const s = search.trim().toLowerCase();
+      const matchesSearch =
+        !s ||
+        doctor.name.toLowerCase().includes(s) ||
+        doctor.specialty.toLowerCase().includes(s);
+
+      return matchesSpec && matchesSearch;
+    });
+  }, [allDoctors, activeTab, search]);
+
+  const openModal = (doctorId) => {
+    setSelectedDoctorId(doctorId);
+    setShowModal(true);
+  };
+
+  const closeModal = () => {
+    setShowModal(false);
+    setSelectedDoctorId(null);
+  };
+
+  const selectedDoctor = selectedDoctorId ? doctorsMap.get(selectedDoctorId) : null;
 
   return (
-    <div className="mydoctors">
-      <style>{`
-        :root{ --orange:${BRAND_ORANGE}; --border:#eceff3; --muted:#6b7280; --shadow:0 10px 26px rgba(16,24,40,.10); --shadow-lg:0 18px 46px rgba(16,24,40,.16)}
-        .muted{color:var(--muted)}
-        .tabs{border-bottom:0;padding:.25rem .5rem;white-space:nowrap}
-        .tabs .nav-link{padding:.45rem .9rem;border:1px solid var(--border);border-bottom:2px solid transparent;border-radius:12px 12px 0 0;background:#fff;color:#111827}
-        .tabs .nav-link.active{font-weight:700;box-shadow:0 2px 6px rgba(0,0,0,.08)}
-        .sbox{max-width:520px}
-        .card-shell{background:#fff;border:1px solid var(--border);border-top:0;border-radius:0 16px 16px 16px;padding:18px}
-        .pro{position:relative;border:0;border-radius:18px;overflow:hidden;box-shadow:var(--shadow)}
-        .pro__bar{height:64px;background:linear-gradient(135deg,var(--orange),#ff9a3c 60%,#ffd89b)}
-        .pro__avatar{position:absolute;top:36px;left:16px;width:64px;height:64px;border-radius:999px;background:var(--orange);color:#fff;border:3px solid #fff;display:flex;align-items:center;justify-content:center;overflow:hidden}
-        .pro__avatar img{width:100%;height:100%;object-fit:cover}
-        .pro__body{padding:56px 16px 14px 16px}
-        .name-row{display:flex;align-items:center;gap:.5rem;padding-left:72px}
-        .chip{background:rgba(255,106,0,.12);color:#b45309;border:1px solid rgba(255,106,0,.35);border-radius:999px;padding:.15rem .55rem;font-size:.8rem;font-weight:600}
-        .info{background:#fafafa;border:1px solid #f0f2f5;border-radius:12px;padding:.55rem .7rem}
-        .grid{display:grid;grid-template-columns:1fr 1fr;gap:.6rem;margin:.6rem 0 .8rem 0}
-        .acts{display:flex;gap:.6rem}
-        .btnx{border-radius:12px;border:1px solid var(--border);padding:.5rem .8rem;font-weight:600}
-        .btnx--primary{background:var(--orange);border-color:var(--orange);color:#fff}
-      `}</style>
-
-      <Row className="align-items-center mb-3">
+    <div className="my-doctors-container">
+      {/* Header */}
+      <Row className="mb-4">
         <Col>
-          <h3 className="mb-0">My Doctors</h3>
-          <small className="muted">Fetched from your appointments (unique doctors)</small>
+          <h3 className="fw-bold mb-1">My Doctors</h3>
+          <p className="text-muted mb-0">Doctors you’ve booked appointments with</p>
         </Col>
       </Row>
 
-      {/* Loading */}
-      {loading && (
-        <div className="py-5 text-center">
-          <Spinner animation="border" style={{ color: BRAND_ORANGE }} />
-          <div className="mt-2 muted">Loading doctors…</div>
-        </div>
-      )}
+      {/* Tabs */}
+      <div className="mb-4">
+        <Nav variant="tabs" className="border-bottom">
+          {specialties.map((spec) => (
+            <Nav.Item key={spec}>
+              <Nav.Link
+                active={activeTab === spec}
+                onClick={() => setActiveTab(spec)}
+                className="px-3 py-2"
+                style={{
+                  fontWeight: activeTab === spec ? "600" : "normal",
+                  color: activeTab === spec ? BRAND_ORANGE : undefined,
+                  borderBottom: activeTab === spec ? `2px solid ${BRAND_ORANGE}` : "none",
+                }}
+              >
+                {spec}
+              </Nav.Link>
+            </Nav.Item>
+          ))}
+        </Nav>
+      </div>
 
-      {/* Error */}
-      {!loading && err && (
-        <div className="p-3 mb-3" style={{ background:"#fff0f0", border:"1px solid #ffcdd2", borderRadius:8, color:"#c62828" }}>
-          {err}
+      {/* Search */}
+      <div className="mb-4" style={{ maxWidth: "450px" }}>
+        <div className="position-relative">
+          <Form.Control
+            type="search"
+            placeholder="Search by name or specialty..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="ps-4"
+            style={{ borderRadius: "8px" }}
+          />
+     
         </div>
-      )}
+      </div>
 
       {/* Content */}
-      {!loading && !err && (
-        <>
-          {/* Tabs */}
-          <Nav variant="tabs" className="tabs flex-nowrap overflow-auto mb-3 align-items-end">
-            {tabs.map((t) => (
-              <Nav.Item key={t} className="me-2">
-                <Nav.Link className={activeTab === t ? "active" : ""} onClick={() => setActiveTab(t)}>{t}</Nav.Link>
-              </Nav.Item>
-            ))}
-          </Nav>
-
-          {/* Search */}
-          <div className="mb-3">
-            <div className="position-relative sbox">
-              <Form.Control
-                type="search"
-                placeholder="Search by name, specialty or email…"
-                className="pe-5"
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-              />
-              <div className="position-absolute top-50 end-0 translate-middle-y p-2" aria-hidden="true">
-                <FaSearch size={16} color="#6b7280" />
+      {loading ? (
+        <div className="text-center py-5">
+          <Spinner animation="border" variant="primary" />
+          <p className="mt-3 text-muted">Loading your doctors...</p>
+        </div>
+      ) : loadErr ? (
+        <div className="alert alert-danger text-center">{loadErr}</div>
+      ) : (
+        <Row xs={1} md={2} lg={3} className="g-4">
+          {filteredDoctors.length === 0 ? (
+            <Col>
+              <div className="text-center py-5">
+                <p className="text-muted">No doctors found matching your criteria.</p>
               </div>
-            </div>
-          </div>
+            </Col>
+          ) : (
+            filteredDoctors.map(({ doctor, appts, lastConsult }) => {
+              const total = appts.length;
+              const confirmed = appts.filter((a) => a.status === "Completed").length;
+              const pending = appts.filter((a) => a.status === "Pending").length;
+              const cancelled = appts.filter((a) => a.status === "Cancelled").length;
 
-          <div className="card-shell">
-            <Row>
-              {filtered.length === 0 ? (
-                <Col xs={12}><div className="py-5 text-center muted">No doctors found.</div></Col>
-              ) : (
-                filtered.map((d) => (
-                  <Col xs={12} md={6} lg={4} className="mb-4 d-flex" key={d.id}>
-                    <Card className="pro flex-fill">
-                      <div className="pro__bar" />
-                      <div className="pro__avatar">
-                        {d.profile ? <img src={d.profile} alt={d.name} /> : <FaUserMd size={26} />}
-                      </div>
-                      <div className="pro__body">
-                        <div className="name-row">
-                          <h5 className="mb-0">{d.name}</h5>
-                          {d.isVerify && <Badge bg="success" className="ms-1"><FaCheckCircle className="me-1" />Verified</Badge>}
-                          {d.specialty && <span className="chip ms-auto">{d.specialty}</span>}
+              return (
+                <Col key={doctor.id}>
+                  <Card className="h-100 shadow-sm border-0 rounded-3">
+                    <Card.Body className="d-flex flex-column">
+                      {/* Doctor Header */}
+                      <div className="d-flex align-items-start mb-3">
+                        <div
+                          className="flex-shrink-0 rounded-circle d-flex align-items-center justify-content-center me-3"
+                          style={{
+                            width: "50px",
+                            height: "50px",
+                            backgroundColor: BRAND_ORANGE,
+                            color: "white",
+                          }}
+                        >
+                          {doctor.profile ? (
+                            <img
+                              src={doctor.profile}
+                              alt={doctor.name}
+                              style={{
+                                width: "100%",
+                                height: "100%",
+                                borderRadius: "50%",
+                                objectFit: "cover",
+                              }}
+                            />
+                          ) : (
+                            <FaUserMd size={24} />
+                          )}
                         </div>
-
-                        <div className="muted" style={{ paddingLeft:72, fontSize:".9rem" }}>
-                          <FaCalendarAlt className="me-1" />
-                          Last consult: {d.lastConsult ? new Date(d.lastConsult).toLocaleDateString() : "—"}
+                        <div className="flex-grow-1">
+                          <Card.Title className="fs-5 mb-0">{doctor.name}</Card.Title>
+                          <Card.Subtitle className="text-muted">{doctor.specialty}</Card.Subtitle>
                         </div>
-
-                        <div className="grid" style={{ marginTop:".7rem" }}>
-                          <div className="info">
-                            <div className="fw-bold">{d.experience || "—"}</div>
-                            <small className="muted">Experience</small>
-                          </div>
-                          <div className="info">
-                            <div className="fw-bold">{toMoney(d.fee)}</div>
-                            <small className="muted">Fee</small>
-                          </div>
-                          <div className="info" style={{ gridColumn:"1 / span 2" }}>
-                            <div className="d-flex align-items-center gap-2">
-                              <FaClock className="muted" />
-                              <div className="fw-bold">{(d.openingTime || "—")} – {(d.closingTime || "—")}</div>
-                            </div>
-                            <small className="muted">
-                              {(d.availableDay && d.availableDay.trim()) ? d.availableDay : "Availability"}
-                            </small>
-                          </div>
-                          <div className="info">
-                            <div className="fw-bold">{d.gender || "—"}</div>
-                            <small className="muted">Gender</small>
-                          </div>
-                          <div className="info">
-                            <div className="fw-bold">{d.email || "—"}</div>
-                            <small className="muted">Email</small>
-                          </div>
-                        </div>
-
-                        <div className="acts">
-                          <Button
-                            variant="light"
-                            className="btnx flex-fill"
-                            onClick={() => d.email && (window.location.href = `mailto:${d.email}`)}
-                          >
-                            <FaEnvelope className="me-2" /> Email
-                          </Button>
-                          <Button className="btnx btnx--primary flex-fill" onClick={() => { setPicked(d); setShow(true); }}>
-                            View Profile
-                          </Button>
+                        <div className="text-warning">
+                        <Card.Subtitle className="text-muted">{doctor.specialty}</Card.Subtitle>
                         </div>
                       </div>
-                    </Card>
-                  </Col>
-                ))
-              )}
-            </Row>
-          </div>
 
-          {/* Modal */}
-          <Modal show={show} onHide={() => setShow(false)} centered size="lg">
-            <Modal.Header closeButton><Modal.Title>Doctor Details</Modal.Title></Modal.Header>
-            <Modal.Body>
-              {!picked ? "—" : (
-                <>
-                  <div className="d-flex align-items-center mb-3">
-                    <div style={{ width:64, height:64, borderRadius:"50%", overflow:"hidden", background:BRAND_ORANGE, color:"#fff",
-                                   display:"flex", alignItems:"center", justifyContent:"center", border:"3px solid #fff" }} className="me-3">
-                      {picked.profile ? <img src={picked.profile} alt={picked.name} style={{ width:"100%", height:"100%", objectFit:"cover" }} /> : <FaUserMd size={28} />}
-                    </div>
-                    <div>
-                      <h5 className="mb-0">{picked.name}</h5>
-                      <div className="muted">{picked.specialty || "—"}</div>
-                    </div>
-                    {picked.isVerify && <Badge bg="success" className="ms-auto"><FaCheckCircle className="me-1" />Verified</Badge>}
-                  </div>
+                      {/* Last Consulted */}
+                      <div className="mb-3">
+                        <small className="text-muted d-flex align-items-center">
+                          <FaCalendarAlt size={12} className="me-1" />
+                          Last consulted: {lastConsult ? lastConsult.toLocaleDateString() : "—"}
+                        </small>
+                      </div>
 
-                  <Row className="g-2 mb-2">
-                    <Col md={4}><div className="info"><div className="fw-bold">{picked.experience || "—"}</div><small className="muted">Experience</small></div></Col>
-                    <Col md={4}><div className="info"><div className="fw-bold">{toMoney(picked.fee)}</div><small className="muted">Fee</small></div></Col>
-                    <Col md={4}><div className="info"><div className="fw-bold">{picked.email || "—"}</div><small className="muted">Email</small></div></Col>
-                  </Row>
+                      {/* Stats Row */}
+                      <Row className="g-2 mb-3">
+                        <Col xs={6}>
+                          <div className="bg-light p-2 rounded text-center">
+                            <div className="fw-bold">{doctor.experience}</div>
+                            <small className="text-muted">Experience</small>
+                          </div>
+                        </Col>
+                        <Col xs={6}>
+                          <div className="bg-light p-2 rounded text-center">
+                            <div className="fw-bold">{total}</div>
+                            <small className="text-muted">Appointments</small>
+                          </div>
+                        </Col>
+                      </Row>
 
-                  <Row className="g-2">
-                    <Col md={6}><div className="info"><div className="fw-bold">{picked.openingTime || "—"}</div><small className="muted">Opens</small></div></Col>
-                    <Col md={6}><div className="info"><div className="fw-bold">{picked.closingTime || "—"}</div><small className="muted">Closes</small></div></Col>
-                  </Row>
-                </>
-              )}
-            </Modal.Body>
-            <Modal.Footer><Button variant="secondary" onClick={() => setShow(false)}>Close</Button></Modal.Footer>
-          </Modal>
-        </>
+                      {/* Status Badges */}
+                      <div className="d-flex flex-wrap gap-2 mb-3">
+                        <Badge bg="success" className="px-2 py-1">
+                          Confirmed {confirmed}
+                        </Badge>
+                        <Badge bg="warning" text="dark" className="px-2 py-1">
+                          Pending {pending}
+                        </Badge>
+                        <Badge bg="secondary" className="px-2 py-1">
+                          Cancelled {cancelled}
+                        </Badge>
+                      </div>
+
+                      {/* Fee */}
+                      <div className="mb-3">
+                        <span className="fw-bold" style={{ color: BRAND_ORANGE }}>
+                          {typeof doctor.fee === "number" ? `₹${doctor.fee}` : doctor.fee}
+                        </span>
+                        <small className="text-muted ms-1">per consultation</small>
+                      </div>
+
+                      {/* Action Button */}
+                      <Button
+                        variant="outline-primary"
+                        size="sm"
+                        className="mt-auto w-100"
+                        onClick={() => openModal(doctor.id)}
+                      >
+                        View Details
+                      </Button>
+                    </Card.Body>
+                  </Card>
+                </Col>
+              );
+            })
+          )}
+        </Row>
       )}
+
+      {/* Details Modal */}
+      <Modal show={showModal} onHide={closeModal} centered size="lg" backdrop="static">
+        <Modal.Header closeButton>
+          <Modal.Title>Doctor Details</Modal.Title>
+        </Modal.Header>
+        <Modal.Body>
+          {!selectedDoctor ? (
+            <p className="text-muted text-center py-4">No data available</p>
+          ) : (
+            <>
+              {/* Doctor Header in Modal */}
+              <div className="d-flex align-items-center mb-4 pb-3 border-bottom">
+                <div
+                  className="flex-shrink-0 rounded-circle d-flex align-items-center justify-content-center me-3"
+                  style={{
+                    width: "60px",
+                    height: "60px",
+                    backgroundColor: BRAND_ORANGE,
+                    color: "white",
+                  }}
+                >
+                  {selectedDoctor.doctor.profile ? (
+                    <img
+                      src={selectedDoctor.doctor.profile}
+                      alt={selectedDoctor.doctor.name}
+                      style={{
+                        width: "100%",
+                        height: "100%",
+                        borderRadius: "50%",
+                        objectFit: "cover",
+                      }}
+                    />
+                  ) : (
+                    <FaUserMd size={28} />
+                  )}
+                </div>
+                <div>
+                  <h5 className="mb-0">{selectedDoctor.doctor.name}</h5>
+                  <p className="text-muted mb-0">{selectedDoctor.doctor.specialty}</p>
+                </div>
+              </div>
+
+              {/* Stats in Modal */}
+              <Row className="mb-4">
+                <Col md={4} className="text-center">
+                  <div className="p-3 bg-light rounded">
+                    <div className="fw-bold h5 mb-0">{selectedDoctor.doctor.experience}</div>
+                    <small className="text-muted">Experience</small>
+                  </div>
+                </Col>
+                <Col md={4} className="text-center">
+                  <div className="p-3 bg-light rounded">
+                    <div className="fw-bold h5 mb-0">{selectedDoctor.appts.length}</div>
+                    <small className="text-muted">Total Appointments</small>
+                  </div>
+                </Col>
+                <Col md={4} className="text-center">
+                  <div className="p-3 bg-light rounded">
+                    <div className="fw-bold h5 mb-0">
+                      {typeof selectedDoctor.doctor.fee === "number"
+                        ? `₹${selectedDoctor.doctor.fee}`
+                        : selectedDoctor.doctor.fee}
+                    </div>
+                    <small className="text-muted">Fee per Consultation</small>
+                  </div>
+                </Col>
+              </Row>
+
+              {/* Appointments Table */}
+              <h6 className="mb-3">Your Appointment History</h6>
+              <div className="table-responsive">
+                <table className="table table-hover align-middle">
+                  <thead className="table-light">
+                    <tr>
+                      <th>Date</th>
+                      <th>Time</th>
+                      <th>Status</th>
+                      <th>Reason</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {selectedDoctor.appts
+                      .slice()
+                      .sort((a, b) => new Date(b.appointmentDate) - new Date(a.appointmentDate))
+                      .map((ap) => (
+                        <tr key={ap.id}>
+                          <td>{fmtDate(ap.appointmentDate)}</td>
+                          <td>{fmtTime(ap.time)}</td>
+                          <td>
+                            <Badge
+                              bg={
+                                ap.status === "Completed"
+                                  ? "success"
+                                  : ap.status === "Pending"
+                                  ? "warning"
+                                  : "secondary"
+                              }
+                              text={ap.status === "Pending" ? "dark" : "white"}
+                              className="px-2 py-1"
+                            >
+                              {ap.status}
+                            </Badge>
+                          </td>
+                          <td>{ap.reason || "—"}</td>
+                        </tr>
+                      ))}
+                  </tbody>
+                </table>
+              </div>
+            </>
+          )}
+        </Modal.Body>
+        <Modal.Footer>
+          <Button variant="secondary" onClick={closeModal}>
+            Close
+          </Button>
+        </Modal.Footer>
+      </Modal>
     </div>
   );
 }
