@@ -1,10 +1,9 @@
 import React, { useState, useEffect } from "react";
 import axios from "axios";
-import API_URL from "../../Baseurl/Baseurl";
 
 const AddCaregiver = () => {
   // ====== CONFIG ======
-  const BASE_URL = API_URL;
+  const BASE_URL = "https://tele-medicine-backend-production.up.railway.app/api";
 
   // ---- auth helpers ----
   const safeJSON = (txt) => { try { return JSON.parse(txt); } catch { return null; } };
@@ -16,8 +15,20 @@ const AddCaregiver = () => {
   const authHeaders = () =>
     accessToken ? { Authorization: `Bearer ${accessToken}` } : {};
 
-  
-  
+  // ---- doctorId from localStorage / user blob ----
+  const getDoctorId = () => {
+    const direct = localStorage.getItem("doctorId");
+    if (direct && direct !== "undefined" && direct !== "null") return String(direct);
+
+    const user = safeJSON(localStorage.getItem("user")) || {};
+    if (user?.doctorId) return String(user.doctorId);
+    if (user?._id && user?.role === "doctor") return String(user._id);
+    if (user?.doctor?._id) return String(user.doctor._id);
+    if (user?.doctor?.id) return String(user.doctor.id);
+
+    return null;
+  };
+  const doctorId = getDoctorId();
 
   // Caregivers state
   const [caregivers, setCaregivers] = useState([]);
@@ -92,57 +103,64 @@ const AddCaregiver = () => {
   const mapApiCaregiver = (api) => {
     const trim = (v) => (typeof v === "string" ? v.trim() : v);
     const expYears = (() => {
-      const e = trim(api.experience);
+      const e = trim(api?.experience);
       if (!e) return 0;
       const m = String(e).match(/(\d+)/);
       return m ? Number(m[1]) : 0;
     })();
 
     const docs = [];
-    if (api.certificate && String(api.certificate).length > 0) {
+    if (api?.certificate && String(api.certificate).length > 0) {
       const fileName = String(api.certificate).split("/").pop() || "Certificate";
       docs.push({ name: fileName, url: api.certificate });
     }
 
     return {
-      id: api._id,
-      name: trim(api.name) || "",
-      email: trim(api.email) || "",
-      joinDate: api.createdAt ? String(api.createdAt).slice(0, 10) : "",
+      id: api?._id,
+      name: trim(api?.name) || "",
+      email: trim(api?.email) || "",
+      joinDate: api?.createdAt ? String(api.createdAt).slice(0, 10) : "",
       status: "Active",
       certification: "",
       yearsExperience: expYears,
-      mobile: trim(api.mobile) || "",
-      address: trim(api.address) || "",
-      skills: trim(api.skills) || "",
-      profilePicture: trim(api.profile) || "https://via.placeholder.com/80",
-      dateOfBirth: trim(api.dob) || "",
-      gender: trim(api.gender) || "",
-      bloodGroup: trim(api.bloodGroup) || "",
+      mobile: trim(api?.mobile) || "",
+      address: trim(api?.address) || "",
+      skills: trim(api?.skills) || "",
+      profilePicture: trim(api?.profile) || "https://via.placeholder.com/80",
+      dateOfBirth: trim(api?.dob) || "",
+      gender: trim(api?.gender) || "",
+      bloodGroup: trim(api?.bloodGroup) || "",
       password: "********",
       documents: docs,
-      patientId: trim(api.patientId) || "",
-      age: api.age || "",
-      role: api.role || "caregiver",
+      patientId: trim(api?.patientId) || "",
+      age: api?.age || "",
+      role: api?.role || "caregiver",
     };
   };
 
-  // ===== GET /caregiver =====
+  // ===== GET /caregiver/:doctorId (by id) =====
   const fetchCaregivers = async () => {
     setLoadingCaregivers(true);
     setCaregiversError(null);
+
     try {
-      const res = await axios.get(`${BASE_URL}/caregiver`, {
-        headers: { ...authHeaders() }
-      });
-      
-      // Handle different response structures
-      const raw = Array.isArray(res?.data)
-        ? res.data
-        : (Array.isArray(res?.data?.data) ? res.data.data : []);
-        
-      const mapped = raw.map(mapApiCaregiver);
-      setCaregivers(mapped);
+      if (!doctorId) {
+        throw new Error("Doctor ID not found in localStorage/user. Please login again.");
+      }
+
+      // adjust if your backend path differs (e.g. /caregivers/doctor/:id)
+      const res = await axios.get(
+        `${BASE_URL}/caregiver?doctorId=${doctorId}`,
+        { headers: { ...authHeaders() } }
+      );
+
+      const raw =
+        Array.isArray(res?.data) ? res.data
+          : Array.isArray(res?.data?.data) ? res.data.data
+          : Array.isArray(res?.data?.caregivers) ? res.data.caregivers
+          : [];
+
+      setCaregivers(raw.map(mapApiCaregiver));
     } catch (err) {
       console.error("Failed to fetch caregivers:", err);
       setCaregiversError(
@@ -158,9 +176,9 @@ const AddCaregiver = () => {
   useEffect(() => {
     fetchCaregivers();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [doctorId]);
 
-  // ===== POST /caregiver (Add Caregiver) =====
+  // ===== POST {{base_url}}/caregiver (Add Caregiver) — axios end-to-end =====
   const handleAddCaregiver = async () => {
     if (!newCaregiver.name || !newCaregiver.email || !newCaregiver.mobile || !newCaregiver.gender) {
       setError("Please fill all required fields (Name, Email, Mobile, Gender)");
@@ -174,13 +192,21 @@ const AddCaregiver = () => {
       setError("Passwords do not match");
       return;
     }
+    if (!doctorId) {
+      setError("Doctor ID not found. Please login again.");
+      return;
+    }
 
+    // Multipart body (supports image/docs). If your API expects JSON, swap to JSON accordingly.
     const fd = new FormData();
     fd.append("name", newCaregiver.name.trim());
     fd.append("email", newCaregiver.email.trim());
     fd.append("password", newCaregiver.password);
     fd.append("gender", newCaregiver.gender);
     fd.append("role", "caregiver");
+    // IMPORTANT: doctor link in body
+    fd.append("doctorId", doctorId);
+
     if (newCaregiver.profilePictureFile) fd.append("profile", newCaregiver.profilePictureFile);
     if (newCaregiver.dateOfBirth) fd.append("dob", newCaregiver.dateOfBirth);
     if (newCaregiver.bloodGroup) fd.append("bloodGroup", newCaregiver.bloodGroup);
@@ -188,25 +214,29 @@ const AddCaregiver = () => {
     if (newCaregiver.address) fd.append("address", newCaregiver.address);
     if (newCaregiver.mobile) fd.append("mobile", newCaregiver.mobile);
     if (newCaregiver.skills) fd.append("skills", newCaregiver.skills);
-    if (newCaregiver.documentFiles?.length) newCaregiver.documentFiles.forEach((file) => fd.append("certificate", file));
+    if (newCaregiver.documentFiles?.length) {
+      newCaregiver.documentFiles.forEach((file) => fd.append("certificate", file));
+    }
 
     try {
       setSubmitting(true);
       setError(null);
-      
-      const res = await axios.post(`${BASE_URL}/caregiver`, fd, {
-        headers: { "Content-Type": "multipart/form-data", ...authHeaders() }
-      });
 
-      // Extract data from API response matching the structure in the image
-      const apiData = res.data;
-      const createdCaregiver = apiData.caregiver; // Directly access caregiver object from response
+      // === NEW POST: axios -> POST {{base_url}}/caregiver ===
+      const res = await axios.post(
+        `${BASE_URL}/caregiver`,
+        fd,
+        { headers: { "Content-Type": "multipart/form-data", ...authHeaders() } }
+      );
 
-      // Map the API caregiver to our local format
-      const mappedCaregiver = mapApiCaregiver(createdCaregiver);
-
-      // Update caregivers state with the new caregiver
-      setCaregivers(prev => [...prev, mappedCaregiver]);
+      // optional: trust response object
+      const created = res?.data?.caregiver || res?.data?.data || res?.data;
+      if (!created?._id) {
+        // if API doesn't return full object, refetch list for current doctor
+        await fetchCaregivers();
+      } else {
+        setCaregivers((prev) => [...prev, mapApiCaregiver(created)]);
+      }
 
       alert("Caregiver created successfully!");
       setShowAddCaregiverModal(false);
@@ -263,11 +293,6 @@ const AddCaregiver = () => {
       );
 
       const updatedApi = res?.data?.caregiver || res?.data?.data || res?.data;
-
-      if (!updatedApi) {
-        throw new Error("No caregiver returned from server");
-      }
-
       const mapped = mapApiCaregiver(updatedApi);
 
       setCaregivers((prev) =>
@@ -290,7 +315,7 @@ const AddCaregiver = () => {
   // ===== DELETE /caregiver/:id =====
   const handleDeleteCaregiver = async () => {
     if (!deletingCaregiver) return;
-    
+
     try {
       setDeleting(true);
       setError(null);
@@ -431,6 +456,11 @@ const AddCaregiver = () => {
         <div className="alert alert-danger d-flex justify-content-between align-items-center">
           <span>{caregiversError}</span>
           <button className="btn btn-sm btn-outline-light" onClick={fetchCaregivers}>Retry</button>
+        </div>
+      )}
+      {!doctorId && (
+        <div className="alert alert-warning">
+          Doctor ID not found in localStorage/user. Please ensure login stores it.
         </div>
       )}
 

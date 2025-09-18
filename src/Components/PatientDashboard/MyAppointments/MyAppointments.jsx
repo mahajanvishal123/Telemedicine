@@ -1,50 +1,81 @@
-import React, { useState } from "react";
-// import 'bootstrap/dist/css/bootstrap.min.css';
+import React, { useState, useEffect } from "react";
+import axios from "axios"; // ✅ Import Axios
 import "./MyAppointments.css";
+
+// Replace with your actual API base URL
+import API_URL from "../../../Baseurl/Baseurl";
 
 const MyAppointments = () => {
   const [activeTab, setActiveTab] = useState("all");
   const [showEditModal, setShowEditModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [selectedAppointment, setSelectedAppointment] = useState(null);
-  const [appointments, setAppointments] = useState([
-    {
-      id: 1,
-      date: "Jan 20, 2024",
-      time: "2:30 PM",
-      doctor: "Dr. Sarah Johnson",
-      specialty: "Cardiologist",
-      type: "Video Call",
-      status: "Upcoming",
-      payment: "Paid",
-    },
-    {
-      id: 2,
-      date: "Jan 18, 2024",
-      time: "10:00 AM",
-      doctor: "Dr. Michael Chen",
-      specialty: "Neurologist",
-      type: "In-Person",
-      status: "Completed",
-      payment: "Paid",
-    },
-    {
-      id: 3,
-      date: "Jan 15, 2024",
-      time: "11:15 AM",
-      doctor: "Dr. Emily Davis",
-      specialty: "Dermatologist",
-      type: "Video Call",
-      status: "Cancelled",
-      payment: "Refunded",
-    },
-  ]);
+  const [appointments, setAppointments] = useState([]);
+  const [loading, setLoading] = useState(true); // Add loading state
+
+  // Fetch appointments on component mount
+  useEffect(() => {
+    const fetchAppointments = async () => {
+      try {
+        // Get user from localStorage
+        const userStr = localStorage.getItem("user");
+        if (!userStr) {
+          throw new Error("User not found in localStorage");
+        }
+        const user = JSON.parse(userStr);
+        const patientId = user._id;
+
+        if (!patientId) {
+          throw new Error("Patient ID not found");
+        }
+
+        // ✅ Make API call using Axios
+        const response = await axios.get(`${API_URL}/appointment`, {
+          params: { patientId }, // Axios uses `params` for query strings
+        });
+
+        const data = response.data; // Axios directly gives you .data
+        console.log("API Response:", data);
+
+        // Transform API data to match your UI structure
+        const transformedAppointments = data.appointments.map((appt) => ({
+          id: appt._id,
+          date: new Date(appt.appointmentDate).toLocaleDateString("en-US", {
+            month: "short",
+            day: "numeric",
+            year: "numeric",
+          }),
+          time: appt.appointmentTime,
+          doctor: appt.doctorId?.name || "Unknown Doctor",
+          specialty: appt.doctorId?.specialty || "General",
+          type: "In-Person", // You can add logic if you have type in API
+          status: appt.status.charAt(0).toUpperCase() + appt.status.slice(1), // "pending" → "Pending"
+          payment: appt.status === "completed" ? "Paid" : "Pending", // Adjust logic as per your backend
+        }));
+
+        setAppointments(transformedAppointments);
+      } catch (error) {
+        console.error("Error fetching appointments:", error);
+        alert("Failed to load appointments. Please try again.");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchAppointments();
+  }, []);
+
+  // Stats calculation based on fetched appointments
+  const total = appointments.length;
+  const upcoming = appointments.filter((a) => a.status === "Pending").length;
+  const completed = appointments.filter((a) => a.status === "Completed").length;
+  const cancelled = appointments.filter((a) => a.status === "Cancelled").length;
 
   const stats = [
-    { label: "Total Appointments", value: 6, icon: "calendar", color: "total" },
-    { label: "Upcoming", value: 3, icon: "clock", color: "upcoming" },
-    { label: "Completed", value: 2, icon: "check-circle", color: "completed" },
-    { label: "Cancelled", value: 1, icon: "times-circle", color: "cancelled" },
+    { label: "Total Appointments", value: total, icon: "calendar", color: "total" },
+    { label: "Upcoming", value: upcoming, icon: "clock", color: "upcoming" },
+    { label: "Completed", value: completed, icon: "check-circle", color: "completed" },
+    { label: "Cancelled", value: cancelled, icon: "times-circle", color: "cancelled" },
   ];
 
   const tabs = [
@@ -70,18 +101,32 @@ const MyAppointments = () => {
   };
 
   const handleEditSave = () => {
-    // In a real application, you would update the appointment in your state/API here
     console.log("Saving changes for appointment:", selectedAppointment);
+    // Here you can make PUT/PATCH API call with Axios later
     setShowEditModal(false);
   };
 
   const handleDeleteConfirm = () => {
-    // Remove the appointment from the list
+    // Optional: Call DELETE API endpoint here with Axios
+    // Example:
+    // await axios.delete(`${API_URL}/appointment/${selectedAppointment.id}`);
+
     setAppointments(
       appointments.filter((appt) => appt.id !== selectedAppointment.id)
     );
     setShowDeleteModal(false);
   };
+
+  if (loading) {
+    return (
+      <div className="text-center py-5">
+        <div className="spinner-border text-primary" role="status">
+          <span className="visually-hidden">Loading...</span>
+        </div>
+        <p className="mt-3">Loading your appointments...</p>
+      </div>
+    );
+  }
 
   return (
     <div className="">
@@ -106,7 +151,7 @@ const MyAppointments = () => {
                 className={`stats-icon d-flex align-items-center justify-content-center rounded-circle bg-${stat.color} text-white`}
                 style={{ width: "50px", height: "50px", fontSize: "20px" }}
               >
-                <i className={`fas fa-${stat.icon} bg-${stat.color}`}></i>
+                <i className={`fas fa-${stat.icon}`}></i>
               </div>
               <div className="ms-3">
                 <h6 className="mb-0 fw-bold text-dark">{stat.value}</h6>
@@ -194,7 +239,7 @@ const MyAppointments = () => {
                       <td>
                         <span
                           className={`badge ${
-                            appt.status === "Upcoming"
+                            appt.status === "Pending"
                               ? "bg-warning text-dark"
                               : appt.status === "Completed"
                               ? "bg-success"
@@ -321,6 +366,7 @@ const MyAppointments = () => {
                       <option value="Neurologist">Neurologist</option>
                       <option value="Dermatologist">Dermatologist</option>
                       <option value="Pediatrician">Pediatrician</option>
+                      <option value="Oncologist">Oncologist</option>
                     </select>
                   </div>
                   <div className="mb-3">
@@ -353,7 +399,7 @@ const MyAppointments = () => {
                   type="button"
                   className="btn"
                   onClick={handleEditSave}
-                  style={{ backgroundColor: "#f9591a", color: "white" } }
+                  style={{ backgroundColor: "#f9591a", color: "white" }}
                 >
                   Save changes
                 </button>

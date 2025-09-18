@@ -1,28 +1,73 @@
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import { Link } from "react-router-dom";
+import axios from "axios";
+import API_URL from "../../../Baseurl/Baseurl"; // adjust path if needed
 
 const BRAND_ORANGE = "#ff6b00";
-const DEFAULT_COUNTRY_CODE = "+91"; // <- yahan change kar sakte ho
+const DEFAULT_COUNTRY_CODE = "+91";
+const BASE_URL = API_URL;
+const ASSIGN_ENDPOINT = `${BASE_URL}/caregiver/assignCaregiver`;
 
-// ------- Helpers -------
+/* ---------------- ID & STORAGE HELPERS ---------------- */
+const safeParse = (str) => { try { return JSON.parse(str); } catch { return null; } };
+
+const pickId = (obj) => {
+  if (!obj || typeof obj !== "object") return null;
+  for (const k of ["_id", "id", "userId", "uid", "sub"]) if (obj[k]) return obj[k];
+  for (const k of Object.keys(obj)) {
+    const nested = obj[k];
+    if (nested && typeof nested === "object") {
+      const nid = pickId(nested);
+      if (nid) return nid;
+    }
+  }
+  return null;
+};
+
+const getPatientIdFromStorage = () => {
+  const direct = localStorage.getItem("userId") || sessionStorage.getItem("userId");
+  if (direct && direct !== "null" && direct !== "undefined") return direct;
+
+  const keys = ["user", "profile", "authUser", "currentUser", "loginUser", "patient"];
+  for (const store of [localStorage, sessionStorage]) {
+    for (const k of keys) {
+      const obj = safeParse(store.getItem(k));
+      const id = pickId(obj);
+      if (id) return id;
+    }
+  }
+  return null;
+};
+
+const getPatientName = () => {
+  const keys = ["user", "profile", "authUser", "currentUser", "loginUser", "patient"];
+  for (const store of [localStorage, sessionStorage]) {
+    for (const k of keys) {
+      const obj = safeParse(store.getItem(k));
+      if (obj && typeof obj === "object") {
+        const name = obj.name || obj.fullName || obj.username || obj.displayName;
+        if (name) return name;
+      }
+    }
+  }
+  return null;
+};
+
+/* ---------------- PHONE / DEEPLINK HELPERS ---------------- */
 const normalizePhone = (raw, defaultCC = DEFAULT_COUNTRY_CODE) => {
   if (!raw) return "";
-  const trimmed = String(raw).trim();
-  // keep plus if present, else strip non-digits
-  if (trimmed.startsWith("+")) {
-    const cleaned = "+" + trimmed.replace(/[^\d]/g, "");
-    return cleaned;
-  }
-  const digits = trimmed.replace(/[^\d]/g, "");
+  const t = String(raw).trim();
+  if (t.startsWith("+")) return "+" + t.replace(/[^\d]/g, "");
+  const digits = t.replace(/[^\d]/g, "");
   if (!digits) return "";
   if (digits.length === 10 && defaultCC) return defaultCC + digits;
-  return digits; // fallback (already has country code digits)
+  return digits;
 };
 
 const buildWhatsAppLink = (phone, text) => {
   const normalized = normalizePhone(phone);
   if (!normalized) return "#";
-  const numForWa = normalized.replace(/^\+/, ""); // wa.me expects no '+'
+  const numForWa = normalized.replace(/^\+/, "");
   const q = text ? `?text=${encodeURIComponent(text)}` : "";
   return `https://wa.me/${numForWa}${q}`;
 };
@@ -32,176 +77,245 @@ const buildTelLink = (phone) => {
   return normalized ? `tel:${normalized}` : "#";
 };
 
+/* ---------------- NORMALIZERS (for your payload) ---------------- */
+
+// Parse "10 yrs" -> 10 (number). If it’s not a pure number, keep original string for display.
+const parseYears = (val) => {
+  if (val == null) return "";
+  const m = String(val).match(/(\d+(\.\d+)?)/);
+  return m ? Number(m[1]) : String(val);
+};
+
+const normalizeCaregiver = (cRaw) => {
+  if (!cRaw || typeof cRaw !== "object") return null;
+  return {
+    id: cRaw._id || cRaw.id || pickId(cRaw),
+    name: cRaw.name || "",
+    email: cRaw.email || "",
+    profilePicture: cRaw.profile || cRaw.avatar || cRaw.photo || "",
+    yearsExperience: parseYears(cRaw.experience),      // "10 yrs" -> 10
+    experienceLabel: cRaw.experience || "",            // keep original for display if needed
+    address: cRaw.address || "",
+    skills: cRaw.skills || "",
+    mobile: cRaw.mobile || cRaw.phone || "",           // not in your sample; will hide buttons if missing
+    status: cRaw.status || "",                         // not in your payload; computed per assignment instead
+    documents: cRaw.certificate
+      ? [{ name: "Certificate", url: cRaw.certificate }]
+      : [],
+  };
+};
+
+const computeAssignmentStatus = (startISO, endISO) => {
+  const now = new Date();
+  const start = startISO ? new Date(startISO) : null;
+  const end = endISO ? new Date(endISO) : null;
+
+  if (start && now < start) return "Upcoming";
+  if (start && end && now >= start && now <= end) return "Active";
+  if (end && now > end) return "Completed";
+  return "Active";
+};
+
+const normalizeAssignment = (item) => {
+  if (!item || typeof item !== "object") return null;
+
+  const id = item._id || item.id || pickId(item);
+  const patientId = item.patientId?._id || item.patientId || "";
+  const cgObj = item.caregiverId && typeof item.caregiverId === "object" ? item.caregiverId : null;
+  const caregiver = normalizeCaregiver(cgObj) || (item.caregiverId ? { id: item.caregiverId } : null);
+
+  const start = item.assignStartDate || item.startDate || item.start || "";
+  const end = item.assignEndDate || item.endDate || item.end || "";
+
+  const status = computeAssignmentStatus(start, end);
+
+  return {
+    id,
+    patientId,
+    caregiverId: caregiver?.id || "",
+    caregiver,
+    dateAssigned: item.createdAt || item.dateAssigned || "",
+    assignStartDate: start,
+    assignEndDate: end,
+    status,
+  };
+};
+
+const normalizeAssignmentsResponse = (resData) => {
+  const arr =
+    (Array.isArray(resData) && resData) ||
+    (Array.isArray(resData?.data) && resData.data) ||
+    (Array.isArray(resData?.assignments) && resData.assignments) ||
+    (Array.isArray(resData?.results) && resData.results) ||
+    (Array.isArray(resData?.items) && resData.items) ||
+    [];
+  const out = [];
+  for (const it of arr) {
+    const n = normalizeAssignment(it);
+    if (n) out.push(n);
+  }
+  return out;
+};
+
+/* ---------------- COMPONENT ---------------- */
 const MyCaregiver = () => {
-  // ---------- Sample data ----------
-  const [patients] = useState([{ id: 1, name: "John Doe", email: "john@example.com" }]);
+  const patientName = getPatientName();
+  const [assignments, setAssignments] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [loadErr, setLoadErr] = useState("");
 
-  const [caregivers] = useState([
-    {
-      id: 201,
-      name: "Amy Rodriguez",
-      email: "amy@example.com",
-      joinDate: "2023-09-25",
-      status: "Active",
-      certification: "CNA",
-      yearsExperience: 5,
-      mobile: "555-9012",
-      address: "789 Care St",
-      skills: "BP Monitoring, Insulin Injection, Elderly Care",
-      profilePicture: "https://randomuser.me/api/portraits/women/44.jpg",
-      documents: [
-        { name: "Certification.pdf", url: "https://example.com/cert1.pdf" },
-        { name: "BackgroundCheck.pdf", url: "https://example.com/bg1.pdf" },
-      ],
-    },
-    {
-      id: 202,
-      name: "Michael Johnson",
-      email: "michael@example.com",
-      joinDate: "2023-08-15",
-      status: "Active",
-      certification: "RN",
-      yearsExperience: 8,
-      mobile: "555-3456",
-      address: "321 Health Ave",
-      skills: "Wound Care, Medication Administration, Physical Therapy",
-      profilePicture: "https://randomuser.me/api/portraits/men/32.jpg",
-      documents: [{ name: "License.pdf", url: "https://example.com/license1.pdf" }],
-    },
-    {
-      id: 203,
-      name: "Sarah Williams",
-      email: "sarah@example.com",
-      joinDate: "2023-10-10",
-      status: "Inactive",
-      certification: "LPN",
-      yearsExperience: 6,
-      mobile: "555-7890",
-      address: "654 Nurse Lane",
-      skills: "Patient Hygiene, Vital Signs Monitoring, Dementia Care",
-      profilePicture: "https://randomuser.me/api/portraits/women/68.jpg",
-      documents: [],
-    },
-  ]);
+  // map caregiverId -> caregiver object
+  const caregiversById = useMemo(() => {
+    const map = new Map();
+    for (const a of assignments) {
+      if (a.caregiver?.id) map.set(a.caregiver.id, a.caregiver);
+    }
+    return map;
+  }, [assignments]);
 
-  const [assignments] = useState([
-    { id: 1001, patientId: 1, caregiverId: 201, dateAssigned: "2023-10-15", status: "Active" },
-    { id: 1002, patientId: 1, caregiverId: 202, dateAssigned: "2023-10-20", status: "Active" },
-    { id: 1003, patientId: 1, caregiverId: 203, dateAssigned: "2023-11-04", status: "Inactive" },
-  ]);
+  useEffect(() => {
+    const fetchAssignments = async () => {
+      setLoading(true);
+      setLoadErr("");
+      try {
+        const patientId = getPatientIdFromStorage();
+        if (!patientId) throw new Error("Patient ID not found in storage.");
 
-  const currentPatientId = 1;
-  const currentPatient = patients.find((p) => p.id === currentPatientId);
+        const token = localStorage.getItem("token") || sessionStorage.getItem("token");
+        const headers = token ? { Authorization: `Bearer ${token}` } : undefined;
 
-  const myAssignments = useMemo(
-    () => assignments.filter((a) => a.patientId === currentPatientId),
-    [assignments]
-  );
+        const res = await axios.get(ASSIGN_ENDPOINT, {
+          params: { patientId },     // your backend reference
+          headers,
+        });
 
-  const getCaregiver = (id) => caregivers.find((c) => c.id === id);
+        const normalized = normalizeAssignmentsResponse(res?.data);
+        // ensure we only show the current patient's assignments
+        const mine = normalized.filter((a) => !a.patientId || String(a.patientId) === String(patientId));
+        setAssignments(mine);
+      } catch (e) {
+        setLoadErr(e?.response?.data?.message || e?.message || "Failed to load assigned caregivers.");
+        setAssignments([]);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchAssignments();
+  }, []);
+
+  const getCaregiver = (id) => caregiversById.get(id);
 
   const pillClass = (status) =>
-    status === "Active" ? "pill pill-success" : "pill pill-muted";
+    status === "Active" ? "pill pill-success" :
+    status === "Upcoming" ? "pill pill-info" :
+    status === "Completed" ? "pill pill-muted" :
+    "pill pill-muted";
 
-  // ---------- Detail component state ----------
+  // Detail
   const [detailOpen, setDetailOpen] = useState(false);
   const [detailCaregiver, setDetailCaregiver] = useState(null);
   const [detailAssignment, setDetailAssignment] = useState(null);
 
   const openDetail = (asn) => {
-    const cg = getCaregiver(asn.caregiverId);
-    setDetailCaregiver(cg || null);
-    setDetailAssignment(asn || null);
+    const cg = getCaregiver(asn.caregiverId) || asn.caregiver || null;
+    setDetailCaregiver(cg);
+    setDetailAssignment(asn);
     setDetailOpen(true);
   };
-
   const closeDetail = () => {
     setDetailOpen(false);
     setDetailCaregiver(null);
     setDetailAssignment(null);
   };
 
-  // ---------- Compact card ----------
+  /* --------- Compact Card --------- */
   const CompactCard = ({ asn }) => {
-    const cg = getCaregiver(asn.caregiverId);
+    const cg = getCaregiver(asn.caregiverId) || asn.caregiver;
     if (!cg) return null;
 
     const telHref = buildTelLink(cg.mobile);
-    const waText = `Hello ${cg.name}, this is ${currentPatient?.name || "your patient"}.`;
+    const waText = `Hello ${cg.name || "Caregiver"}, this is ${patientName || "your patient"}.`;
     const waHref = buildWhatsAppLink(cg.mobile, waText);
+
+    const expLabel = cg.experienceLabel || (typeof cg.yearsExperience === "number" ? `${cg.yearsExperience} yrs` : "");
 
     return (
       <div className="mini-card">
         <div className="mini-top">
           <div className="mini-avatar">
             {cg.profilePicture ? (
-              <img src={cg.profilePicture} alt={cg.name} />
+              <img src={cg.profilePicture} alt={cg.name || "Caregiver"} />
             ) : (
-              <div className="placeholder">{cg.name.charAt(0)}</div>
+              <div className="placeholder">{(cg.name || "C").charAt(0)}</div>
             )}
           </div>
 
-        <div className="mini-meta">
-            <div className="mini-name">{cg.name}</div>
-            <div className="mini-role">{cg.certification}</div>
+          <div className="mini-meta">
+            <div className="mini-name">{cg.name || "—"}</div>
+            <div className="mini-role">Caregiver</div>
           </div>
         </div>
 
         <div className="mini-badges">
-          <span className={pillClass(cg.status)}>{cg.status}</span>
-          <span className="pill">
-            <i className="fas fa-calendar-alt me" />
-            {cg.joinDate}
-          </span>
-          <span className="pill">
-            <i className="fas fa-history me" />
-            {cg.yearsExperience} yrs
-          </span>
+          <span className={pillClass(asn.status)}>{asn.status}</span>
+          {expLabel ? (
+            <span className="pill">
+              <i className="fas fa-history me" />
+              {expLabel}
+            </span>
+          ) : null}
         </div>
 
         <div className="mini-info">
-          <div className="rowi">
-            <span className="ico"><i className="fas fa-envelope" /></span>
-            <span className="val">{cg.email}</span>
-          </div>
-          <div className="rowi">
-            <span className="ico"><i className="fas fa-phone" /></span>
-            <span className="val">{normalizePhone(cg.mobile)}</span>
-          </div>
-          <div className="rowi">
-            <span className="ico"><i className="fas fa-calendar-check" /></span>
-            <span className="val">Assigned: {asn.dateAssigned}</span>
-          </div>
+          {cg.email ? (
+            <div className="rowi">
+              <span className="ico"><i className="fas fa-envelope" /></span>
+              <span className="val">{cg.email}</span>
+            </div>
+          ) : null}
+          {asn.assignStartDate || asn.assignEndDate ? (
+            <div className="rowi">
+              <span className="ico"><i className="fas fa-calendar-check" /></span>
+              <span className="val">
+                {asn.assignStartDate ? new Date(asn.assignStartDate).toLocaleDateString() : "—"}
+                {" "}to{" "}
+                {asn.assignEndDate ? new Date(asn.assignEndDate).toLocaleDateString() : "—"}
+              </span>
+            </div>
+          ) : null}
         </div>
 
         <div className="mini-actions">
           <button className="btn btn-orange btn-sm" onClick={() => openDetail(asn)}>
             <i className="fas fa-eye me" /> View
           </button>
-
-          {/* Call */}
-          <a className="btn btn-ghost-orange btn-sm" href={telHref}>
-            <i className="fas fa-phone me" /> Call
-          </a>
-
-          {/* WhatsApp */}
-          <a className="btn btn-ghost-orange btn-sm" href={waHref} target="_blank" rel="noreferrer">
-            <i className="fab fa-whatsapp me" /> WhatsApp
-          </a>
+          {cg.mobile ? (
+            <>
+              <a className="btn btn-ghost-orange btn-sm" href={telHref}>
+                <i className="fas fa-phone me" /> Call
+              </a>
+              <a className="btn btn-ghost-orange btn-sm" href={waHref} target="_blank" rel="noreferrer">
+                <i className="fab fa-whatsapp me" /> WhatsApp
+              </a>
+            </>
+          ) : null}
         </div>
       </div>
     );
   };
 
-  // ---------- Detail Modal Component ----------
+  /* --------- Detail Modal --------- */
   const DetailModal = () => {
     if (!detailOpen || !detailCaregiver) return null;
     const cg = detailCaregiver;
     const asn = detailAssignment;
 
     const telHref = buildTelLink(cg.mobile);
-    const waText = `Hello ${cg.name}, this is ${currentPatient?.name || "your patient"}.`;
+    const waText = `Hello ${cg.name || "Caregiver"}, this is ${patientName || "your patient"}.`;
     const waHref = buildWhatsAppLink(cg.mobile, waText);
+
+    const expLabel = cg.experienceLabel || (typeof cg.yearsExperience === "number" ? `${cg.yearsExperience} years` : "");
 
     return (
       <div className="modal-backdrop" role="dialog" aria-modal="true">
@@ -211,32 +325,35 @@ const MyCaregiver = () => {
               <i className="fas fa-user-nurse me"></i>
               <strong>Caregiver Details</strong>
             </div>
-            <button className="btn-close-white" onClick={closeDetail} aria-label="Close">
-              &times;
-            </button>
+            <button className="btn-close-white" onClick={closeDetail} aria-label="Close">&times;</button>
           </div>
 
           <div className="modal-body">
-            {/* Header row with avatar + meta */}
             <div className="modal-header-row">
               <div className="modal-avatar">
                 {cg.profilePicture ? (
-                  <img src={cg.profilePicture} alt={cg.name} />
+                  <img src={cg.profilePicture} alt={cg.name || "Caregiver"} />
                 ) : (
-                  <div className="placeholder">{cg.name.charAt(0)}</div>
+                  <div className="placeholder">{(cg.name || "C").charAt(0)}</div>
                 )}
               </div>
               <div className="mh-meta">
-                <h3 className="mh-name">{cg.name}</h3>
-                <div className="mh-role">{cg.certification}</div>
+                <h3 className="mh-name">{cg.name || "—"}</h3>
+                <div className="mh-role">Caregiver</div>
                 <div className="mh-pills">
-                  <span className={pillClass(cg.status)}>{cg.status}</span>
-                  <span className="pill">
-                    <i className="fas fa-calendar-alt me" /> Joined: {cg.joinDate}
-                  </span>
-                  <span className="pill">
-                    <i className="fas fa-history me" /> {cg.yearsExperience} years
-                  </span>
+                  <span className={pillClass(asn.status)}>{asn.status}</span>
+                  {expLabel ? (
+                    <span className="pill">
+                      <i className="fas fa-history me" /> {expLabel}
+                    </span>
+                  ) : null}
+                  {asn.assignStartDate || asn.assignEndDate ? (
+                    <span className="pill">
+                      <i className="fas fa-calendar-alt me" /> {asn.assignStartDate ? new Date(asn.assignStartDate).toLocaleDateString() : "—"}
+                      {" "}to{" "}
+                      {asn.assignEndDate ? new Date(asn.assignEndDate).toLocaleDateString() : "—"}
+                    </span>
+                  ) : null}
                 </div>
               </div>
             </div>
@@ -244,75 +361,81 @@ const MyCaregiver = () => {
             <div className="modal-grid">
               {/* Contact */}
               <div className="card block">
-                <div className="block-head">
-                  <h6>Contact Information</h6>
-                </div>
+                <div className="block-head"><h6>Contact Information</h6></div>
                 <div className="block-body">
                   <div className="rowi">
                     <span className="ico"><i className="fas fa-envelope" /></span>
                     <div>
                       <div className="label">Email</div>
-                      <div className="val">{cg.email}</div>
+                      <div className="val">{cg.email || "—"}</div>
                     </div>
                   </div>
                   <div className="rowi">
                     <span className="ico"><i className="fas fa-phone" /></span>
                     <div>
                       <div className="label">Mobile</div>
-                      <div className="val">{normalizePhone(cg.mobile)}</div>
+                      <div className="val">{cg.mobile ? normalizePhone(cg.mobile) : "—"}</div>
                     </div>
                   </div>
-                  <div className="rowi">
-                    <span className="ico"><i className="fas fa-map-marker-alt" /></span>
-                    <div>
-                      <div className="label">Address</div>
-                      <div className="val">{cg.address}</div>
+                  {cg.address ? (
+                    <div className="rowi">
+                      <span className="ico"><i className="fas fa-map-marker-alt" /></span>
+                      <div>
+                        <div className="label">Address</div>
+                        <div className="val">{cg.address}</div>
+                      </div>
                     </div>
-                  </div>
+                  ) : null}
                 </div>
               </div>
 
               {/* Professional */}
               <div className="card block">
-                <div className="block-head">
-                  <h6>Professional</h6>
-                </div>
+                <div className="block-head"><h6>Professional</h6></div>
                 <div className="block-body">
-                  <div className="rowi">
-                    <span className="ico"><i className="fas fa-certificate" /></span>
-                    <div>
-                      <div className="label">Certification</div>
-                      <div className="val">{cg.certification}</div>
+                  {expLabel ? (
+                    <div className="rowi">
+                      <span className="ico"><i className="fas fa-history" /></span>
+                      <div>
+                        <div className="label">Experience</div>
+                        <div className="val">{expLabel}</div>
+                      </div>
                     </div>
-                  </div>
-                  <div className="rowi">
-                    <span className="ico"><i className="fas fa-tools" /></span>
-                    <div>
-                      <div className="label">Skills</div>
-                      <div className="val">{cg.skills}</div>
+                  ) : null}
+                  {cg.skills ? (
+                    <div className="rowi">
+                      <span className="ico"><i className="fas fa-tools" /></span>
+                      <div>
+                        <div className="label">Skills</div>
+                        <div className="val">{cg.skills}</div>
+                      </div>
                     </div>
-                  </div>
+                  ) : null}
                 </div>
               </div>
 
               {/* Assignment */}
               <div className="card block">
-                <div className="block-head">
-                  <h6>Assignment</h6>
-                </div>
+                <div className="block-head"><h6>Assignment</h6></div>
                 <div className="block-body">
-                  <div className="rowi">
-                    <span className="ico"><i className="fas fa-calendar-check" /></span>
-                    <div>
-                      <div className="label">Assigned Date</div>
-                      <div className="val">{asn?.dateAssigned}</div>
+                  {asn.assignStartDate || asn.assignEndDate ? (
+                    <div className="rowi">
+                      <span className="ico"><i className="fas fa-calendar-check" /></span>
+                      <div>
+                        <div className="label">Period</div>
+                        <div className="val">
+                          {asn.assignStartDate ? new Date(asn.assignStartDate).toLocaleString() : "—"}{" "}
+                          to{" "}
+                          {asn.assignEndDate ? new Date(asn.assignEndDate).toLocaleString() : "—"}
+                        </div>
+                      </div>
                     </div>
-                  </div>
+                  ) : null}
                   <div className="rowi">
                     <span className="ico"><i className="fas fa-info-circle" /></span>
                     <div>
                       <div className="label">Status</div>
-                      <div className="val"><span className={pillClass(asn?.status)}>{asn?.status}</span></div>
+                      <div className="val"><span className={pillClass(asn.status)}>{asn.status}</span></div>
                     </div>
                   </div>
                 </div>
@@ -320,9 +443,7 @@ const MyCaregiver = () => {
 
               {/* Documents */}
               <div className="card block">
-                <div className="block-head">
-                  <h6>Documents</h6>
-                </div>
+                <div className="block-head"><h6>Documents</h6></div>
                 <div className="block-body">
                   {cg.documents?.length ? (
                     <ul className="doc-list">
@@ -332,12 +453,7 @@ const MyCaregiver = () => {
                             <span className="icon-dot"><i className="fas fa-file-pdf" /></span>
                             <span className="doc-name">{d.name}</span>
                           </div>
-                          <a
-                            href={d.url}
-                            target="_blank"
-                            rel="noreferrer"
-                            className="btn btn-ghost-orange btn-sm"
-                          >
+                          <a href={d.url} target="_blank" rel="noreferrer" className="btn btn-ghost-orange btn-sm">
                             <i className="fas fa-download me" /> Download
                           </a>
                         </li>
@@ -352,30 +468,23 @@ const MyCaregiver = () => {
           </div>
 
           <div className="modal-footer">
-            <button className="btn btn-ghost-orange" onClick={closeDetail}>
-              Close
-            </button>
-            {/* Call */}
-            <a className="btn btn-ghost-orange" href={telHref}>
-              <i className="fas fa-phone me" /> Call
-            </a>
-            {/* WhatsApp */}
-            <a className="btn btn-orange" href={waHref} target="_blank" rel="noreferrer">
-              <i className="fab fa-whatsapp me" /> WhatsApp
-            </a>
+            <button className="btn btn-ghost-orange" onClick={closeDetail}>Close</button>
+            {cg.mobile ? <a className="btn btn-ghost-orange" href={telHref}><i className="fas fa-phone me" /> Call</a> : null}
+            {cg.mobile ? <a className="btn btn-orange" href={waHref} target="_blank" rel="noreferrer"><i className="fab fa-whatsapp me" /> WhatsApp</a> : null}
           </div>
         </div>
       </div>
     );
   };
 
+  /* ---------------- UI ---------------- */
   return (
     <div className="container cg-wrap">
       {/* HERO */}
       <div className="hero card">
         <div className="hero-inner">
           <div className="hero-left">
-            <div className="ring-avatar">{currentPatient?.name?.charAt(0) || "P"}</div>
+            <div className="ring-avatar">{(patientName || "P").charAt(0)}</div>
             <div>
               <h2 className="hero-title">My Caregiver</h2>
               <div className="hero-sub">View your assigned caregiver information</div>
@@ -387,31 +496,38 @@ const MyCaregiver = () => {
         </div>
       </div>
 
-      {/* Multiple caregivers in small cards */}
-      <div className="card section-card">
-        <div className="section-head">
-          <h5>Assigned Caregivers</h5>
+      {/* Loading / Error / Content */}
+      {loading ? (
+        <div className="card section-card">
+          <div className="section-head"><h5>Assigned Caregivers</h5></div>
+          <div className="empty"><div className="muted">Loading...</div></div>
         </div>
+      ) : loadErr ? (
+        <div className="card section-card">
+          <div className="section-head"><h5>Assigned Caregivers</h5></div>
+          <div className="empty"><div className="muted" style={{color:"#dc3545"}}>{loadErr}</div></div>
+        </div>
+      ) : (
+        <div className="card section-card">
+          <div className="section-head"><h5>Assigned Caregivers</h5></div>
+          {assignments.length ? (
+            <div className="grid-cards">
+              {assignments.map((asn) => (
+                <CompactCard key={asn.id || `${asn.caregiverId}-${asn.assignStartDate || ""}`} asn={asn} />
+              ))}
+            </div>
+          ) : (
+            <div className="empty">
+              <i className="fas fa-user-nurse empty-icon" />
+              <h5>No Caregiver Assigned</h5>
+              <p className="muted">You don't have any caregiver assigned to you yet.</p>
+              <Link to="/dashboard" className="btn btn-orange">Back to Dashboard</Link>
+            </div>
+          )}
+        </div>
+      )}
 
-        {myAssignments.length ? (
-          <div className="grid-cards">
-            {myAssignments.map((asn) => (
-              <CompactCard key={asn.id} asn={asn} />
-            ))}
-          </div>
-        ) : (
-          <div className="empty">
-            <i className="fas fa-user-nurse empty-icon" />
-            <h5>No Caregiver Assigned</h5>
-            <p className="muted">You don't have any caregiver assigned to you yet.</p>
-            <Link to="/dashboard" className="btn btn-orange">
-              Back to Dashboard
-            </Link>
-          </div>
-        )}
-      </div>
-
-      {/* Detail Component (Modal) */}
+      {/* Detail Modal */}
       <DetailModal />
 
       {/* ---------- INLINE STYLES ---------- */}
@@ -447,7 +563,6 @@ const MyCaregiver = () => {
         .hero-title{ margin:0; font-weight:800; }
         .hero-sub{ font-size:.9rem; color:var(--muted); }
 
-        /* GRID of mini cards */
         .grid-cards{
           padding:16px;
           display:grid;
@@ -483,6 +598,7 @@ const MyCaregiver = () => {
         .pill{ display:inline-flex; align-items:center; gap:.4rem; padding:.35rem .6rem; border-radius:999px; font-weight:700; font-size:.78rem; border:1px solid var(--line); background:#fff; }
         .pill-success{ background:rgba(25,135,84,.12); color:#198754; border-color:transparent; }
         .pill-muted{ background:#f1f3f5; color:#6c757d; border-color:transparent; }
+        .pill-info{ background:rgba(13,110,253,.12); color:#0d6efd; border-color:transparent; }
 
         .mini-info{ display:flex; flex-direction:column; gap:8px; }
         .rowi{ display:flex; align-items:flex-start; gap:8px; }
@@ -494,7 +610,6 @@ const MyCaregiver = () => {
         .empty{ text-align:center; padding:40px 20px; }
         .empty-icon{ font-size:44px; color:#cbd5e1; margin-bottom:10px; }
 
-        /* ===== Detail Modal ===== */
         .modal-backdrop{
           position: fixed;
           inset: 0;
@@ -576,12 +691,8 @@ const MyCaregiver = () => {
         .doc-name{ font-weight:700; }
         .icon-dot{ min-width:36px; height:36px; border-radius:12px; background:rgba(255,107,0,.12); color:var(--orange); display:flex; align-items:center; justify-content:center; }
 
-        /* Responsive */
         @media (max-width: 992px){
           .grid-cards{ grid-template-columns: repeat(2, minmax(0, 1fr)); }
-        }
-        @media (max-width: 768px){
-          .modal-grid{ grid-template-columns: 1fr; }
         }
         @media (max-width: 600px){
           .grid-cards{ grid-template-columns: 1fr; }
