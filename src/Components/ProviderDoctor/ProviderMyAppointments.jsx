@@ -6,11 +6,13 @@ import API_URL from "../../Baseurl/Baseurl";
 const ProviderMyAppointments = () => {
   const BASE_URL = API_URL;
 
-  // ============ Resolve userId (NO TOKEN) ============
+  /* ===================== doctorId resolver (NO TOKEN, NO FIXED ID) ===================== */
   const safeJSON = (txt) => { try { return JSON.parse(txt); } catch { return null; } };
+
+  // Try to pick an "id" from any object (supports nested)
   const pickId = (obj) => {
     if (!obj || typeof obj !== "object") return null;
-    const keys = ["id", "_id", "userId", "uid", "sub"];
+    const keys = ["doctorId", "id", "_id", "userId", "uid", "sub"];
     for (const k of keys) if (obj[k]) return obj[k];
     for (const k of Object.keys(obj)) {
       const v = obj[k];
@@ -21,21 +23,30 @@ const ProviderMyAppointments = () => {
     }
     return null;
   };
-  const resolveUserId = () => {
-    // 1) URL ?id=
+
+  const resolveDoctorId = () => {
+    // 1) URL ?doctorId=
     try {
       const params = new URLSearchParams(window.location.search);
-      const qid = params.get("id");
+      const qid = params.get("doctorId");
       if (qid) return qid;
     } catch {}
-    // 2) direct storage
-    const direct = localStorage.getItem("userId") || sessionStorage.getItem("userId");
+    // 2) Direct storage keys
+    const direct =
+      localStorage.getItem("doctorId") ||
+      sessionStorage.getItem("doctorId");
     if (direct) return direct;
-    // 3) JSON blobs in storage
-    const jsonKeys = ["user", "profile", "auth", "currentUser", "loginUser"];
+
+    // 3) Common JSON blobs where doctor profile might be saved
+    const jsonKeys = ["doctor", "profile", "auth", "currentUser", "loginUser", "user"];
     for (const store of [localStorage, sessionStorage]) {
       for (const key of jsonKeys) {
         const obj = safeJSON(store.getItem(key));
+        // If an explicit doctor object: prefer its id
+        if (obj && (obj.role === "doctor" || obj.type === "doctor")) {
+          const did = pickId(obj);
+          if (did) return did;
+        }
         const id = pickId(obj);
         if (id) return id;
       }
@@ -43,10 +54,11 @@ const ProviderMyAppointments = () => {
     return null;
   };
 
-  const userId = resolveUserId();
+  const doctorId = resolveDoctorId();
 
-  // ============ API/UI state ============
+  /* ===================== UI / API state ===================== */
   const [appointments, setAppointments] = useState([]);
+  const [summary, setSummary] = useState({ total: 0, confirmed: 0, pending: 0, cancelled: 0 });
   const [loading, setLoading] = useState(false);
   const [apiError, setApiError] = useState(null);
 
@@ -57,16 +69,11 @@ const ProviderMyAppointments = () => {
   const [cancellingId, setCancellingId] = useState(null);
   const [deletingId, setDeletingId] = useState(null);
 
-  const [filter, setFilter] = useState("all"); // all | scheduled | confirmed | completed
+  const [filter, setFilter] = useState("all"); // all | pending | confirmed | cancelled | completed
   const [searchTerm, setSearchTerm] = useState("");
-  const [filterReason, setFilterReason] = useState("all");
   const [buttonAnimations, setButtonAnimations] = useState({});
 
-  // 🔹 Pagination states
-  const [currentPage, setCurrentPage] = useState(1);
-  const [rowsPerPage, setRowsPerPage] = useState(5);
-
-  // ============ utils ============
+  /* ===================== helpers ===================== */
   const properCase = (s) =>
     typeof s === "string" && s.length
       ? s.charAt(0).toUpperCase() + s.slice(1).toLowerCase()
@@ -85,7 +92,6 @@ const ProviderMyAppointments = () => {
     }
   };
 
-  // ============ API -> UI mapping ============
   const mapApiAppointment = (a) => {
     const rawStatus = String(a?.status || "").toLowerCase();
     const status = properCase(rawStatus) || "Scheduled";
@@ -94,7 +100,9 @@ const ProviderMyAppointments = () => {
     const patientName =
       (a?.patientId?.name || a?.patient?.name || "").trim() || "Unknown";
     const reason = (a?.reason || "").trim();
-    const paymentStatus = status === "Completed" ? "Paid" : "Pending";
+
+    // Your payload doesn't include payment info; keep a simple heuristic
+    const paymentStatus = rawStatus === "completed" ? "Paid" : "Pending";
 
     return {
       id: a?._id || Date.now(),
@@ -103,28 +111,51 @@ const ProviderMyAppointments = () => {
       status,
       paymentStatus,
       notes: reason,
-      reason,
       _raw: a,
     };
   };
 
-  // ============ GET: list (by ID) ============
+  /* ===================== GET: /appointment?doctorId=xxx ===================== */
   const fetchAppointments = async () => {
-    if (!userId) {
-      setApiError("User ID not found. URL me ?id= pass karo ya localStorage me 'userId' set karo.");
+    if (!doctorId) {
+      setApiError("Doctor ID not found. localStorage me 'doctorId' set karein ya URL me ?doctorId= pass karein.");
       return;
     }
     setLoading(true);
     setApiError(null);
     try {
       const res = await axios.get(`${BASE_URL}/appointment`, {
-        params: { userId },
+        params: { doctorId },
       });
-      const list = Array.isArray(res?.data)
-        ? res.data
-        : Array.isArray(res?.data?.data)
-        ? res.data.data
+
+      // Expecting: { summary: {...}, appointments: [...] }
+      const payload = res?.data || {};
+      const list = Array.isArray(payload?.appointments)
+        ? payload.appointments
+        : Array.isArray(payload?.data?.appointments)
+        ? payload.data.appointments
+        : Array.isArray(payload)
+        ? payload
         : [];
+
+      // Fallback compute summary if backend didn't send it
+      const computeSummary = (items) => {
+        const norm = (s) => String(s || "").toLowerCase();
+        const total = items.length;
+        const confirmed = items.filter((x) => norm(x.status) === "confirmed").length;
+        const pending = items.filter((x) => norm(x.status) === "pending" || norm(x.status) === "scheduled").length;
+        const cancelled = items.filter((x) => norm(x.status) === "cancelled").length;
+        return { total, confirmed, pending, cancelled };
+        };
+      const apiSummary = payload?.summary || payload?.data?.summary || computeSummary(list);
+
+      setSummary({
+        total: Number(apiSummary.total || 0),
+        confirmed: Number(apiSummary.confirmed || 0),
+        pending: Number(apiSummary.pending || 0),
+        cancelled: Number(apiSummary.cancelled || 0),
+      });
+
       const mapped = list.map(mapApiAppointment);
       setAppointments(mapped);
     } catch (err) {
@@ -144,47 +175,20 @@ const ProviderMyAppointments = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // 🔹 Extract unique reasons for filter dropdown
-  const reasons = [...new Set(appointments.map(a => a.reason).filter(Boolean))];
-
-  // ============ filtering/search ============
+  /* ===================== filtering/search ===================== */
   const filteredAppointments = appointments.filter((appointment) => {
     const matchesFilter =
       filter === "all" ||
       String(appointment.status).toLowerCase() === filter;
-
-    const matchesReason = filterReason === "all"
-      ? true
-      : appointment.reason === filterReason;
-
     const q = searchTerm.toLowerCase();
-    // ✅ SEARCH ONLY BY PATIENT NAME AND DATE/TIME — NOT NOTES
     const matchesSearch =
       appointment.patientName.toLowerCase().includes(q) ||
-      appointment.dateTime.toLowerCase().includes(q);
-
-    return matchesFilter && matchesReason && matchesSearch;
+      appointment.dateTime.toLowerCase().includes(q) ||
+      (appointment.notes || "").toLowerCase().includes(q);
+    return matchesFilter && matchesSearch;
   });
 
-  // 🔹 Pagination Logic
-  const indexOfLastRow = currentPage * rowsPerPage;
-  const indexOfFirstRow = indexOfLastRow - rowsPerPage;
-  const currentRows =
-    rowsPerPage === "All" ? filteredAppointments : filteredAppointments.slice(indexOfFirstRow, indexOfLastRow);
-  const totalPages =
-    rowsPerPage === "All" ? 1 : Math.ceil(filteredAppointments.length / rowsPerPage);
-
-  const paginate = (pageNumber) => setCurrentPage(pageNumber);
-
-  // 🔹 Reset Filters
-  const resetFilters = () => {
-    setFilter("all");
-    setFilterReason("all");
-    setSearchTerm("");
-    setCurrentPage(1);
-  };
-
-  // ============ actions ============
+  /* ===================== actions ===================== */
   const handleStartCall = (appointment) => {
     setButtonAnimations((p) => ({ ...p, [`call-${appointment.id}`]: true }));
     setTimeout(() => {
@@ -193,9 +197,9 @@ const ProviderMyAppointments = () => {
     }, 300);
   };
 
-  // ============ PUT: cancel (by ID) ============
+  // PUT: cancel (passes doctorId as query param)
   const handleCancel = async (appointmentId) => {
-    if (!userId) return alert("User ID missing.");
+    if (!doctorId) return alert("Doctor ID missing.");
     const appt = appointments.find((a) => a.id === appointmentId);
     if (!appt) return;
 
@@ -204,8 +208,7 @@ const ProviderMyAppointments = () => {
       setButtonAnimations((p) => ({ ...p, [`cancel-${appointmentId}`]: false }));
     }, 300);
 
-    if (!window.confirm("Are you sure you want to cancel this appointment?"))
-      return;
+    if (!window.confirm("Are you sure you want to cancel this appointment?")) return;
 
     try {
       setCancellingId(appointmentId);
@@ -213,33 +216,25 @@ const ProviderMyAppointments = () => {
       const res = await axios.put(
         `${BASE_URL}/appointment/${idForApi}`,
         { status: "cancelled" },
-        { params: { userId }, headers: { "Content-Type": "application/json" } }
+        { params: { doctorId }, headers: { "Content-Type": "application/json" } }
       );
 
-      const updated =
-        res?.data?.appointment || res?.data?.data || res?.data || null;
+      const updated = res?.data?.appointment || res?.data?.data || res?.data || null;
       if (updated) {
         const mapped = mapApiAppointment(updated);
-        setAppointments((prev) =>
-          prev.map((a) => (a.id === appointmentId ? mapped : a))
-        );
+        setAppointments((prev) => prev.map((a) => (a.id === appointmentId ? mapped : a)));
       } else {
-        setAppointments((prev) =>
-          prev.map((a) => (a.id === appointmentId ? { ...a, status: "Cancelled" } : a))
-        );
+        setAppointments((prev) => prev.map((a) => (a.id === appointmentId ? { ...a, status: "Cancelled" } : a)));
       }
     } catch (err) {
       console.error(err);
-      alert(
-        err?.response?.data?.message ||
-          err?.message ||
-          "Failed to cancel appointment"
-      );
+      alert(err?.response?.data?.message || err?.message || "Failed to cancel appointment");
     } finally {
       setCancellingId(null);
     }
   };
 
+  // Notes modal open
   const handleAddNotes = (appointment) => {
     setButtonAnimations((p) => ({ ...p, [`notes-${appointment.id}`]: true }));
     setTimeout(() => {
@@ -250,58 +245,44 @@ const ProviderMyAppointments = () => {
     }, 300);
   };
 
-  // ============ PUT: save notes (by ID) ============
+  // PUT: save notes (passes doctorId as query param)
   const handleSaveNotes = async () => {
     if (!currentAppointment) return;
-    if (!userId) return alert("User ID missing.");
+    if (!doctorId) return alert("Doctor ID missing.");
     try {
       setSavingNotes(true);
-      const idForApi =
-        currentAppointment._raw?._id || currentAppointment.id;
-
+      const idForApi = currentAppointment._raw?._id || currentAppointment.id;
       const res = await axios.put(
         `${BASE_URL}/appointment/${idForApi}`,
         { reason: notesText },
-        { params: { userId }, headers: { "Content-Type": "application/json" } }
+        { params: { doctorId }, headers: { "Content-Type": "application/json" } }
       );
-
-      const updated =
-        res?.data?.appointment || res?.data?.data || res?.data || null;
-      const mapped = updated
-        ? mapApiAppointment(updated)
-        : { ...currentAppointment, notes: notesText };
-
-      setAppointments((prev) =>
-        prev.map((a) => (a.id === currentAppointment.id ? mapped : a))
-      );
+      const updated = res?.data?.appointment || res?.data?.data || res?.data || null;
+      const mapped = updated ? mapApiAppointment(updated) : { ...currentAppointment, notes: notesText };
+      setAppointments((prev) => prev.map((a) => (a.id === currentAppointment.id ? mapped : a)));
       setShowNotesModal(false);
     } catch (err) {
       console.error(err);
-      alert(
-        err?.response?.data?.message ||
-          err?.message ||
-          "Failed to update appointment"
-      );
+      alert(err?.response?.data?.message || err?.message || "Failed to update appointment");
     } finally {
       setSavingNotes(false);
     }
   };
 
-  // ============ DELETE: permanently delete (by ID) ============
+  // DELETE: permanently delete (passes doctorId as query param)
   const handleDelete = async (appointmentId) => {
-    if (!userId) return alert("User ID missing.");
+    if (!doctorId) return alert("Doctor ID missing.");
     const appt = appointments.find((a) => a.id === appointmentId);
     if (!appt) return;
 
-    if (!window.confirm("This will permanently delete the appointment. Continue?"))
-      return;
+    if (!window.confirm("This will permanently delete the appointment. Continue?")) return;
 
     try {
       setDeletingId(appointmentId);
       const idForApi = appt._raw?._id || appointmentId;
 
       const res = await axios.delete(`${BASE_URL}/appointment/${idForApi}`, {
-        params: { userId },
+        params: { doctorId },
       });
 
       if (res?.status === 200 || res?.status === 204 || res?.data) {
@@ -311,17 +292,13 @@ const ProviderMyAppointments = () => {
       }
     } catch (err) {
       console.error(err);
-      alert(
-        err?.response?.data?.message ||
-          err?.message ||
-          "Failed to delete appointment"
-      );
+      alert(err?.response?.data?.message || err?.message || "Failed to delete appointment");
     } finally {
       setDeletingId(null);
     }
   };
 
-  // ============ badges ============
+  /* ===================== badges ===================== */
   const getStatusBadge = (status) => {
     let className = "badge ";
     switch (status) {
@@ -334,6 +311,7 @@ const ProviderMyAppointments = () => {
       case "Cancelled":
         className += "bg-danger";
         break;
+      case "Pending":
       case "Scheduled":
         className += "bg-info text-dark";
         break;
@@ -362,85 +340,118 @@ const ProviderMyAppointments = () => {
     <div className="">
       <div className="">
         <div className="d-flex align-items-center gap-2">
-          <h3 className="dashboard-heading mb-0">My Appointment</h3>
+          <h3 className="dashboard-heading mb-0">My Appointments</h3>
+          <button
+            className="btn btn-sm btn-outline-secondary"
+            onClick={fetchAppointments}
+            title="Refresh"
+            disabled={!doctorId}
+          >
+            <i className="fas fa-sync-alt me-1" />
+            Refresh
+          </button>
         </div>
+        <p className="text-muted mb-4">
+          Manage your patient appointments and consultations
+        </p>
       </div>
 
-      <div className="row mt-4">
-        {/* Entries dropdown */}
-        <div className="d-flex justify-content-between align-items-center mb-3 col-md-3">
-          <div>
-            <label className="me-2">Show</label>
-            <select
-              className="form-select d-inline-block w-auto"
-              value={rowsPerPage}
-              onChange={(e) => {
-                setRowsPerPage(e.target.value === "All" ? "All" : parseInt(e.target.value));
-                setCurrentPage(1);
-              }}
-            >
-              <option value="3">3</option>
-              <option value="5">5</option>
-              <option value="8">8</option>
-              <option value="10">10</option>
-              <option value="25">25</option>
-              <option value="All">All</option>
-            </select>
-            <span className="ms-2">entries</span>
-          </div>
+      {!doctorId && (
+        <div className="alert alert-warning">
+          Doctor ID not found. URL me <code>?doctorId=YOUR_ID</code> pass karein ya{" "}
+          <code>localStorage.setItem('doctorId','YOUR_ID')</code> set karein.
         </div>
+      )}
 
-        {/* 🔹 FILTERS SECTION */}
-        <div className="mb-4 mt-4 col-md-9">
-          <div className="card-body">
-            <div className="row g-3">
-              <div className="col-md-5">
-                <div className="input-group">
-                  <span className="input-group-text bg-transparent">
-                    <i className="fas fa-search text-muted"></i>
-                  </span>
-                  <input
-                    type="text"
-                    className="form-control"
-                    id="searchTerm"
-                    placeholder="Search by patient name or date..."
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                  />
+      {loading && <div className="alert alert-info py-2">Loading appointments…</div>}
+
+      {apiError && (
+        <div className="alert alert-danger d-flex justify-content-between align-items-center">
+          <span>{apiError}</span>
+          <button className="btn btn-sm btn-light" onClick={fetchAppointments} disabled={!doctorId}>
+            Retry
+          </button>
+        </div>
+      )}
+
+      {/* Summary strip */}
+      <div className="row g-3 mb-3">
+        {[
+          { label: "Total", value: summary.total },
+          { label: "Confirmed", value: summary.confirmed },
+          { label: "Pending", value: summary.pending },
+          { label: "Cancelled", value: summary.cancelled },
+        ].map((s) => (
+          <div key={s.label} className="col-6 col-md-3">
+            <div className="card border-0 shadow-sm">
+              <div className="card-body d-flex justify-content-between align-items-center">
+                <div>
+                  <div className="text-muted small">{s.label}</div>
+                  <div className="h5 mb-0">{s.value}</div>
                 </div>
+                <span className="badge bg-light text-dark">{s.label}</span>
               </div>
-              {/* <div className="col-md-5">
-                <select
-                  className="form-select"
-                  id="filterReason"
-                  value={filterReason}
-                  onChange={(e) => {
-                    setFilterReason(e.target.value);
-                    setCurrentPage(1);
-                  }}
-                >
-                  <option value="all">All Reasons</option>
-                  {reasons.map((reason, i) => (
-                    <option key={i} value={reason}>{reason}</option>
-                  ))}
-                </select>
-              </div> */}
-              <div className="mt-3 d-flex justify-content-between align-items-center flex-wrap gap-2 col-md-2">
+            </div>
+          </div>
+        ))}
+      </div>
+
+      <div className="card shadow-lg border-0">
+        <div className="card-body">
+          {/* Search & Filters */}
+          <div className="row mb-4">
+            <div className="col-md-6">
+              <div className="input-group">
+                <span className="input-group-text bg-transparent">
+                  <i className="fas fa-search text-muted"></i>
+                </span>
+                <input
+                  type="text"
+                  className="form-control"
+                  placeholder="Search appointments..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                />
+              </div>
+            </div>
+
+            <div className="col-md-6 mt-3">
+              <div className="d-flex flex-wrap justify-content-md-end gap-2">
                 <button
-                  className="btn btn-outline-secondary btn-sm"
-                  onClick={resetFilters}
+                  className={`btn btn-sm ${filter === "all" ? "btn-primary" : "btn-outline-primary"}`}
+                  onClick={() => setFilter("all")}
                 >
-                  <i className="fas fa-sync me-1"></i> Reset Filters
+                  All
+                </button>
+                <button
+                  className={`btn btn-sm ${filter === "pending" ? "btn-info text-white" : "btn-outline-info"}`}
+                  onClick={() => setFilter("pending")}
+                >
+                  Pending
+                </button>
+                <button
+                  className={`btn btn-sm ${filter === "confirmed" ? "btn-primary" : "btn-outline-primary"}`}
+                  onClick={() => setFilter("confirmed")}
+                >
+                  Confirmed
+                </button>
+                <button
+                  className={`btn btn-sm ${filter === "completed" ? "btn-success" : "btn-outline-success"}`}
+                  onClick={() => setFilter("completed")}
+                >
+                  Completed
+                </button>
+                <button
+                  className={`btn btn-sm ${filter === "cancelled" ? "btn-danger" : "btn-outline-danger"}`}
+                  onClick={() => setFilter("cancelled")}
+                >
+                  Cancelled
                 </button>
               </div>
             </div>
           </div>
-        </div>
-      </div>
 
-      {/* Table */}
-      <div className="card shadow-lg border-0">
-        <div className="card-body">
+          {/* Table */}
           <div className="table-responsive rounded">
             <table className="table table-hover align-middle">
               <thead>
@@ -468,149 +479,117 @@ const ProviderMyAppointments = () => {
                 </tr>
               </thead>
               <tbody>
-                {currentRows.length === 0 ? (
-                  <tr>
-                    <td colSpan="5" className="text-center py-5">
-                      <i className="far fa-calendar-times display-4 text-muted mb-3"></i>
-                      <p className="text-muted">No appointments found matching your filters</p>
+                {filteredAppointments.map((appointment, index) => (
+                  <tr
+                    key={appointment.id}
+                    className="animate__animated animate__fadeIn"
+                    style={{ animationDelay: `${index * 0.1}s` }}
+                  >
+                    <td className="ps-4">
+                      <div className="d-flex align-items-center">
+                        <i className="far fa-calendar-alt text-muted me-2"></i>
+                        <span>{appointment.dateTime}</span>
+                      </div>
+                    </td>
+                    <td>
+                      <div className="d-flex align-items-center">
+                        <div
+                          className="rounded-circle d-flex align-items-center justify-content-center me-2"
+                          style={{
+                            width: "36px",
+                            height: "36px",
+                            backgroundColor: "#F95918",
+                            color: "white",
+                          }}
+                        >
+                          {appointment.patientName.charAt(0).toUpperCase()}
+                        </div>
+                        <span>{appointment.patientName}</span>
+                      </div>
+                    </td>
+                    <td>{getStatusBadge(appointment.status)}</td>
+                    <td>{getPaymentBadge(appointment.paymentStatus)}</td>
+                    <td className="pe-4">
+                      <div className="d-flex justify-content-center gap-2">
+                        <button
+                          className={`btn text-white btn-sm ${
+                            buttonAnimations[`call-${appointment.id}`]
+                              ? "animate__animated animate__pulse"
+                              : ""
+                          }`}
+                          style={{ backgroundColor: "#F95918" }}
+                          onClick={() => handleStartCall(appointment)}
+                          disabled={
+                            (!doctorId) ||
+                            (appointment.status !== "Confirmed" &&
+                             appointment.status !== "Scheduled" &&
+                             appointment.status !== "Pending")
+                          }
+                        >
+                          <i className="fas fa-video me-1"></i>
+                          Start Call
+                        </button>
+
+                        {/* Cancel */}
+                        <button
+                          className={`btn btn-outline-danger btn-sm ${
+                            buttonAnimations[`cancel-${appointment.id}`]
+                              ? "animate__animated animate__shakeX"
+                              : ""
+                          }`}
+                          onClick={() => handleCancel(appointment.id)}
+                          disabled={cancellingId === appointment.id || !doctorId}
+                          title="Cancel appointment"
+                        >
+                          {cancellingId === appointment.id ? (
+                            <span className="spinner-border spinner-border-sm" />
+                          ) : (
+                            <i className="fas fa-times"></i>
+                          )}
+                        </button>
+
+                        {/* Notes */}
+                        <button
+                          className={`btn btn-outline-secondary btn-sm ${
+                            buttonAnimations[`notes-${appointment.id}`]
+                              ? "animate__animated animate__rubberBand"
+                              : ""
+                          }`}
+                          onClick={() => handleAddNotes(appointment)}
+                          title="Edit notes"
+                          disabled={!doctorId}
+                        >
+                          <i className="fas fa-edit"></i>
+                        </button>
+
+                        {/* Delete */}
+                        <button
+                          className="btn btn-outline-dark btn-sm"
+                          onClick={() => handleDelete(appointment.id)}
+                          disabled={deletingId === appointment.id || !doctorId}
+                          title="Delete appointment permanently"
+                        >
+                          {deletingId === appointment.id ? (
+                            <span className="spinner-border spinner-border-sm" />
+                          ) : (
+                            <i className="fas fa-trash"></i>
+                          )}
+                        </button>
+                      </div>
                     </td>
                   </tr>
-                ) : (
-                  currentRows.map((appointment, index) => (
-                    <tr
-                      key={appointment.id}
-                      className="animate__animated animate__fadeIn"
-                      style={{ animationDelay: `${index * 0.1}s` }}
-                    >
-                      <td className="ps-4">
-                        <div className="d-flex align-items-center">
-                          <i className="far fa-calendar-alt text-muted me-2"></i>
-                          <span>{appointment.dateTime}</span>
-                        </div>
-                      </td>
-                      <td>
-                        <div className="d-flex align-items-center">
-                          <div
-                            className="rounded-circle d-flex align-items-center justify-content-center me-2"
-                            style={{
-                              width: "36px",
-                              height: "36px",
-                              backgroundColor: "#F95918",
-                              color: "white",
-                            }}
-                          >
-                            {appointment.patientName.charAt(0).toUpperCase()}
-                          </div>
-                          <span>{appointment.patientName}</span>
-                        </div>
-                      </td>
-                      <td>{getStatusBadge(appointment.status)}</td>
-                      <td>{getPaymentBadge(appointment.paymentStatus)}</td>
-                      <td className="pe-4">
-                        <div className="d-flex justify-content-center gap-2">
-                          <button
-                            className={`btn text-white btn-sm ${
-                              buttonAnimations[`call-${appointment.id}`]
-                                ? "animate__animated animate__pulse"
-                                : ""
-                            }`}
-                            style={{ backgroundColor: "#F95918" }}
-                            onClick={() => handleStartCall(appointment)}
-                            disabled={
-                              (!userId) ||
-                              (appointment.status !== "Confirmed" &&
-                               appointment.status !== "Scheduled")
-                            }
-                          >
-                            <i className="fas fa-video me-1"></i>
-                            Start Call
-                          </button>
-
-                          <button
-                            className={`btn btn-outline-danger btn-sm ${
-                              buttonAnimations[`cancel-${appointment.id}`]
-                                ? "animate__animated animate__shakeX"
-                                : ""
-                            }`}
-                            onClick={() => handleCancel(appointment.id)}
-                            disabled={cancellingId === appointment.id || !userId}
-                            title="Cancel appointment"
-                          >
-                            {cancellingId === appointment.id ? (
-                              <span className="spinner-border spinner-border-sm" />
-                            ) : (
-                              <i className="fas fa-times"></i>
-                            )}
-                          </button>
-
-                          <button
-                            className={`btn btn-outline-secondary btn-sm ${
-                              buttonAnimations[`notes-${appointment.id}`]
-                                ? "animate__animated animate__rubberBand"
-                                : ""
-                            }`}
-                            onClick={() => handleAddNotes(appointment)}
-                            title="Edit notes"
-                            disabled={!userId}
-                          >
-                            <i className="fas fa-edit"></i>
-                          </button>
-
-                          <button
-                            className="btn btn-outline-dark btn-sm"
-                            onClick={() => handleDelete(appointment.id)}
-                            disabled={deletingId === appointment.id || !userId}
-                            title="Delete appointment permanently"
-                          >
-                            {deletingId === appointment.id ? (
-                              <span className="spinner-border spinner-border-sm" />
-                            ) : (
-                              <i className="fas fa-trash"></i>
-                            )}
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))
-                )}
+                ))}
               </tbody>
             </table>
+
+            {!loading && filteredAppointments.length === 0 && (
+              <div className="text-center py-5">
+                <i className="far fa-calendar-times display-4 text-muted mb-3"></i>
+                <p className="text-muted">No appointments found</p>
+              </div>
+            )}
           </div>
         </div>
-      </div>
-
-      {/* ✅ FOOTER: Pagination */}
-      <div className="card-footer bg-light d-flex justify-content-between align-items-center py-3">
-        <div className="text-muted small">
-          Showing {(currentPage - 1) * rowsPerPage + 1} to {Math.min(currentPage * rowsPerPage, filteredAppointments.length)} of {filteredAppointments.length} entries
-        </div>
-
-        {rowsPerPage !== "All" && (
-          <nav>
-            <ul className="pagination mb-0">
-              <li className={`page-item ${currentPage === 1 ? "disabled" : ""}`}>
-                <button className="page-link" onClick={() => paginate(currentPage - 1)}>
-                  Prev
-                </button>
-              </li>
-              {[...Array(totalPages)].map((_, i) => (
-                <li
-                  key={i}
-                  className={`page-item ${currentPage === i + 1 ? "active" : ""}`}
-                >
-                  <button className="page-link" onClick={() => paginate(i + 1)}>
-                    {i + 1}
-                  </button>
-                </li>
-              ))}
-              <li className={`page-item ${currentPage === totalPages ? "disabled" : ""}`}>
-                <button className="page-link" onClick={() => paginate(currentPage + 1)}>
-                  Next
-                </button>
-              </li>
-            </ul>
-          </nav>
-        )}
       </div>
 
       {/* Notes Modal */}
@@ -664,7 +643,7 @@ const ProviderMyAppointments = () => {
                 className="btn text-white"
                 style={{ backgroundColor: "#F95918" }}
                 onClick={handleSaveNotes}
-                disabled={savingNotes || !userId}
+                disabled={savingNotes || !doctorId}
               >
                 {savingNotes ? "Saving..." : "Save Notes"}
               </button>
