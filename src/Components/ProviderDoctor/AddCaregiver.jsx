@@ -1,10 +1,9 @@
 import React, { useState, useEffect } from "react";
 import axios from "axios";
-import API_URL from "../../Baseurl/Baseurl";
 
 const AddCaregiver = () => {
   // ====== CONFIG ======
-  const BASE_URL = API_URL;
+  const BASE_URL = "https://tele-medicine-backend-production.up.railway.app/api";
 
   // ---- auth helpers ----
   const safeJSON = (txt) => { try { return JSON.parse(txt); } catch { return null; } };
@@ -15,6 +14,21 @@ const AddCaregiver = () => {
     "";
   const authHeaders = () =>
     accessToken ? { Authorization: `Bearer ${accessToken}` } : {};
+
+  // ---- doctorId from localStorage / user blob ----
+  const getDoctorId = () => {
+    const direct = localStorage.getItem("doctorId");
+    if (direct && direct !== "undefined" && direct !== "null") return String(direct);
+
+    const user = safeJSON(localStorage.getItem("user")) || {};
+    if (user?.doctorId) return String(user.doctorId);
+    if (user?._id && user?.role === "doctor") return String(user._id);
+    if (user?.doctor?._id) return String(user.doctor._id);
+    if (user?.doctor?.id) return String(user.doctor.id);
+
+    return null;
+  };
+  const doctorId = getDoctorId();
 
   // Caregivers state
   const [caregivers, setCaregivers] = useState([]);
@@ -33,14 +47,6 @@ const AddCaregiver = () => {
   const [updating, setUpdating] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [error, setError] = useState(null);
-
-  // 🔹 Filter states
-  const [filterName, setFilterName] = useState("");
-  const [filterSpecialty, setFilterSpecialty] = useState("all");
-
-  // 🔹 Pagination states
-  const [currentPage, setCurrentPage] = useState(1);
-  const [rowsPerPage, setRowsPerPage] = useState(5);
 
   // New caregiver form
   const [newCaregiver, setNewCaregiver] = useState({
@@ -97,56 +103,64 @@ const AddCaregiver = () => {
   const mapApiCaregiver = (api) => {
     const trim = (v) => (typeof v === "string" ? v.trim() : v);
     const expYears = (() => {
-      const e = trim(api.experience);
+      const e = trim(api?.experience);
       if (!e) return 0;
       const m = String(e).match(/(\d+)/);
       return m ? Number(m[1]) : 0;
     })();
 
     const docs = [];
-    if (api.certificate && String(api.certificate).length > 0) {
+    if (api?.certificate && String(api.certificate).length > 0) {
       const fileName = String(api.certificate).split("/").pop() || "Certificate";
       docs.push({ name: fileName, url: api.certificate });
     }
 
     return {
-      id: api._id,
-      name: trim(api.name) || "",
-      email: trim(api.email) || "",
-      joinDate: api.createdAt ? String(api.createdAt).slice(0, 10) : "",
+      id: api?._id,
+      name: trim(api?.name) || "",
+      email: trim(api?.email) || "",
+      joinDate: api?.createdAt ? String(api.createdAt).slice(0, 10) : "",
       status: "Active",
       certification: "",
       yearsExperience: expYears,
-      mobile: trim(api.mobile) || "",
-      address: trim(api.address) || "",
-      skills: trim(api.skills) || "",
-      profilePicture: trim(api.profile) || "https://via.placeholder.com/80",
-      dateOfBirth: trim(api.dob) || "",
-      gender: trim(api.gender) || "",
-      bloodGroup: trim(api.bloodGroup) || "",
+      mobile: trim(api?.mobile) || "",
+      address: trim(api?.address) || "",
+      skills: trim(api?.skills) || "",
+      profilePicture: trim(api?.profile) || "https://via.placeholder.com/80",
+      dateOfBirth: trim(api?.dob) || "",
+      gender: trim(api?.gender) || "",
+      bloodGroup: trim(api?.bloodGroup) || "",
       password: "********",
       documents: docs,
-      patientId: trim(api.patientId) || "",
-      age: api.age || "",
-      role: api.role || "caregiver",
+      patientId: trim(api?.patientId) || "",
+      age: api?.age || "",
+      role: api?.role || "caregiver",
     };
   };
 
-  // ===== GET /caregiver =====
+  // ===== GET /caregiver/:doctorId (by id) =====
   const fetchCaregivers = async () => {
     setLoadingCaregivers(true);
     setCaregiversError(null);
+
     try {
-      const res = await axios.get(`${BASE_URL}/caregiver`, {
-        headers: { ...authHeaders() }
-      });
-      
-      const raw = Array.isArray(res?.data)
-        ? res.data
-        : (Array.isArray(res?.data?.data) ? res.data.data : []);
-        
-      const mapped = raw.map(mapApiCaregiver);
-      setCaregivers(mapped);
+      if (!doctorId) {
+        throw new Error("Doctor ID not found in localStorage/user. Please login again.");
+      }
+
+      // adjust if your backend path differs (e.g. /caregivers/doctor/:id)
+      const res = await axios.get(
+        `${BASE_URL}/caregiver?doctorId=${doctorId}`,
+        { headers: { ...authHeaders() } }
+      );
+
+      const raw =
+        Array.isArray(res?.data) ? res.data
+          : Array.isArray(res?.data?.data) ? res.data.data
+          : Array.isArray(res?.data?.caregivers) ? res.data.caregivers
+          : [];
+
+      setCaregivers(raw.map(mapApiCaregiver));
     } catch (err) {
       console.error("Failed to fetch caregivers:", err);
       setCaregiversError(
@@ -162,45 +176,9 @@ const AddCaregiver = () => {
   useEffect(() => {
     fetchCaregivers();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [doctorId]);
 
-   // 🔹 Apply Filters
-  const filteredCaregivers = caregivers.filter(caregiver => {
-    const matchesNameOrMobile = filterName
-      ? (caregiver.name.toLowerCase().includes(filterName.toLowerCase()) ||
-         caregiver.mobile.toLowerCase().includes(filterName.toLowerCase()))
-      : true;
-    const matchesSpecialty = filterSpecialty === "all"
-      ? true
-      : caregiver.skills.toLowerCase().includes(filterSpecialty.toLowerCase());
-    return matchesNameOrMobile && matchesSpecialty;
-  });
-
-  // 🔹 Extract unique specialties from skills (comma-separated or single)
-  const allSkills = caregivers.flatMap(c => {
-    if (!c.skills) return [];
-    return c.skills.split(',').map(s => s.trim()).filter(s => s);
-  });
-  const specialties = [...new Set(allSkills)];
-
-  // 🔹 Pagination Logic
-  const indexOfLastRow = currentPage * rowsPerPage;
-  const indexOfFirstRow = indexOfLastRow - rowsPerPage;
-  const currentRows =
-    rowsPerPage === "All" ? filteredCaregivers : filteredCaregivers.slice(indexOfFirstRow, indexOfLastRow);
-  const totalPages =
-    rowsPerPage === "All" ? 1 : Math.ceil(filteredCaregivers.length / rowsPerPage);
-
-  const paginate = (pageNumber) => setCurrentPage(pageNumber);
-
-  // 🔹 Reset Filters
-  const resetFilters = () => {
-    setFilterName("");
-    setFilterSpecialty("all");
-    setCurrentPage(1);
-  };
-
-  // ===== POST /caregiver (Add Caregiver) =====
+  // ===== POST {{base_url}}/caregiver (Add Caregiver) — axios end-to-end =====
   const handleAddCaregiver = async () => {
     if (!newCaregiver.name || !newCaregiver.email || !newCaregiver.mobile || !newCaregiver.gender) {
       setError("Please fill all required fields (Name, Email, Mobile, Gender)");
@@ -214,13 +192,21 @@ const AddCaregiver = () => {
       setError("Passwords do not match");
       return;
     }
+    if (!doctorId) {
+      setError("Doctor ID not found. Please login again.");
+      return;
+    }
 
+    // Multipart body (supports image/docs). If your API expects JSON, swap to JSON accordingly.
     const fd = new FormData();
     fd.append("name", newCaregiver.name.trim());
     fd.append("email", newCaregiver.email.trim());
     fd.append("password", newCaregiver.password);
     fd.append("gender", newCaregiver.gender);
     fd.append("role", "caregiver");
+    // IMPORTANT: doctor link in body
+    fd.append("doctorId", doctorId);
+
     if (newCaregiver.profilePictureFile) fd.append("profile", newCaregiver.profilePictureFile);
     if (newCaregiver.dateOfBirth) fd.append("dob", newCaregiver.dateOfBirth);
     if (newCaregiver.bloodGroup) fd.append("bloodGroup", newCaregiver.bloodGroup);
@@ -228,20 +214,29 @@ const AddCaregiver = () => {
     if (newCaregiver.address) fd.append("address", newCaregiver.address);
     if (newCaregiver.mobile) fd.append("mobile", newCaregiver.mobile);
     if (newCaregiver.skills) fd.append("skills", newCaregiver.skills);
-    if (newCaregiver.documentFiles?.length) newCaregiver.documentFiles.forEach((file) => fd.append("certificate", file));
+    if (newCaregiver.documentFiles?.length) {
+      newCaregiver.documentFiles.forEach((file) => fd.append("certificate", file));
+    }
 
     try {
       setSubmitting(true);
       setError(null);
-      
-      const res = await axios.post(`${BASE_URL}/caregiver`, fd, {
-        headers: { "Content-Type": "multipart/form-data", ...authHeaders() }
-      });
 
-      const apiData = res.data;
-      const createdCaregiver = apiData.caregiver;
-      const mappedCaregiver = mapApiCaregiver(createdCaregiver);
-      setCaregivers(prev => [...prev, mappedCaregiver]);
+      // === NEW POST: axios -> POST {{base_url}}/caregiver ===
+      const res = await axios.post(
+        `${BASE_URL}/caregiver`,
+        fd,
+        { headers: { "Content-Type": "multipart/form-data", ...authHeaders() } }
+      );
+
+      // optional: trust response object
+      const created = res?.data?.caregiver || res?.data?.data || res?.data;
+      if (!created?._id) {
+        // if API doesn't return full object, refetch list for current doctor
+        await fetchCaregivers();
+      } else {
+        setCaregivers((prev) => [...prev, mapApiCaregiver(created)]);
+      }
 
       alert("Caregiver created successfully!");
       setShowAddCaregiverModal(false);
@@ -298,11 +293,6 @@ const AddCaregiver = () => {
       );
 
       const updatedApi = res?.data?.caregiver || res?.data?.data || res?.data;
-
-      if (!updatedApi) {
-        throw new Error("No caregiver returned from server");
-      }
-
       const mapped = mapApiCaregiver(updatedApi);
 
       setCaregivers((prev) =>
@@ -325,7 +315,7 @@ const AddCaregiver = () => {
   // ===== DELETE /caregiver/:id =====
   const handleDeleteCaregiver = async () => {
     if (!deletingCaregiver) return;
-    
+
     try {
       setDeleting(true);
       setError(null);
@@ -455,7 +445,7 @@ const AddCaregiver = () => {
         <h3 className="dashboard-heading">Manage Caregivers</h3>
         <div className="d-flex gap-2">
           <button className="btn text-white" style={{ backgroundColor: "#F95918" }} onClick={() => setShowAddCaregiverModal(true)}>
-            Add Caregiver
+            + Add Caregiver
           </button>
         </div>
       </div>
@@ -468,63 +458,11 @@ const AddCaregiver = () => {
           <button className="btn btn-sm btn-outline-light" onClick={fetchCaregivers}>Retry</button>
         </div>
       )}
-
-         <div className="row">
-{/* Entries dropdown */}
-      <div className="d-flex justify-content-between align-items-center mb-3 col-md-3">
-        <div>
-          <label className="me-2">Show</label>
-          <select
-            className="form-select d-inline-block w-auto"
-            value={rowsPerPage}
-            onChange={(e) => {
-              setRowsPerPage(e.target.value === "All" ? "All" : parseInt(e.target.value));
-              setCurrentPage(1);
-            }}
-          >
-            <option value="3">3</option>
-            <option value="5">5</option>
-            <option value="8">8</option>
-            <option value="10">10</option>
-            <option value="25">25</option>
-            <option value="All">All</option>
-          </select>
-          <span className="ms-2">entries</span>
+      {!doctorId && (
+        <div className="alert alert-warning">
+          Doctor ID not found in localStorage/user. Please ensure login stores it.
         </div>
-      </div>
-      {/* 🔹 FILTERS SECTION */}
-      <div className="mb-4 col-md-9">
-        <div className="card-body">
-          <div className="row g-3">
-            <div className="col-md-5">
-              <input
-                type="text"
-                className="form-control"
-                id="filterName"
-                placeholder="Search by caregiver name..."
-                value={filterName}
-                onChange={(e) => {
-                  setFilterName(e.target.value);
-                  setCurrentPage(1);
-                }}
-              />
-            </div>
-          
-              <div className="col-md-2">
-            <button
-              className="btn btn-outline-secondary btn-sm"
-              onClick={resetFilters}
-            >
-              <i className="fas fa-sync me-1"></i> Reset Filters
-            </button>
-           
-            </div>
-          </div>
-        
-        </div>
-      </div>
-         </div>
-      
+      )}
 
       {/* ======= Caregivers Table ======= */}
       <div className="row">
@@ -545,14 +483,14 @@ const AddCaregiver = () => {
                     </tr>
                   </thead>
                   <tbody>
-                    {currentRows.length === 0 ? (
+                    {caregivers.length === 0 ? (
                       <tr>
-                        <td colSpan={7} className="text-center text-muted">No caregivers found matching your filters.</td>
+                        <td colSpan={7} className="text-center text-muted">No caregivers found.</td>
                       </tr>
                     ) : (
-                      currentRows.map((caregiver, index) => (
+                      caregivers.map((caregiver,index) => (
                         <tr key={caregiver.id}>
-                          <td>{(currentPage - 1) * rowsPerPage + index + 1}</td>
+                          <td>{index+1}</td>
                           <td>{caregiver.name}</td>
                           <td>{caregiver.email}</td>
                           <td>{caregiver.mobile}</td>
@@ -563,11 +501,10 @@ const AddCaregiver = () => {
                             </span>
                           </td>
                           <td>
-                            <div className="d-flex">
+                            <div className="d-flex gap-2">
                               <button 
-                                className="btn btn-sm" 
+                                className="btn btn-sm btn-outline-primary" 
                                 onClick={() => handleView(caregiver)} 
-                                 style={{ color: "#F95918" }} 
                                 title="View"
                               >
                                 <i className="fas fa-eye"></i>
@@ -581,9 +518,8 @@ const AddCaregiver = () => {
                                 <i className="fas fa-edit"></i>
                               </button>
                               <button
-                                className="btn btn-sm"
+                                className="btn btn-sm btn-outline-danger"
                                 onClick={() => handleDelete(caregiver)}
-                                 style={{ color: "#F95918" }} 
                                 title="Delete"
                                 disabled={deleting && deletingCaregiver?.id === caregiver.id}
                               >
@@ -601,43 +537,12 @@ const AddCaregiver = () => {
                   </tbody>
                 </table>
               </div>
+              <div className="text-muted small">Caregivers loaded: {caregivers.length}</div>
             </div>
           </div>
         </div>
       </div>
- {/* ✅ FOOTER: Pagination */}
-              <div className="card-footer bg-light d-flex justify-content-between align-items-center py-3">
-                <div className="text-muted small">
-                  Showing {(currentPage - 1) * rowsPerPage + 1} to {Math.min(currentPage * rowsPerPage, filteredCaregivers.length)} of {filteredCaregivers.length} entries
-                </div>
 
-                {rowsPerPage !== "All" && (
-                  <nav>
-                    <ul className="pagination mb-0">
-                      <li className={`page-item ${currentPage === 1 ? "disabled" : ""}`}>
-                        <button className="page-link" onClick={() => paginate(currentPage - 1)}>
-                          Prev
-                        </button>
-                      </li>
-                      {[...Array(totalPages)].map((_, i) => (
-                        <li
-                          key={i}
-                          className={`page-item ${currentPage === i + 1 ? "active" : ""}`}
-                        >
-                          <button className="page-link" onClick={() => paginate(i + 1)}>
-                            {i + 1}
-                          </button>
-                        </li>
-                      ))}
-                      <li className={`page-item ${currentPage === totalPages ? "disabled" : ""}`}>
-                        <button className="page-link" onClick={() => paginate(currentPage + 1)}>
-                          Next
-                        </button>
-                      </li>
-                    </ul>
-                  </nav>
-                )}
-              </div>
       {/* Add Caregiver Modal */}
       {showAddCaregiverModal && (
         <div className="modal fade show d-block" style={{ backgroundColor: "rgba(0,0,0,0.5)" }}>
@@ -712,7 +617,7 @@ const AddCaregiver = () => {
                     </div>
                     <div className="mb-3">
                       <label className="form-label">Skills</label>
-                      <textarea className="form-control" name="skills" value={newCaregiver.skills} onChange={handleInputChange} rows="2" placeholder="e.g., Elderly Care, First Aid, CPR"></textarea>
+                      <textarea className="form-control" name="skills" value={newCaregiver.skills} onChange={handleInputChange} rows="2"></textarea>
                     </div>
                     <div className="mb-3">
                       <label className="form-label">Profile Picture</label>
@@ -923,7 +828,7 @@ const AddCaregiver = () => {
                     </div>
                     <div className="mb-3">
                       <label className="form-label">Skills</label>
-                      <textarea className="form-control" name="skills" value={editingCaregiver.skills} onChange={handleEditInputChange} rows="2" placeholder="e.g., Elderly Care, First Aid, CPR"></textarea>
+                      <textarea className="form-control" name="skills" value={editingCaregiver.skills} onChange={handleEditInputChange} rows="2"></textarea>
                     </div>
                     <div className="mb-3">
                       <label className="form-label">Profile Picture</label>
