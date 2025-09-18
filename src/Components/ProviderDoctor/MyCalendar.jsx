@@ -1,7 +1,4 @@
 import React, { useState, useEffect } from "react";
-import axios from "axios";
-import API_URL from "../../Baseurl/Baseurl";
-
 import FullCalendar from "@fullcalendar/react";
 import dayGridPlugin from "@fullcalendar/daygrid";
 import timeGridPlugin from "@fullcalendar/timegrid";
@@ -10,25 +7,14 @@ import listPlugin from "@fullcalendar/list";
 import "bootstrap/dist/css/bootstrap.min.css";
 import "./Calender.css";
 
-const Calendar = () => {
-  const BASE_URL = API_URL;
-  const DOCTOR_ID = "68c56a43d833a205bfd4237f";
-
-  // Calendar events (API + locally added via modal)
+const Calendar = ({ doctorId }) => {
   const [events, setEvents] = useState([]);
-
-  // UI / API states
   const [loading, setLoading] = useState(false);
   const [apiError, setApiError] = useState(null);
-
-  // Modal states
+  const [selectedAppointments, setSelectedAppointments] = useState([]);
   const [showModal, setShowModal] = useState(false);
-  const [selectedDate, setSelectedDate] = useState("");
-  const [selectedTime, setSelectedTime] = useState("");
-  const [title, setTitle] = useState("");
-  const [description, setDescription] = useState("");
+  const [selectedDate, setSelectedDate] = useState(null);
 
-  // ---------- Helpers ----------
   const properCase = (s) =>
     typeof s === "string" && s.length
       ? s.charAt(0).toUpperCase() + s.slice(1).toLowerCase()
@@ -37,7 +23,6 @@ const Calendar = () => {
   const parseTo24h = (t) => {
     if (!t) return null;
     const str = String(t).trim();
-    // already 24h "HH:mm" or "HH:mm:ss"
     if (/^\d{1,2}:\d{2}(:\d{2})?$/.test(str)) {
       const parts = str.split(":");
       const hh = parts[0].padStart(2, "0");
@@ -45,7 +30,6 @@ const Calendar = () => {
       const ss = parts[2] || "00";
       return `${hh}:${mm}:${ss}`;
     }
-    // 12h like "10:30 AM" / "7 PM"
     const m = str.match(/^(\d{1,2})(?::(\d{2}))?\s*([AaPp][Mm])$/);
     if (m) {
       let h = parseInt(m[1], 10);
@@ -56,167 +40,130 @@ const Calendar = () => {
       const hh = String(h).padStart(2, "0");
       return `${hh}:${mm}:00`;
     }
-    return null; // unknown format
+    return null;
   };
 
   const buildStartIso = (dateStr, timeStr) => {
     if (!dateStr) return null;
-    const date = String(dateStr).slice(0, 10); // YYYY-MM-DD if ISO-ish
+    const date = String(dateStr).slice(0, 10);
     const t24 = parseTo24h(timeStr);
     if (t24) return `${date}T${t24}`;
-    // fallback just the date
     return date;
   };
 
   const patientNameFrom = (obj) =>
     (obj?.patientId?.name || obj?.patient?.name || "").trim() || "Patient";
 
-  // Map API appointment -> FullCalendar event
   const mapApiAppointmentToEvent = (a) => {
     const id = a?._id || `${a?.appointmentDate || ""}-${a?.appointmentTime || ""}-${Math.random()}`;
-    const status = properCase(String(a?.status || "Scheduled"));
     const start = buildStartIso(a?.appointmentDate, a?.appointmentTime);
-    const title =
-      (a?.title && a.title.trim()) ||
-      `Appt: ${patientNameFrom(a)}${status ? ` (${status})` : ""}`;
-    const description = a?.reason || a?.notes || "";
-
-    // Optional end handling if backend sends duration
-    let end = undefined;
-    if (a?.endTime) {
-      const endIso = buildStartIso(a?.appointmentDate, a?.endTime);
-      if (endIso) end = endIso;
-    }
 
     return {
       id: String(id),
-      title,
+      title: "", // ✅ खाली — कैलेंडर पर कुछ न दिखे
       start: start || null,
-      end: end || undefined,
+      display: 'background', // ✅ यह महत्वपूर्ण है — इवेंट को बैकग्राउंड में दिखाएगा (बिना टेक्स्ट के)
       extendedProps: {
         raw: a,
-        status,
-        description,
         patient: patientNameFrom(a),
+        status: properCase(String(a?.status || "Scheduled")),
       },
     };
   };
 
-  // ---------- API: GET appointments ----------
-  const fetchAppointments = async () => {
-    setLoading(true);
-    setApiError(null);
-    try {
-      const res = await axios.get(`${BASE_URL}/appointment`, {
-        params: { doctorId: DOCTOR_ID },
-      });
-
-      const rawList = Array.isArray(res?.data)
-        ? res.data
-        : Array.isArray(res?.data?.data)
-        ? res.data.data
-        : [];
-
-      const apiEvents = rawList
-        .map(mapApiAppointmentToEvent)
-        .filter((ev) => !!ev.start); // keep only valid dates
-
-      setEvents(apiEvents);
-    } catch (err) {
-      console.error(err);
-      setApiError(
-        err?.response?.data?.message ||
-          err?.message ||
-          "Failed to fetch appointments"
-      );
-    } finally {
-      setLoading(false);
-    }
-  };
+  const staticAppointments = [
+    {
+      _id: "1",
+      patientId: { name: "Rahul Sharma" },
+      appointmentDate: "2025-9-10",
+      appointmentTime: "10:00 AM",
+      endTime: "10:30 AM",
+      status: "Scheduled",
+      reason: "General Checkup",
+      notes: "Patient has mild fever.",
+    },
+    {
+      _id: "2",
+      patientId: { name: "Priya Singh" },
+      appointmentDate: "2025-08-10",
+      appointmentTime: "11:30 AM",
+      endTime: "12:00 PM",
+      status: "Completed",
+      reason: "Dental Cleaning",
+    },
+    {
+      _id: "3",
+      patientId: { name: "Amit Patel" },
+      appointmentDate: "2025-08-12",
+      appointmentTime: "03:00 PM",
+      endTime: "03:45 PM",
+      status: "Pending",
+      reason: "Follow-up",
+    },
+    {
+      _id: "4",
+      patientId: { name: "Sneha Gupta" },
+      appointmentDate: "2025-08-15",
+      appointmentTime: "09:00 AM",
+      endTime: "09:30 AM",
+      status: "Cancelled",
+      reason: "Skin Allergy",
+      notes: "Rescheduled for next week.",
+    },
+    {
+      _id: "5",
+      patientId: { name: "Vikram Mehta" },
+      appointmentDate: "2025-08-18",
+      appointmentTime: "04:00 PM",
+      endTime: "05:00 PM",
+      status: "Scheduled",
+      reason: "Annual Physical",
+    },
+  ];
 
   useEffect(() => {
-    fetchAppointments();
+    const mappedEvents = staticAppointments
+      .map(mapApiAppointmentToEvent)
+      .filter((ev) => !!ev.start);
+
+    setEvents(mappedEvents);
   }, []);
 
-  // ---------- Calendar handlers ----------
+  // ✅ अब इवेंट्स पर कुछ भी न दिखे — सिर्फ बैकग्राउंड हाइलाइट
+  const renderEventContent = () => {
+    return null; // कुछ भी रेंडर न करें
+  };
+
+  // ✅ अब इवेंट पर क्लिक करने पर कुछ न हो — हम डेट क्लिक पर ही डिटेल्स दिखाएंगे
+  const handleEventClick = () => {
+    // कुछ न करें
+  };
+
+  // ✅ डेट पर क्लिक करने पर — उस दिन के सभी पेशेंट्स दिखाएं
+  const getAppointmentsByDate = (dateStr) => {
+    return events
+      .filter(event => {
+        if (!event.start) return false;
+        const eventDate = event.start.toISOString().split('T')[0];
+        return eventDate === dateStr;
+      })
+      .map(event => event.extendedProps.raw);
+  };
+
   const handleDateClick = (arg) => {
-    setSelectedDate(arg.dateStr);
-    const t = arg.date.toTimeString().split(" ")[0].substring(0, 5); // HH:mm
-    setSelectedTime(t);
-    setShowModal(true);
+    const clickedDate = arg.dateStr;
+    const appointments = getAppointmentsByDate(clickedDate);
+    if (appointments.length > 0) {
+      setSelectedAppointments(appointments);
+      setSelectedDate(clickedDate);
+      setShowModal(true);
+    }
   };
 
-  const handleModalClose = () => {
+  const closeModal = () => {
     setShowModal(false);
-    setTitle("");
-    setDescription("");
-  };
-
-  // ✅ POST API call to save new appointment
-  const handleSaveMeeting = async () => {
-    if (!title.trim()) {
-      alert("Please enter a title for the meeting");
-      return;
-    }
-
-    const newAppointmentData = {
-      doctorId: DOCTOR_ID,
-      patientId: "68c2c39a59e57e85e5419996", // You can make this dynamic
-      appointmentDate: selectedDate,
-      appointmentTime: selectedTime,
-      reason: description,
-      title: title.trim(),
-      status: "scheduled",
-    };
-
-    try {
-      const res = await axios.post(`${BASE_URL}/appointment`, newAppointmentData);
-
-      // On success, add the event to calendar
-      const newEvent = mapApiAppointmentToEvent(res.data.appointment);
-      setEvents((prev) => [...prev, newEvent]);
-
-      handleModalClose();
-    } catch (err) {
-      console.error("Failed to save appointment:", err);
-      alert("Failed to save appointment.");
-    }
-  };
-
-  // ✅ IMPROVED: eventRender for better layout, color, tooltip
-  const renderEventContent = (eventInfo) => {
-    const extendedProps = eventInfo.event.extendedProps;
-    const status = extendedProps.status || "Scheduled";
-    const patient = extendedProps.patient || "Patient";
-    const description = extendedProps.description || "";
-
-    // Color mapping
-    let bgColor = "bg-light";
-    if (status === "Completed") bgColor = "bg-success-subtle";
-    else if (status === "Cancelled") bgColor = "bg-danger-subtle";
-    else if (status === "Pending") bgColor = "bg-warning-subtle";
-    else if (status === "Scheduled") bgColor = "bg-primary-subtle";
-
-    // Full tooltip
-    const tooltip = `${eventInfo.event.title}\n${description}`;
-
-    return (
-      <div
-        className={`fc-event fc-event-draggable ${bgColor} p-1 rounded text-truncate d-flex align-items-center`}
-        title={tooltip}
-        style={{ minHeight: "36px", fontSize: "0.8rem" }}
-      >
-        <span className="fw-bold me-1" style={{ fontSize: "0.85rem" }}>
-          {eventInfo.timeText}
-        </span>
-        <span className="text-secondary me-1" style={{ fontSize: "0.75rem" }}>
-          {patient}
-        </span>
-        <span className="ms-auto badge bg-secondary" style={{ fontSize: "0.7rem" }}>
-          {status}
-        </span>
-      </div>
-    );
+    setSelectedAppointments([]);
+    setSelectedDate(null);
   };
 
   return (
@@ -226,21 +173,16 @@ const Calendar = () => {
         <div className="d-flex gap-2">
           <button
             className="btn btn-sm btn-outline-secondary"
-            onClick={fetchAppointments}
-            disabled={loading}
-            title="Refresh from server"
+            onClick={() => {
+              const mappedEvents = staticAppointments
+                .map(mapApiAppointmentToEvent)
+                .filter((ev) => !!ev.start);
+              setEvents(mappedEvents);
+            }}
+            title="Refresh data"
           >
-            {loading ? (
-              <>
-                <span className="spinner-border spinner-border-sm me-1" />
-                Loading…
-              </>
-            ) : (
-              <>
-                <i className="fas fa-sync-alt me-1" />
-                Refresh
-              </>
-            )}
+            <i className="fas fa-sync-alt me-1" />
+            Refresh
           </button>
         </div>
       </div>
@@ -248,7 +190,7 @@ const Calendar = () => {
       {apiError && (
         <div className="alert alert-danger d-flex justify-content-between align-items-center">
           <span>{apiError}</span>
-          <button className="btn btn-sm btn-light" onClick={fetchAppointments}>
+          <button className="btn btn-sm btn-light" onClick={() => {}}>
             Retry
           </button>
         </div>
@@ -264,78 +206,76 @@ const Calendar = () => {
             right: "dayGridMonth,timeGridWeek,timeGridDay,listWeek",
           }}
           events={events}
-          eventContent={renderEventContent} // ✅ Improved rendering
-          height="700px" // ✅ Fixed height to avoid squishing
-          dateClick={handleDateClick}
-          selectable={true}
+          eventContent={renderEventContent} // ✅ अब कुछ न दिखे
+          eventClick={handleEventClick} // ✅ इवेंट पर क्लिक करने पर कुछ न हो
+          dateClick={handleDateClick} // ✅ सिर्फ डेट पर क्लिक करने पर डिटेल्स खुले
+          dayCellDidMount={(arg) => {
+            const dateStr = arg.date.toISOString().split('T')[0];
+            const hasAppointments = events.some(event => {
+              if (!event.start) return false;
+              const eventDate = event.start.toISOString().split('T')[0];
+              return eventDate === dateStr;
+            });
+
+            if (hasAppointments) {
+              // ✅ सिर्फ हाइलाइट — बिना बैज के, बिना हॉवर इवेंट के
+              arg.el.style.backgroundColor = '#e3f2fd';
+              arg.el.style.borderRadius = '4px';
+            }
+          }}
+          height="700px"
           weekends={true}
-          editable={true}
+          editable={false}
         />
       </div>
 
-      {/* Booking Modal (POST API now) */}
-      {showModal && (
-        <div className="modal show d-block" tabIndex="-1">
-          <div className="modal-dialog">
+      {/* Appointment Details Modal — सिर्फ क्लिक पर खुले */}
+      {showModal && selectedAppointments.length > 0 && (
+        <div className="modal d-block" tabIndex="-1">
+          <div className="modal-dialog modal-dialog-centered modal-lg">
             <div className="modal-content">
               <div className="modal-header">
-                <h5 className="modal-title">Book a Meeting</h5>
-                <button type="button" className="btn-close" onClick={handleModalClose}></button>
+                <h5 className="modal-title">
+                  Appointments on {selectedDate}
+                </h5>
+                <button type="button" className="btn-close" onClick={closeModal}></button>
               </div>
               <div className="modal-body">
-                <div className="mb-3">
-                  <label className="form-label">Date</label>
-                  <input
-                    type="text"
-                    className="form-control"
-                    value={selectedDate}
-                    readOnly
-                  />
-                </div>
-                <div className="mb-3">
-                  <label className="form-label">Time</label>
-                  <input
-                    type="time"
-                    className="form-control"
-                    value={selectedTime}
-                    onChange={(e) => setSelectedTime(e.target.value)}
-                  />
-                </div>
-                <div className="mb-3">
-                  <label className="form-label">Meeting Title*</label>
-                  <input
-                    type="text"
-                    className="form-control"
-                    value={title}
-                    onChange={(e) => setTitle(e.target.value)}
-                    placeholder="Enter meeting title"
-                  />
-                </div>
-                <div className="mb-3">
-                  <label className="form-label">Description</label>
-                  <textarea
-                    className="form-control"
-                    value={description}
-                    onChange={(e) => setDescription(e.target.value)}
-                    rows="3"
-                    placeholder="Meeting details (optional)"
-                  />
-                </div>
+                {selectedAppointments.map((appt, index) => (
+                  <div key={appt._id || index} className="border rounded p-3 mb-3 bg-light">
+                    <div className="mb-2">
+                      <strong>Patient:</strong> {patientNameFrom(appt)}
+                    </div>
+                    <div className="mb-2">
+                      <strong>Date:</strong> {appt.appointmentDate}
+                    </div>
+                    <div className="mb-2">
+                      <strong>Time:</strong> {appt.appointmentTime}
+                      {appt.endTime && ` - ${appt.endTime}`}
+                    </div>
+                    <div className="mb-2">
+                      <strong>Status:</strong> {properCase(appt.status || "Scheduled")}
+                    </div>
+                    <div className="mb-2">
+                      <strong>Reason:</strong> {appt.reason || "N/A"}
+                    </div>
+                    {appt.notes && (
+                      <div className="mb-2">
+                        <strong>Notes:</strong> {appt.notes}
+                      </div>
+                    )}
+                  </div>
+                ))}
               </div>
               <div className="modal-footer">
-                <button type="button" className="btn btn-secondary" onClick={handleModalClose}>
-                  Cancel
-                </button>
-                <button type="button" className="btn btn-primary" onClick={handleSaveMeeting}>
-                  Book Meeting
+                <button type="button" className="btn btn-secondary" onClick={closeModal}>
+                  Close
                 </button>
               </div>
             </div>
           </div>
         </div>
       )}
-
-      {showModal && <div className="modal-backdrop show"></div>}
     </div>
   );
 };

@@ -4,11 +4,9 @@ import 'bootstrap/dist/css/bootstrap.min.css';
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faCamera, faUserCircle, faTimes, faEye, faEyeSlash } from "@fortawesome/free-solid-svg-icons";
 import axios from "axios";
-// import Swal from "sweetalert2";
-// import 'sweetalert2/dist/sweetalert2.min.css';
 import API_URL from "../../../Baseurl/Baseurl";
 
-// ---------- Theme ----------
+// ---------- Theme ----------.
 const BRAND_ORANGE = '#ff6b00';
 
 // ---------- Helpers (module-scope) ----------
