@@ -30,8 +30,8 @@ const MyAppointments = () => {
         }
 
         // ✅ Make API call using Axios
-        const response = await axios.get(`${API_URL}/appointment`, {
-          params: { patientId }, // Axios uses `params` for query strings
+  const response = await axios.get(`${API_URL}/appointment`, {
+          params: { patientId }, // Axios uses params for query strings
         });
 
         const data = response.data; // Axios directly gives you .data
@@ -109,7 +109,7 @@ const MyAppointments = () => {
   const handleDeleteConfirm = () => {
     // Optional: Call DELETE API endpoint here with Axios
     // Example:
-    // await axios.delete(`${API_URL}/appointment/${selectedAppointment.id}`);
+    // await axios.delete(${API_URL}/appointment/${selectedAppointment.id});
 
     setAppointments(
       appointments.filter((appt) => appt.id !== selectedAppointment.id)

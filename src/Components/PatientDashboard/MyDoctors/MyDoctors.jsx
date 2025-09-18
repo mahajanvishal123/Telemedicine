@@ -49,7 +49,7 @@ export default function MyDoctors() {
         if (!patientId) throw new Error("Patient ID not found in localStorage");
 
         // ✅ Fetch appointments (same as MyAppointments)
-        const response = await axios.get(`${API_URL}/appointment`, {
+  const response = await axios.get(`${API_URL}/appointment`, {
           params: { patientId },
         });
 
