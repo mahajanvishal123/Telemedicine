@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import axios from "axios";
 import API_URL from "../../Baseurl/Baseurl";
+import Swal from 'sweetalert2';
 
 const Caregiver = () => {
   // ====== CONFIG ======
@@ -16,14 +17,30 @@ const Caregiver = () => {
   const [showViewModal, setShowViewModal] = useState(false);
   const [viewingCaregiver, setViewingCaregiver] = useState(null);
 
+  // 🔹 Update Modal State
+  const [showUpdateModal, setShowUpdateModal] = useState(false);
+  const [updatingCaregiver, setUpdatingCaregiver] = useState(null);
+  const [updateFormData, setUpdateFormData] = useState({
+    name: "",
+    email: "",
+    mobile: "",
+    address: "",
+    skills: "",
+    dateOfBirth: "",
+    gender: "",
+    bloodGroup: "",
+    yearsExperience: 0,
+    status: "Active"
+  });
+
   // 🔹 Document Preview Modal State
   const [showDocModal, setShowDocModal] = useState(false);
   const [docToView, setDocToView] = useState(null);
-  const [showDocOptions, setShowDocOptions] = useState(true); // Start with options screen
+  const [showDocOptions, setShowDocOptions] = useState(true);
 
   // 🔹 Pagination states
   const [currentPage, setCurrentPage] = useState(1);
-  const [rowsPerPage, setRowsPerPage] = useState(5); // Default 5
+  const [rowsPerPage, setRowsPerPage] = useState(5);
 
   // 🔹 Filter states
   const [filterName, setFilterName] = useState("");
@@ -44,27 +61,19 @@ const Caregiver = () => {
   // ===== Map API caregiver -> local caregiver object
   const mapApiCaregiver = (api) => {
     const trim = (v) => (typeof v === "string" ? v.trim() : v);
-    const expYears = (() => {
-      const e = trim(api.experience);
-      if (!e) return 0;
-      const m = String(e).match(/(\d+)/);
-      return m ? Number(m[1]) : 0;
-    })();
 
     const docs = [];
     if (api.certificate && String(api.certificate).length > 0) {
       let certUrl = api.certificate;
-      // Ensure URL is absolute
-      if (certUrl && !certUrl.startsWith('http')) {
-        certUrl = `${BASE_URL}${certUrl.startsWith('/') ? '' : '/'}${certUrl}`;
+      if (certUrl && !certUrl.startsWith("http")) {
+        certUrl = `${BASE_URL}${certUrl.startsWith("/") ? "" : "/"}${certUrl}`;
       }
       const fileName = String(certUrl).split("/").pop() || "Certificate";
-      // Determine file type from extension
-      const fileExtension = fileName.split('.').pop().toLowerCase();
-      docs.push({ 
-        name: fileName, 
+      const fileExtension = fileName.split(".").pop().toLowerCase();
+      docs.push({
+        name: fileName,
         url: certUrl,
-        type: fileExtension
+        type: fileExtension,
       });
     }
 
@@ -74,8 +83,7 @@ const Caregiver = () => {
       email: trim(api.email) || "",
       joinDate: api.createdAt ? String(api.createdAt).slice(0, 10) : "",
       status: "Active",
-      certification: "",
-      yearsExperience: expYears,
+      yearsExperience: api.experience || 0,
       mobile: trim(api.mobile) || "",
       address: trim(api.address) || "",
       skills: trim(api.skills) || "",
@@ -104,7 +112,6 @@ const Caregiver = () => {
       const mapped = raw.map(mapApiCaregiver);
       setCaregivers(mapped);
     } catch (err) {
-      console.error("Failed to fetch caregivers:", err);
       setCaregiversError(
         err?.response?.data?.message || err?.message || "Failed to fetch caregivers"
       );
@@ -115,13 +122,125 @@ const Caregiver = () => {
 
   useEffect(() => {
     fetchCaregivers();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // View Caregiver Handler
   const handleView = (caregiver) => {
     setViewingCaregiver(caregiver);
     setShowViewModal(true);
+  };
+
+  // ✅ Update Caregiver Handler
+  const handleUpdate = (caregiver) => {
+    setUpdatingCaregiver(caregiver);
+    setUpdateFormData({
+      name: caregiver.name,
+      email: caregiver.email,
+      mobile: caregiver.mobile,
+      address: caregiver.address,
+      skills: caregiver.skills,
+      dateOfBirth: caregiver.dateOfBirth,
+      gender: caregiver.gender,
+      bloodGroup: caregiver.bloodGroup,
+      yearsExperience: caregiver.yearsExperience,
+      status: caregiver.status
+    });
+    setShowUpdateModal(true);
+  };
+
+  // Handle form input changes
+  const handleInputChange = (e) => {
+    const { name, value } = e.target;
+    setUpdateFormData({
+      ...updateFormData,
+      [name]: value
+    });
+  };
+
+  // Submit update form
+  const handleUpdateSubmit = async (e) => {
+    e.preventDefault();
+    try {
+      Swal.fire({
+        title: 'Updating...',
+        text: 'Please wait while we update the caregiver information',
+        icon: 'info',
+        allowOutsideClick: false,
+        didOpen: () => {
+          Swal.showLoading();
+        }
+      });
+      
+      const response = await axios.put(`${BASE_URL}/caregiver/${updatingCaregiver.id}`, updateFormData);
+      if (response.data) {
+        // Update the caregiver in the list
+        setCaregivers(caregivers.map(c => 
+          c.id === updatingCaregiver.id ? { ...c, ...updateFormData } : c
+        ));
+        setShowUpdateModal(false);
+        
+        Swal.fire({
+          title: 'Success!',
+          text: 'Caregiver updated successfully',
+          icon: 'success',
+          timer: 2000,
+          showConfirmButton: false
+        });
+      }
+    } catch (err) {
+      console.error("Error updating caregiver:", err);
+      Swal.fire({
+        title: 'Error!',
+        text: 'Failed to update caregiver. Please try again.',
+        icon: 'error',
+        confirmButtonText: 'OK'
+      });
+    }
+  };
+
+  // ✅ Delete Caregiver Handler
+  const handleDelete = async (caregiverId) => {
+    Swal.fire({
+      title: 'Are you sure?',
+      text: "You won't be able to revert this!",
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: '#3085d6',
+      cancelButtonColor: '#d33',
+      confirmButtonText: 'Yes, delete it!'
+    }).then(async (result) => {
+      if (result.isConfirmed) {
+        try {
+          Swal.fire({
+            title: 'Deleting...',
+            text: 'Please wait while we delete the caregiver',
+            icon: 'info',
+            allowOutsideClick: false,
+            didOpen: () => {
+              Swal.showLoading();
+            }
+          });
+          
+          await axios.delete(`${BASE_URL}/caregiver/${caregiverId}`);
+          setCaregivers((prev) => prev.filter((c) => c.id !== caregiverId));
+          
+          Swal.fire({
+            title: 'Deleted!',
+            text: 'Caregiver has been deleted.',
+            icon: 'success',
+            timer: 2000,
+            showConfirmButton: false
+          });
+        } catch (err) {
+          Swal.fire({
+            title: 'Error!',
+            text: 'Failed to delete caregiver. Please try again.',
+            icon: 'error',
+            confirmButtonText: 'OK'
+          });
+        }
+      }
+    });
   };
 
   // Handle image loading error
@@ -133,48 +252,53 @@ const Caregiver = () => {
   // Handle document view - show options modal
   const handleViewDocument = (doc) => {
     setDocToView(doc);
-    setShowDocOptions(true); // Show options first
+    setShowDocOptions(true);
     setShowDocModal(true);
   };
 
   // Handle direct document download
   const handleDownloadDocument = (doc) => {
-    // Create a temporary link to trigger download
-    const link = document.createElement('a');
+    const link = document.createElement("a");
     link.href = doc.url;
     link.download = doc.name;
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
+    
+    Swal.fire({
+      title: 'Download Started!',
+      text: 'Your document download has started',
+      icon: 'success',
+      timer: 2000,
+      showConfirmButton: false
+    });
   };
 
   // Handle option selection
   const handleViewOption = (option) => {
-    if (option === 'download') {
+    if (option === "download") {
       handleDownloadDocument(docToView);
       setShowDocModal(false);
-    } else if (option === 'newTab') {
-      window.open(docToView.url, '_blank');
+    } else if (option === "newTab") {
+      window.open(docToView.url, "_blank");
       setShowDocModal(false);
-    } else if (option === 'preview') {
-      setShowDocOptions(false); // Switch to preview
+    } else if (option === "preview") {
+      setShowDocOptions(false);
     }
   };
 
   // 🔹 Apply Filters
-  const filteredCaregivers = caregivers.filter(caregiver => {
+  const filteredCaregivers = caregivers.filter((caregiver) => {
     const matchesName = filterName
       ? caregiver.name.toLowerCase().includes(filterName.toLowerCase())
       : true;
-
     const matchesEmail = filterEmail
       ? caregiver.email.toLowerCase().includes(filterEmail.toLowerCase())
       : true;
-
     return matchesName && matchesEmail;
   });
 
-  // 🔹 Pagination Logic — Applied to FILTERED data
+  // 🔹 Pagination Logic
   const indexOfLastRow = currentPage * rowsPerPage;
   const indexOfFirstRow = indexOfLastRow - rowsPerPage;
   const currentRows =
@@ -186,34 +310,32 @@ const Caregiver = () => {
 
   const paginate = (pageNumber) => setCurrentPage(pageNumber);
 
-  // 🔹 Reset Filters
   const resetFilters = () => {
     setFilterName("");
     setFilterEmail("");
     setCurrentPage(1);
   };
 
-  // Get file icon based on file type
   const getFileIcon = (fileType) => {
     switch (fileType) {
-      case 'pdf':
-        return 'fa-file-pdf text-danger';
-      case 'doc':
-      case 'docx':
-        return 'fa-file-word text-primary';
-      case 'xls':
-      case 'xlsx':
-        return 'fa-file-excel text-success';
-      case 'ppt':
-      case 'pptx':
-        return 'fa-file-powerpoint text-warning';
-      case 'jpg':
-      case 'jpeg':
-      case 'png':
-      case 'gif':
-        return 'fa-file-image text-info';
+      case "pdf":
+        return "fa-file-pdf text-danger";
+      case "doc":
+      case "docx":
+        return "fa-file-word text-primary";
+      case "xls":
+      case "xlsx":
+        return "fa-file-excel text-success";
+      case "ppt":
+      case "pptx":
+        return "fa-file-powerpoint text-warning";
+      case "jpg":
+      case "jpeg":
+      case "png":
+      case "gif":
+        return "fa-file-image text-info";
       default:
-        return 'fa-file text-secondary';
+        return "fa-file text-secondary";
     }
   };
 
@@ -348,12 +470,29 @@ const Caregiver = () => {
                           </span>
                         </td>
                         <td>
+                          {/* 👁 View */}
                           <button
-                            className="btn btn-sm"
+                            className="btn btn-sm me-1"
                             onClick={() => handleView(caregiver)}
                             title="View"
                           >
                             <i className="fas fa-eye" style={{ color: "#FF3500" }}></i>
+                          </button>
+                          {/* ✏️ Update */}
+                          <button
+                            className="btn btn-sm me-1"
+                            onClick={() => handleUpdate(caregiver)}
+                            title="Update"
+                          >
+                            <i className="fas fa-edit" style={{ color: "#FF3500" }}></i>
+                          </button>
+                          {/* 🗑 Delete */}
+                          <button
+                            className="btn btn-sm"
+                            onClick={() => handleDelete(caregiver.id)}
+                            title="Delete"
+                          >
+                            <i className="fas fa-trash" style={{ color: "#FF3500" }}></i>
                           </button>
                         </td>
                       </tr>
@@ -490,22 +629,12 @@ const Caregiver = () => {
                                     <i className={`fas ${getFileIcon(doc.type)} me-2`}></i>
                                     {doc.name}
                                   </div>
-                                  <div>
-                                    <button
-                                      className="btn btn-sm btn-outline-primary me-2"
-                                      onClick={() => handleViewDocument(doc)}
-                                      title="View Document"
-                                    >
-                                      <i className="fas fa-eye"></i>
-                                    </button>
-                                    <button
-                                      className="btn btn-sm btn-outline-success"
-                                      onClick={() => handleDownloadDocument(doc)}
-                                      title="Download Document"
-                                    >
-                                      <i className="fas fa-download"></i>
-                                    </button>
-                                  </div>
+                                  <button
+                                    className="btn btn-sm btn-outline-primary"
+                                    onClick={() => handleViewDocument(doc)}
+                                  >
+                                    View
+                                  </button>
                                 </li>
                               ))}
                             </ul>
@@ -531,6 +660,168 @@ const Caregiver = () => {
                   Close
                 </button>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Update Caregiver Modal */}
+      {showUpdateModal && updatingCaregiver && (
+        <div
+          className="modal fade show d-block"
+          style={{ backgroundColor: "rgba(0,0,0,0.5)" }}
+          onClick={() => setShowUpdateModal(false)}
+        >
+          <div className="modal-dialog modal-lg" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-content">
+              <div className="modal-header">
+                <h5 className="modal-title">Update Caregiver</h5>
+                <button
+                  type="button"
+                  className="btn-close"
+                  onClick={() => setShowUpdateModal(false)}
+                />
+              </div>
+              <form onSubmit={handleUpdateSubmit}>
+                <div className="modal-body">
+                  <div className="row">
+                    <div className="col-md-6">
+                      <div className="mb-3">
+                        <label className="form-label">Full Name</label>
+                        <input
+                          type="text"
+                          className="form-control"
+                          name="name"
+                          value={updateFormData.name}
+                          onChange={handleInputChange}
+                          required
+                        />
+                      </div>
+                      <div className="mb-3">
+                        <label className="form-label">Email</label>
+                        <input
+                          type="email"
+                          className="form-control"
+                          name="email"
+                          value={updateFormData.email}
+                          onChange={handleInputChange}
+                          required
+                        />
+                      </div>
+                      <div className="mb-3">
+                        <label className="form-label">Mobile</label>
+                        <input
+                          type="text"
+                          className="form-control"
+                          name="mobile"
+                          value={updateFormData.mobile}
+                          onChange={handleInputChange}
+                        />
+                      </div>
+                      <div className="mb-3">
+                        <label className="form-label">Date of Birth</label>
+                        <input
+                          type="date"
+                          className="form-control"
+                          name="dateOfBirth"
+                          value={updateFormData.dateOfBirth}
+                          onChange={handleInputChange}
+                        />
+                      </div>
+                      <div className="mb-3">
+                        <label className="form-label">Gender</label>
+                        <select
+                          className="form-select"
+                          name="gender"
+                          value={updateFormData.gender}
+                          onChange={handleInputChange}
+                        >
+                          <option value="">Select Gender</option>
+                          <option value="Male">Male</option>
+                          <option value="Female">Female</option>
+                          <option value="Other">Other</option>
+                        </select>
+                      </div>
+                    </div>
+                    <div className="col-md-6">
+                      <div className="mb-3">
+                        <label className="form-label">Blood Group</label>
+                        <select
+                          className="form-select"
+                          name="bloodGroup"
+                          value={updateFormData.bloodGroup}
+                          onChange={handleInputChange}
+                        >
+                          <option value="">Select Blood Group</option>
+                          <option value="A+">A+</option>
+                          <option value="A-">A-</option>
+                          <option value="B+">B+</option>
+                          <option value="B-">B-</option>
+                          <option value="AB+">AB+</option>
+                          <option value="AB-">AB-</option>
+                          <option value="O+">O+</option>
+                          <option value="O-">O-</option>
+                        </select>
+                      </div>
+                      <div className="mb-3">
+                        <label className="form-label">Years of Experience</label>
+                        <input
+                          type="number"
+                          className="form-control"
+                          name="yearsExperience"
+                          value={updateFormData.yearsExperience}
+                          onChange={handleInputChange}
+                          min="0"
+                        />
+                      </div>
+                      <div className="mb-3">
+                        <label className="form-label">Status</label>
+                        <select
+                          className="form-select"
+                          name="status"
+                          value={updateFormData.status}
+                          onChange={handleInputChange}
+                        >
+                          <option value="Active">Active</option>
+                          <option value="Inactive">Inactive</option>
+                        </select>
+                      </div>
+                      <div className="mb-3">
+                        <label className="form-label">Skills</label>
+                        <textarea
+                          className="form-control"
+                          name="skills"
+                          value={updateFormData.skills}
+                          onChange={handleInputChange}
+                          rows="2"
+                        ></textarea>
+                      </div>
+                      <div className="mb-3">
+                        <label className="form-label">Address</label>
+                        <textarea
+                          className="form-control"
+                          name="address"
+                          value={updateFormData.address}
+                          onChange={handleInputChange}
+                          rows="2"
+                        ></textarea>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                <div className="modal-footer">
+                  <button
+                    type="button"
+                    className="btn btn-secondary"
+                    onClick={() => setShowUpdateModal(false)}
+                  >
+                    Cancel
+                  </button>
+                  <button type="submit" className="btn" style={{ backgroundColor: "#FF3500", color: "white" }}>
+                    Update Caregiver
+                  </button>
+                </div>
+              </form>
             </div>
           </div>
         </div>
