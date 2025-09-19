@@ -19,6 +19,7 @@ import {
   faTimes,
   faDedent,
   faRightLeft,
+  faTags,
 } from "@fortawesome/free-solid-svg-icons";
 import "./Sidebar.css";
 
@@ -103,7 +104,9 @@ const Sidebar = ({ collapsed, setCollapsed }) => {
 
     { label: "All Patient", path: "/admin/patient", icon: faUsers },
     { label: "Verification", path: "/admin/verification", icon: faCheckCircle },
+    { label: "Plans Manager", path: "/admin/plansManager", icon: faTags },
     { label: "Appointments", path: "/admin/appointments", icon: faCalendarCheck },
+    
   ];
 
   // Decide menu based on role
