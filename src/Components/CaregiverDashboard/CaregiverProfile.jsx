@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import axios from 'axios';
+import Swal from 'sweetalert2';
 import {
   FaCamera, FaUser, FaEnvelope, FaLock, FaVenusMars, FaCalendarAlt,
   FaIdCard, FaSave, FaCheck, FaTimes, FaEye, FaEyeSlash
@@ -20,7 +21,8 @@ const CaregiverProfile = () => {
     profile: "",
     age: "",
     dob: "",
-    certificate: "",
+    certificate: "",       // URL or empty
+    certificateName: "",   // ORIGINAL file name we want to show/persist
     bloodGroup: ""
   });
 
@@ -42,6 +44,31 @@ const CaregiverProfile = () => {
 
   // ---------- helpers ----------
   const safeJSON = (txt) => { try { return JSON.parse(txt); } catch { return null; } };
+
+  // keep a tiny map of original names per caregiver in LS
+  const CERT_MAP_KEY = 'cg_cert_names';
+  const readCertNameMap = () => safeJSON(localStorage.getItem(CERT_MAP_KEY)) || {};
+  const writeCertNameMap = (id, name) => {
+    const m = readCertNameMap();
+    if (id) {
+      if (name) m[id] = name;
+      else delete m[id];
+      localStorage.setItem(CERT_MAP_KEY, JSON.stringify(m));
+    }
+  };
+
+  // derive a friendly name from a URL as a last resort
+  const nameFromUrl = (url) => {
+    if (!url) return "";
+    try {
+      const last = decodeURIComponent(url.split('/').pop().split('?')[0]);
+      // strip very long Cloudinary public-ids (optional)
+      if (!last || last.length > 80) return "";
+      return last;
+    } catch {
+      return "";
+    }
+  };
 
   // login payload usually stored as 'user' with { token, role, user: {...} }
   const loginBlob = safeJSON(localStorage.getItem('user')) || {};
@@ -65,14 +92,9 @@ const CaregiverProfile = () => {
     const params = new URLSearchParams(window.location.search);
     const fromQuery = params.get('id');
 
-    const fromUserObj = loginBlob?.user?._id || loginBlob?._id || null; // your login sample uses user._id
+    const fromUserObj = loginBlob?.user?._id || loginBlob?._id || null;
     const fromJwt = decodeJwtId();
 
-    // FINAL priority:
-    // 1) URL ?id=...
-    // 2) logged-in user._id (from login response)
-    // 3) JWT id
-    // 4) cached profile._id (last resort)
     const cachedProfile = safeJSON(localStorage.getItem('caregiverProfile')) || {};
     const fromCache = cachedProfile?._id || null;
 
@@ -83,15 +105,7 @@ const CaregiverProfile = () => {
       fromCache ||
       null;
 
-    // keep localStorage aligned with the authenticated identity (avoid stale ID)
-    if (fromUserObj && resolved !== fromUserObj) {
-      localStorage.setItem('caregiverId', fromUserObj);
-    } else if (fromJwt && resolved !== fromJwt) {
-      localStorage.setItem('caregiverId', fromJwt);
-    } else if (resolved) {
-      localStorage.setItem('caregiverId', resolved);
-    }
-
+    if (resolved) localStorage.setItem('caregiverId', resolved);
     return resolved;
   };
 
@@ -114,9 +128,13 @@ const CaregiverProfile = () => {
   };
 
   const mapAndSetByDoc = (doc, id) => {
-    // if API wrapped it, unwrap again
     const d = Array.isArray(doc) ? doc.find(x => x?._id === id) : doc;
     if (!d || typeof d !== 'object') throw new Error('Invalid caregiver payload');
+
+    // Pull a remembered original name if API doesn't send certificateName
+    const rememberedName = readCertNameMap()[id] || "";
+    const derivedName = nameFromUrl(trimStr(d?.certificate));
+    const finalCertName = trimStr(d?.certificateName) || rememberedName || derivedName || '';
 
     const mapped = {
       _id: d?._id || id,
@@ -126,18 +144,22 @@ const CaregiverProfile = () => {
       password: (typeof d?.password === 'string' && d.password.startsWith('$')) ? '' : (trimStr(d?.password) || ''),
       gender: trimStr(d?.gender) || '',
       profile: trimStr(d?.profile) || '',
-      age: trimStr(d?.age) || '', // keep age separate
+      age: trimStr(d?.age) || '',
       dob: normalizeDobForInput(d?.dob),
       certificate: trimStr(d?.certificate) || '',
+      certificateName: finalCertName,
       bloodGroup: trimStr(d?.bloodGroup) || ''
     };
 
     setCaregiver(mapped);
     if (mapped.profile) setProfileImage(mapped.profile);
 
-    // sync cache to the correct logged-in caregiver
+    // persist to LS for refresh safety
     localStorage.setItem('caregiverId', mapped._id);
     localStorage.setItem('caregiverProfile', JSON.stringify(mapped));
+
+    // also refresh our name map if API now has a name
+    if (finalCertName) writeCertNameMap(mapped._id, finalCertName);
   };
 
   // ---------- GET by ID ----------
@@ -158,8 +180,7 @@ const CaregiverProfile = () => {
     };
 
     try {
-      // Prefer clean by-id endpoints ONLY
-      // 1) /caregiver/:id
+      // Try clean by-id endpoint
       try {
         const res1 = await axios.get(`${BASE_URL}/caregiver/${CAREGIVER_ID}`, { headers });
         const d1 = pickFromAnyShapeById(res1, CAREGIVER_ID) || res1?.data;
@@ -167,9 +188,9 @@ const CaregiverProfile = () => {
           mapAndSetByDoc((Array.isArray(d1) ? pickFromAnyShapeById({ data: d1 }, CAREGIVER_ID) : d1), CAREGIVER_ID);
           return;
         }
-      } catch { /* continue fallback */ }
+      } catch { /* continue */ }
 
-      // 2) /caregiver?caregiverId=...
+      // Fallback query
       const res2 = await axios.get(`${BASE_URL}/caregiver?caregiverId=${CAREGIVER_ID}`, { headers });
       const d2 = pickFromAnyShapeById(res2, CAREGIVER_ID) || res2?.data;
       if (!d2) throw new Error('Caregiver not found');
@@ -189,7 +210,6 @@ const CaregiverProfile = () => {
   }, []);
 
   // ---------- Submit (PUT by ID) ----------
-  // Util: convert dataURL to Blob for multipart
   const dataURLtoBlob = (dataurl) => {
     try {
       const arr = dataurl.split(',');
@@ -209,7 +229,6 @@ const CaregiverProfile = () => {
     setIsSaving(true);
     setSaveSuccess(false);
 
-    // resolve target id: prefer state._id, else resolver
     const targetId = caregiver._id || resolveCaregiverId();
     if (!targetId) {
       setIsSaving(false);
@@ -221,16 +240,22 @@ const CaregiverProfile = () => {
     }
 
     const url = `${BASE_URL}/caregiver/${targetId}`;
-
     const headersBase = {
       ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
     };
 
-    // Decide payload type:
     const isDataUrlProfile = (profileImage || caregiver.profile || '').startsWith('data:');
     const useMultipart = !!certificateFile || isDataUrlProfile;
 
     try {
+      Swal.fire({
+        title: 'Updating Profile',
+        text: 'Please wait while we update your profile...',
+        icon: 'info',
+        allowOutsideClick: false,
+        didOpen: () => Swal.showLoading(),
+      });
+
       let res;
 
       if (useMultipart) {
@@ -245,18 +270,22 @@ const CaregiverProfile = () => {
         form.append('dob', caregiver.dob || '');
         form.append('bloodGroup', caregiver.bloodGroup || '');
 
+        // profile
         if (isDataUrlProfile) {
           const blob = dataURLtoBlob(profileImage || caregiver.profile);
           if (blob) form.append('profile', blob, 'profile.jpg');
-        } else if (caregiver.profile) {
-          form.append('profile', caregiver.profile);
         }
 
+        // certificate: send file if picked, otherwise keep server-side as is (do not send URL string here)
         if (certificateFile) {
           form.append('certificate', certificateFile, certificateFile.name);
-        } else if (caregiver.certificate) {
-          form.append('certificate', caregiver.certificate);
         }
+
+        // send original name always (best effort)
+        form.append(
+          'certificateName',
+          certificateFile ? certificateFile.name : (caregiver.certificateName || '')
+        );
 
         res = await axios.put(url, form, {
           headers: {
@@ -265,6 +294,7 @@ const CaregiverProfile = () => {
           },
         });
       } else {
+        // JSON update (no new files)
         const payload = {
           name: caregiver.name || '',
           email: caregiver.email || '',
@@ -272,7 +302,9 @@ const CaregiverProfile = () => {
           age: caregiver.age || '',
           dob: caregiver.dob || '',
           bloodGroup: caregiver.bloodGroup || '',
+          // keep existing certificate URL untouched
           certificate: caregiver.certificate || '',
+          certificateName: caregiver.certificateName || '',
           profile: caregiver.profile || '',
           ...(caregiver.password && caregiver.password.trim() !== '' ? { password: caregiver.password.trim() } : {}),
         };
@@ -289,11 +321,31 @@ const CaregiverProfile = () => {
       const updatedDoc = pickFromAnyShapeById(res, targetId) || res?.data || {};
       try {
         mapAndSetByDoc(updatedDoc, targetId);
-      } catch { /* ignore if server doesn't echo */ }
+      } catch {
+        // if server didn't echo, at least persist the chosen name locally
+        const name = certificateFile?.name || caregiver.certificateName || '';
+        if (name) writeCertNameMap(targetId, name);
+        const patched = { ...caregiver, certificateName: name };
+        localStorage.setItem('caregiverProfile', JSON.stringify(patched));
+        setCaregiver(patched);
+      }
+
+      // persist chosen name to our local map (so refresh keeps it)
+      const latestName = certificateFile?.name || caregiver.certificateName || '';
+      if (latestName) writeCertNameMap(targetId, latestName);
 
       setIsSaving(false);
       setSaveSuccess(true);
       setShowToast(true);
+
+      Swal.fire({
+        title: 'Success!',
+        text: 'Your profile has been updated successfully',
+        icon: 'success',
+        timer: 2000,
+        showConfirmButton: false
+      });
+
       setTimeout(() => {
         setShowToast(false);
         setSaveSuccess(false);
@@ -303,6 +355,14 @@ const CaregiverProfile = () => {
       setIsSaving(false);
       setSaveSuccess(false);
       setShowToast(true);
+
+      Swal.fire({
+        title: 'Error!',
+        text: err?.response?.data?.message || err?.message || 'Failed to update profile',
+        icon: 'error',
+        confirmButtonText: 'OK'
+      });
+
       setTimeout(() => setShowToast(false), 3500);
     }
   };
@@ -328,13 +388,25 @@ const CaregiverProfile = () => {
   const handleCertificateUpload = (e) => {
     const file = e.target.files?.[0];
     if (file) {
+      // ✅ DO NOT overwrite certificate URL with file.name
       setCertificateFile(file);
-      setCaregiver(prev => ({ ...prev, certificate: file.name }));
+      setCaregiver(prev => ({
+        ...prev,
+        certificateName: file.name,  // keep the original name
+        // keep prev.certificate as-is (URL will come from server after upload)
+      }));
     }
   };
 
   const triggerProfileUpload = () => profileInputRef.current?.click();
   const triggerCertificateUpload = () => certificateInputRef.current?.click();
+
+  // A single, always-correct display name for the input
+  const certificateDisplayName =
+    (certificateFile && certificateFile.name) ||
+    caregiver.certificateName ||
+    nameFromUrl(caregiver.certificate) ||
+    "No file chosen";
 
   return (
     <div className="caregiver-profile-container py-4">
@@ -569,7 +641,7 @@ const CaregiverProfile = () => {
                               <input
                                 type="text"
                                 className="form-control"
-                                value={caregiver.certificate || "No file chosen"}
+                                value={certificateDisplayName}
                                 readOnly
                               />
                               <button
@@ -699,7 +771,7 @@ const CaregiverProfile = () => {
 
         /* 👁️ Password field styles */
         .pw-wrapper { position: relative; }
-        .pw-input { padding-right: 44px; } /* space for eye button */
+        .pw-input { padding-right: 44px; }
         .pw-toggle {
           position: absolute;
           right: 12px;

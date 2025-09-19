@@ -9,6 +9,7 @@ const Dashboard = () => {
     totalPatients: 0,
     totalCaregivers: 0,
     totalUsers: 0,
+    totalEarnings: 0,         // ✅ added
     recentSignups: []
   });
   const [loading, setLoading] = useState(true);
@@ -63,9 +64,7 @@ const Dashboard = () => {
 
       {/* Stats Cards Row */}
       <div className="row">
-        {/* Doctors */}
-
-
+        {/* Total Users */}
         <div className="col-xl-3 col-md-6 mb-4">
           <div className="card border-left-warning shadow h-100 py-2">
             <div className="card-body">
@@ -82,7 +81,8 @@ const Dashboard = () => {
             </div>
           </div>
         </div>
-        {/* Total Doctors Card */}
+
+        {/* Total Doctors */}
         <div className="col-xl-3 col-md-6 mb-4">
           <Link to="/admin/doctor" style={{ textDecoration: "none" }}>
             <div className="card border-left-primary shadow h-100 py-2">
@@ -104,7 +104,7 @@ const Dashboard = () => {
           </Link>
         </div>
 
-        {/* Patients */}
+        {/* Total Patients */}
         <div className="col-xl-3 col-md-6 mb-4">
           <Link to="/admin/patient" style={{ textDecoration: "none" }}>
             <div className="card border-left-success shadow h-100 py-2">
@@ -126,7 +126,7 @@ const Dashboard = () => {
           </Link>
         </div>
 
-        {/* Caregivers */}
+        {/* Total Caregivers */}
         <div className="col-xl-3 col-md-6 mb-4">
           <Link to="/admin/caregiver" style={{ textDecoration: "none" }}>
             <div className="card border-left-info shadow h-100 py-2">
@@ -148,11 +148,27 @@ const Dashboard = () => {
           </Link>
         </div>
 
-        {/* Users */}
-      
-        
-        {/* Total Users Card */}
-        
+        {/* ✅ Total Earnings */}
+        <div className="col-xl-3 col-md-6 mb-4">
+          <div className="card border-left-danger shadow h-100 py-2">
+            <div className="card-body">
+              <div className="row no-gutters align-items-center">
+                <div className="col mr-2">
+                  <div className="text-xs font-weight-bold text-danger text-uppercase mb-1">
+                    Total Earnings
+                  </div>
+                  <div className="h5 mb-0 font-weight-bold text-gray-800">
+                    ${Number(dashboardData.totalEarnings ?? 0).toLocaleString()}
+                  </div>
+                </div>
+                <div className="col-auto">
+                  <i className="fas fa-dollar-sign fa-2x text-danger"></i>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
       </div>
 
       {/* Table for recent signups */}
@@ -200,6 +216,7 @@ const Dashboard = () => {
           .border-left-success { border-left: 0.25rem solid #1cc88a !important; }
           .border-left-info { border-left: 0.25rem solid #36b9cc !important; }
           .border-left-warning { border-left: 0.25rem solid #f95918 !important; }
+          .border-left-danger { border-left: 0.25rem solid #e74a3b !important; } /* ✅ for earnings card */
           .card { border: 0; border-radius: 0.35rem; transition: transform 0.2s; }
           .card:hover { transform: scale(1.02); cursor: pointer; }
           .shadow { box-shadow: 0 0.15rem 1.75rem 0 rgba(58,59,69,0.15) !important; }
