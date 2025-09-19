@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import axios from 'axios';
 import API_URL from '../../Baseurl/Baseurl';
+import Swal from 'sweetalert2';
 
 const MyProfile = () => {
   const BASE_URL = API_URL;
@@ -255,6 +256,17 @@ const MyProfile = () => {
       localStorage.setItem('isAvailable', isAvailable.toString());
       const fd = uiToFormData();
 
+      // Show loading SweetAlert
+      Swal.fire({
+        title: 'Updating Profile',
+        text: 'Please wait while we update your profile...',
+        icon: 'info',
+        allowOutsideClick: false,
+        didOpen: () => {
+          Swal.showLoading();
+        }
+      });
+
       const url = `${BASE_URL}/doctor/${DOCTOR_ID}`;
       const res = await axios.put(url, fd, {
         headers: {
@@ -274,13 +286,29 @@ const MyProfile = () => {
       if (typeof updated?.documents === 'string' && updated.documents.trim()) {
         setExistingDocumentUrl(updated.documents);
       }
+
+      // Show success SweetAlert
+      Swal.fire({
+        title: 'Success!',
+        text: 'Your profile has been updated successfully',
+        icon: 'success',
+        timer: 2000,
+        showConfirmButton: false
+      });
     } catch (err) {
       const msg =
         err?.response?.data?.message ||
         err?.message ||
         'Failed to update profile';
       setError(msg);
-      alert(msg);
+      
+      // Show error SweetAlert
+      Swal.fire({
+        title: 'Error!',
+        text: msg,
+        icon: 'error',
+        confirmButtonText: 'OK'
+      });
     } finally {
       setIsSaving(false);
     }
@@ -495,7 +523,7 @@ const MyProfile = () => {
                               placeholder="e.g. ₹1,000/- or 600.50"
                             />
                             <div className="form-text">
-                              Display shows payload as-is. On save, we’ll send the numeric value to the server.
+                              Display shows payload as-is. On save, we'll send the numeric value to the server.
                             </div>
                           </div>
                           <div className="col-md-6 mb-3">
@@ -525,7 +553,7 @@ const MyProfile = () => {
                             </div>
 
                             <div className="form-text">
-                              For security, your current password isn’t fetched. Enter a new one to update.
+                              For security, your current password isn't fetched. Enter a new one to update.
                             </div>
                           </div>
                         </div>
