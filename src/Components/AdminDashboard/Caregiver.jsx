@@ -19,6 +19,7 @@ const Caregiver = () => {
   // 🔹 Document Preview Modal State
   const [showDocModal, setShowDocModal] = useState(false);
   const [docToView, setDocToView] = useState(null);
+  const [showDocOptions, setShowDocOptions] = useState(true); // Start with options screen
 
   // 🔹 Pagination states
   const [currentPage, setCurrentPage] = useState(1);
@@ -52,8 +53,19 @@ const Caregiver = () => {
 
     const docs = [];
     if (api.certificate && String(api.certificate).length > 0) {
-      const fileName = String(api.certificate).split("/").pop() || "Certificate";
-      docs.push({ name: fileName, url: api.certificate });
+      let certUrl = api.certificate;
+      // Ensure URL is absolute
+      if (certUrl && !certUrl.startsWith('http')) {
+        certUrl = `${BASE_URL}${certUrl.startsWith('/') ? '' : '/'}${certUrl}`;
+      }
+      const fileName = String(certUrl).split("/").pop() || "Certificate";
+      // Determine file type from extension
+      const fileExtension = fileName.split('.').pop().toLowerCase();
+      docs.push({ 
+        name: fileName, 
+        url: certUrl,
+        type: fileExtension
+      });
     }
 
     return {
@@ -118,6 +130,32 @@ const Caregiver = () => {
       "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='40' height='40' viewBox='0 0 24 24' fill='none' stroke='%236c757d' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2'%3E%3C/path%3E%3Ccircle cx='12' cy='7' r='4'%3E%3C/circle%3E%3C/svg%3E";
   };
 
+  // Handle document view - show options modal
+  const handleViewDocument = (doc) => {
+    setDocToView(doc);
+    setShowDocOptions(true); // Show options first
+    setShowDocModal(true);
+  };
+
+  // Handle option selection
+  const handleViewOption = (option) => {
+    if (option === 'download') {
+      // Create a temporary link to trigger download
+      const link = document.createElement('a');
+      link.href = docToView.url;
+      link.download = docToView.name;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      setShowDocModal(false);
+    } else if (option === 'newTab') {
+      window.open(docToView.url, '_blank');
+      setShowDocModal(false);
+    } else if (option === 'preview') {
+      setShowDocOptions(false); // Switch to preview
+    }
+  };
+
   // 🔹 Apply Filters
   const filteredCaregivers = caregivers.filter(caregiver => {
     const matchesName = filterName
@@ -148,6 +186,30 @@ const Caregiver = () => {
     setFilterName("");
     setFilterEmail("");
     setCurrentPage(1);
+  };
+
+  // Get file icon based on file type
+  const getFileIcon = (fileType) => {
+    switch (fileType) {
+      case 'pdf':
+        return 'fa-file-pdf text-danger';
+      case 'doc':
+      case 'docx':
+        return 'fa-file-word text-primary';
+      case 'xls':
+      case 'xlsx':
+        return 'fa-file-excel text-success';
+      case 'ppt':
+      case 'pptx':
+        return 'fa-file-powerpoint text-warning';
+      case 'jpg':
+      case 'jpeg':
+      case 'png':
+      case 'gif':
+        return 'fa-file-image text-info';
+      default:
+        return 'fa-file text-secondary';
+    }
   };
 
   return (
@@ -419,13 +481,13 @@ const Caregiver = () => {
                                   key={index}
                                   className="list-group-item d-flex justify-content-between align-items-center"
                                 >
-                                  {doc.name}
+                                  <div className="d-flex align-items-center">
+                                    <i className={`fas ${getFileIcon(doc.type)} me-2`}></i>
+                                    {doc.name}
+                                  </div>
                                   <button
                                     className="btn btn-sm btn-outline-primary"
-                                    onClick={() => {
-                                      setDocToView(doc);
-                                      setShowDocModal(true);
-                                    }}
+                                    onClick={() => handleViewDocument(doc)}
                                   >
                                     View
                                   </button>
@@ -459,34 +521,125 @@ const Caregiver = () => {
         </div>
       )}
 
-      {/* 📄 Document Preview Modal */}
-      {showDocModal && docToView && (
+      {/* 📄 Document Options Modal */}
+      {showDocModal && docToView && showDocOptions && (
         <div
           className="modal fade show d-block"
           style={{ backgroundColor: "rgba(0,0,0,0.5)" }}
           onClick={() => setShowDocModal(false)}
         >
-          <div className="modal-dialog modal-xl" onClick={(e) => e.stopPropagation()}>
+          <div className="modal-dialog modal-md" onClick={(e) => e.stopPropagation()}>
             <div className="modal-content">
               <div className="modal-header">
-                <h5 className="modal-title">{docToView.name}</h5>
+                <h5 className="modal-title">
+                  <i className={`fas ${getFileIcon(docToView.type)} me-2`}></i>
+                  {docToView.name}
+                </h5>
                 <button
                   type="button"
                   className="btn-close"
                   onClick={() => setShowDocModal(false)}
                 />
               </div>
-              <div className="modal-body" style={{ minHeight: "80vh" }}>
-                <iframe
-                  src={docToView.url}
-                  title={docToView.name}
-                  className="w-100 h-100 border-0"
-                />
+              <div className="modal-body">
+                <div className="text-center mb-4">
+                  <p className="mb-4">How would you like to view this document?</p>
+                  <div className="d-grid gap-3">
+                    <button
+                      className="btn btn-primary d-flex align-items-center justify-content-center"
+                      onClick={() => handleViewOption('preview')}
+                    >
+                      <i className="fas fa-eye me-2"></i>
+                      Preview in Browser
+                    </button>
+                    <button
+                      className="btn btn-outline-primary d-flex align-items-center justify-content-center"
+                      onClick={() => handleViewOption('newTab')}
+                    >
+                      <i className="fas fa-external-link-alt me-2"></i>
+                      Open in New Tab
+                    </button>
+                    <button
+                      className="btn btn-outline-success d-flex align-items-center justify-content-center"
+                      onClick={() => handleViewOption('download')}
+                    >
+                      <i className="fas fa-download me-2"></i>
+                      Download Document
+                    </button>
+                  </div>
+                </div>
+              </div>
+              <div className="modal-footer">
+                <button
+                  type="button"
+                  className="btn btn-secondary"
+                  onClick={() => setShowDocModal(false)}
+                >
+                  Cancel
+                </button>
               </div>
             </div>
           </div>
         </div>
       )}
+
+{/* 📄 Document Preview Modal */}
+{showDocModal && docToView && (
+  <div
+    className="modal fade show d-block"
+    style={{ backgroundColor: "rgba(0,0,0,0.5)" }}
+    onClick={() => setShowDocModal(false)}
+  >
+    <div
+      className="modal-dialog modal-xl"
+      style={{ maxWidth: "95%", height: "90%" }}
+      onClick={(e) => e.stopPropagation()}
+    >
+      <div className="modal-content" style={{ height: "100%" }}>
+        <div className="modal-header">
+          <h5 className="modal-title">{docToView.name}</h5>
+          <button
+            type="button"
+            className="btn-close"
+            onClick={() => setShowDocModal(false)}
+          />
+        </div>
+
+        <div className="modal-body p-0" style={{ height: "calc(100% - 56px)" }}>
+          {docToView.url.match(/\.(jpeg|jpg|png|gif|png)$/i) ? (
+            <img
+              src={docToView.url}
+              alt={docToView.name}
+              className="w-100 h-100"
+              style={{ objectFit: "contain" }}
+            />
+          ) : docToView.url.match(/\.pdf$/i) ? (
+            <iframe
+              src={docToView.url}
+              title={docToView.name}
+              width="100%"
+              height="100%"
+              style={{ border: "none" }}
+            />
+          ) : (
+            <iframe
+              src={`https://docs.google.com/gview?url=${encodeURIComponent(
+                docToView.url
+              )}&embedded=true`}
+              title={docToView.name}
+              width="100%"
+              height="100%"
+              style={{ border: "none" }}
+            />
+          )}
+        </div>
+      </div>
+    </div>
+  </div>
+)}
+
+
+
     </div>
   );
 };

@@ -69,10 +69,10 @@ const PricingPage = () => {
                 </ul>
                 <Button
                   variant="light"
-                  className="w-100 py-2 border-0"
+                  className="w-100 py-2 border-0 text-white mt-[42px]"
                   style={{
-                    backgroundColor: 'rgba(255, 136, 0, 0.27)',
-                    color: '#d35400',
+                    backgroundColor: '#d35400',
+                    borderColor: '#d35400',
                     fontWeight: '600',
                     borderRadius: '8px',
                   }}
@@ -218,7 +218,7 @@ const PricingPage = () => {
                 </ul>
                 <Button
                   variant="danger"
-                  className="w-100 py-2"
+                  className="w-100 py-2 mt-2"
                   style={{
                     backgroundColor: '#d35400',
                     borderColor: '#d35400',
