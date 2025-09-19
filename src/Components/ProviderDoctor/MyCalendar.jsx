@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
+import axios from "axios";
 import FullCalendar from "@fullcalendar/react";
 import dayGridPlugin from "@fullcalendar/daygrid";
 import timeGridPlugin from "@fullcalendar/timegrid";
@@ -6,6 +7,8 @@ import interactionPlugin from "@fullcalendar/interaction";
 import listPlugin from "@fullcalendar/list";
 import "bootstrap/dist/css/bootstrap.min.css";
 import "./Calender.css";
+import Base_Url from '../../Baseurl/Baseurl'; // path adjust kar lena
+
 
 const Calendar = ({ doctorId }) => {
   const [events, setEvents] = useState([]);
@@ -14,6 +17,7 @@ const Calendar = ({ doctorId }) => {
   const [selectedAppointments, setSelectedAppointments] = useState([]);
   const [showModal, setShowModal] = useState(false);
   const [selectedDate, setSelectedDate] = useState(null);
+  const bookedDatesRef = useRef(new Set());
 
   const properCase = (s) =>
     typeof s === "string" && s.length
@@ -56,98 +60,97 @@ const Calendar = ({ doctorId }) => {
 
   const mapApiAppointmentToEvent = (a) => {
     const id = a?._id || `${a?.appointmentDate || ""}-${a?.appointmentTime || ""}-${Math.random()}`;
-    const start = buildStartIso(a?.appointmentDate, a?.appointmentTime);
+    const status = properCase(String(a?.status || "Scheduled"));
+    const startStr = buildStartIso(a?.appointmentDate, a?.appointmentTime);
+    const title = "Appointment";
+    const description = a?.reason || a?.notes || "";
+
+    let end = undefined;
+    if (a?.endTime) {
+      const endIso = buildStartIso(a?.appointmentDate, a?.endTime);
+      if (endIso) end = endIso;
+    }
+
+    const startDate = startStr ? new Date(startStr) : null;
+    const endDate = end ? new Date(end) : null;
 
     return {
       id: String(id),
-      title: "", // ✅ खाली — कैलेंडर पर कुछ न दिखे
-      start: start || null,
-      display: 'background', // ✅ यह महत्वपूर्ण है — इवेंट को बैकग्राउंड में दिखाएगा (बिना टेक्स्ट के)
+      title,
+      start: startDate,
+      end: endDate,
       extendedProps: {
         raw: a,
+        status,
+        description,
         patient: patientNameFrom(a),
-        status: properCase(String(a?.status || "Scheduled")),
       },
     };
   };
 
-  const staticAppointments = [
-    {
-      _id: "1",
-      patientId: { name: "Rahul Sharma" },
-      appointmentDate: "2025-9-10",
-      appointmentTime: "10:00 AM",
-      endTime: "10:30 AM",
-      status: "Scheduled",
-      reason: "General Checkup",
-      notes: "Patient has mild fever.",
-    },
-    {
-      _id: "2",
-      patientId: { name: "Priya Singh" },
-      appointmentDate: "2025-08-10",
-      appointmentTime: "11:30 AM",
-      endTime: "12:00 PM",
-      status: "Completed",
-      reason: "Dental Cleaning",
-    },
-    {
-      _id: "3",
-      patientId: { name: "Amit Patel" },
-      appointmentDate: "2025-08-12",
-      appointmentTime: "03:00 PM",
-      endTime: "03:45 PM",
-      status: "Pending",
-      reason: "Follow-up",
-    },
-    {
-      _id: "4",
-      patientId: { name: "Sneha Gupta" },
-      appointmentDate: "2025-08-15",
-      appointmentTime: "09:00 AM",
-      endTime: "09:30 AM",
-      status: "Cancelled",
-      reason: "Skin Allergy",
-      notes: "Rescheduled for next week.",
-    },
-    {
-      _id: "5",
-      patientId: { name: "Vikram Mehta" },
-      appointmentDate: "2025-08-18",
-      appointmentTime: "04:00 PM",
-      endTime: "05:00 PM",
-      status: "Scheduled",
-      reason: "Annual Physical",
-    },
-  ];
+const fetchAppointments = async () => {
+  setLoading(true);
+  setApiError(null);
 
-  useEffect(() => {
-    const mappedEvents = staticAppointments
+  try {
+    const response = await axios.get(`${Base_Url}/appointment?doctorId=${doctorId}`);
+    console.log("API Response:", response.data);
+
+    const data = response.data.appointments || [];  // ✅ FIX HERE
+
+    const mappedEvents = data
       .map(mapApiAppointmentToEvent)
       .filter((ev) => !!ev.start);
 
     setEvents(mappedEvents);
-  }, []);
 
-  // ✅ अब इवेंट्स पर कुछ भी न दिखे — सिर्फ बैकग्राउंड हाइलाइट
-  const renderEventContent = () => {
-    return null; // कुछ भी रेंडर न करें
+    const datesSet = new Set();
+    mappedEvents.forEach((event) => {
+      const dateStr = event.start instanceof Date
+        ? event.start.toISOString().split("T")[0]
+        : new Date(event.start).toISOString().split("T")[0];
+      datesSet.add(dateStr);
+    });
+    bookedDatesRef.current = datesSet;
+  } catch (error) {
+    setApiError("Failed to load appointments.");
+    console.error("API error:", error);
+  } finally {
+    setLoading(false);
+  }
+};
+
+
+
+  useEffect(() => {
+    if (doctorId) {
+      fetchAppointments();
+    }
+  }, [doctorId]);
+
+  const renderEventContent = (eventInfo) => {
+    return (
+      <div className="fc-event-main">
+        <span>{eventInfo.timeText}</span>
+      </div>
+    );
   };
 
-  // ✅ अब इवेंट पर क्लिक करने पर कुछ न हो — हम डेट क्लिक पर ही डिटेल्स दिखाएंगे
-  const handleEventClick = () => {
-    // कुछ न करें
+  const handleEventClick = (info) => {
+    setSelectedAppointments([info.event.extendedProps.raw]);
+    setShowModal(true);
   };
 
-  // ✅ डेट पर क्लिक करने पर — उस दिन के सभी पेशेंट्स दिखाएं
   const getAppointmentsByDate = (dateStr) => {
     return events
-      .filter(event => {
+      .filter((event) => {
         if (!event.start) return false;
-        const eventDate = event.start.toISOString().split('T')[0];
+        const eventDate = event.start instanceof Date
+          ? event.start.toISOString().split("T")[0]
+          : new Date(event.start).toISOString().split("T")[0];
         return eventDate === dateStr;
       })
-      .map(event => event.extendedProps.raw);
+      .map((event) => event.extendedProps.raw);
   };
 
   const handleDateClick = (arg) => {
@@ -173,12 +176,7 @@ const Calendar = ({ doctorId }) => {
         <div className="d-flex gap-2">
           <button
             className="btn btn-sm btn-outline-secondary"
-            onClick={() => {
-              const mappedEvents = staticAppointments
-                .map(mapApiAppointmentToEvent)
-                .filter((ev) => !!ev.start);
-              setEvents(mappedEvents);
-            }}
+            onClick={fetchAppointments}
             title="Refresh data"
           >
             <i className="fas fa-sync-alt me-1" />
@@ -187,10 +185,14 @@ const Calendar = ({ doctorId }) => {
         </div>
       </div>
 
+      {loading && (
+        <div className="alert alert-info">Loading appointments...</div>
+      )}
+
       {apiError && (
         <div className="alert alert-danger d-flex justify-content-between align-items-center">
           <span>{apiError}</span>
-          <button className="btn btn-sm btn-light" onClick={() => {}}>
+          <button className="btn btn-sm btn-light" onClick={fetchAppointments}>
             Retry
           </button>
         </div>
@@ -206,21 +208,36 @@ const Calendar = ({ doctorId }) => {
             right: "dayGridMonth,timeGridWeek,timeGridDay,listWeek",
           }}
           events={events}
-          eventContent={renderEventContent} // ✅ अब कुछ न दिखे
-          eventClick={handleEventClick} // ✅ इवेंट पर क्लिक करने पर कुछ न हो
-          dateClick={handleDateClick} // ✅ सिर्फ डेट पर क्लिक करने पर डिटेल्स खुले
+          eventContent={renderEventContent}
+          eventClick={handleEventClick}
+          dateClick={handleDateClick}
+          dayCellContent={(arg) => {
+            const dateStr = arg.date.toISOString().split("T")[0];
+            const isBooked = bookedDatesRef.current.has(dateStr);
+            return (
+              <div className="fc-daygrid-day-content d-flex flex-column align-items-center">
+                <div className="fc-daygrid-day-number">{arg.dayNumberText}</div>
+                {isBooked && (
+                  <span className="badge bg-primary mt-1" style={{ fontSize: "0.65rem" }}>
+                    Booked
+                  </span>
+                )}
+              </div>
+            );
+          }}
           dayCellDidMount={(arg) => {
-            const dateStr = arg.date.toISOString().split('T')[0];
-            const hasAppointments = events.some(event => {
-              if (!event.start) return false;
-              const eventDate = event.start.toISOString().split('T')[0];
+            const dateStr = arg.date.toISOString().split("T")[0];
+            const hasAppointments = events.some((event) => {
+              const eventDate = event.start instanceof Date
+                ? event.start.toISOString().split("T")[0]
+                : new Date(event.start).toISOString().split("T")[0];
               return eventDate === dateStr;
             });
 
             if (hasAppointments) {
-              // ✅ सिर्फ हाइलाइट — बिना बैज के, बिना हॉवर इवेंट के
-              arg.el.style.backgroundColor = '#e3f2fd';
-              arg.el.style.borderRadius = '4px';
+              arg.el.style.backgroundColor = "#e3f2fd";
+              arg.el.style.borderRadius = "4px";
+              arg.el.style.cursor = "pointer";
             }
           }}
           height="700px"
@@ -229,7 +246,7 @@ const Calendar = ({ doctorId }) => {
         />
       </div>
 
-      {/* Appointment Details Modal — सिर्फ क्लिक पर खुले */}
+      {/* Appointment Modal */}
       {showModal && selectedAppointments.length > 0 && (
         <div className="modal d-block" tabIndex="-1">
           <div className="modal-dialog modal-dialog-centered modal-lg">
