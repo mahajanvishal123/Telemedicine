@@ -1,7 +1,5 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import axios from "axios";
-import API_URL from "../../Baseurl/Baseurl";
-
 import FullCalendar from "@fullcalendar/react";
 import dayGridPlugin from "@fullcalendar/daygrid";
 import timeGridPlugin from "@fullcalendar/timegrid";
@@ -9,26 +7,18 @@ import interactionPlugin from "@fullcalendar/interaction";
 import listPlugin from "@fullcalendar/list";
 import "bootstrap/dist/css/bootstrap.min.css";
 import "./Calender.css";
+import Base_Url from '../../Baseurl/Baseurl'; // path adjust kar lena
 
-const Calendar = () => {
-  const BASE_URL = API_URL;
-  const DOCTOR_ID = "68c56a43d833a205bfd4237f";
 
-  // Calendar events (API + locally added via modal)
+const Calendar = ({ doctorId }) => {
   const [events, setEvents] = useState([]);
-
-  // UI / API states
   const [loading, setLoading] = useState(false);
   const [apiError, setApiError] = useState(null);
-
-  // Modal states
+  const [selectedAppointments, setSelectedAppointments] = useState([]);
   const [showModal, setShowModal] = useState(false);
-  const [selectedDate, setSelectedDate] = useState("");
-  const [selectedTime, setSelectedTime] = useState("");
-  const [title, setTitle] = useState("");
-  const [description, setDescription] = useState("");
+  const [selectedDate, setSelectedDate] = useState(null);
+  const bookedDatesRef = useRef(new Set());
 
-  // ---------- Helpers ----------
   const properCase = (s) =>
     typeof s === "string" && s.length
       ? s.charAt(0).toUpperCase() + s.slice(1).toLowerCase()
@@ -37,7 +27,6 @@ const Calendar = () => {
   const parseTo24h = (t) => {
     if (!t) return null;
     const str = String(t).trim();
-    // already 24h "HH:mm" or "HH:mm:ss"
     if (/^\d{1,2}:\d{2}(:\d{2})?$/.test(str)) {
       const parts = str.split(":");
       const hh = parts[0].padStart(2, "0");
@@ -45,7 +34,6 @@ const Calendar = () => {
       const ss = parts[2] || "00";
       return `${hh}:${mm}:${ss}`;
     }
-    // 12h like "10:30 AM" / "7 PM"
     const m = str.match(/^(\d{1,2})(?::(\d{2}))?\s*([AaPp][Mm])$/);
     if (m) {
       let h = parseInt(m[1], 10);
@@ -56,43 +44,41 @@ const Calendar = () => {
       const hh = String(h).padStart(2, "0");
       return `${hh}:${mm}:00`;
     }
-    return null; // unknown format
+    return null;
   };
 
   const buildStartIso = (dateStr, timeStr) => {
     if (!dateStr) return null;
-    const date = String(dateStr).slice(0, 10); // YYYY-MM-DD if ISO-ish
+    const date = String(dateStr).slice(0, 10);
     const t24 = parseTo24h(timeStr);
     if (t24) return `${date}T${t24}`;
-    // fallback just the date
     return date;
   };
 
   const patientNameFrom = (obj) =>
     (obj?.patientId?.name || obj?.patient?.name || "").trim() || "Patient";
 
-  // Map API appointment -> FullCalendar event
   const mapApiAppointmentToEvent = (a) => {
     const id = a?._id || `${a?.appointmentDate || ""}-${a?.appointmentTime || ""}-${Math.random()}`;
     const status = properCase(String(a?.status || "Scheduled"));
-    const start = buildStartIso(a?.appointmentDate, a?.appointmentTime);
-    const title =
-      (a?.title && a.title.trim()) ||
-      `Appt: ${patientNameFrom(a)}${status ? ` (${status})` : ""}`;
+    const startStr = buildStartIso(a?.appointmentDate, a?.appointmentTime);
+    const title = "Appointment";
     const description = a?.reason || a?.notes || "";
 
-    // Optional end handling if backend sends duration
     let end = undefined;
     if (a?.endTime) {
       const endIso = buildStartIso(a?.appointmentDate, a?.endTime);
       if (endIso) end = endIso;
     }
 
+    const startDate = startStr ? new Date(startStr) : null;
+    const endDate = end ? new Date(end) : null;
+
     return {
       id: String(id),
       title,
-      start: start || null,
-      end: end || undefined,
+      start: startDate,
+      end: endDate,
       extendedProps: {
         raw: a,
         status,
@@ -102,121 +88,85 @@ const Calendar = () => {
     };
   };
 
-  // ---------- API: GET appointments ----------
-  const fetchAppointments = async () => {
-    setLoading(true);
-    setApiError(null);
-    try {
-      const res = await axios.get(`${BASE_URL}/appointment`, {
-        params: { doctorId: DOCTOR_ID },
-      });
+const fetchAppointments = async () => {
+  setLoading(true);
+  setApiError(null);
 
-      const rawList = Array.isArray(res?.data)
-        ? res.data
-        : Array.isArray(res?.data?.data)
-        ? res.data.data
-        : [];
+  try {
+    const response = await axios.get(`${Base_Url}/appointment?doctorId=${doctorId}`);
+    console.log("API Response:", response.data);
 
-      const apiEvents = rawList
-        .map(mapApiAppointmentToEvent)
-        .filter((ev) => !!ev.start); // keep only valid dates
+    const data = response.data.appointments || [];  // ✅ FIX HERE
 
-      setEvents(apiEvents);
-    } catch (err) {
-      console.error(err);
-      setApiError(
-        err?.response?.data?.message ||
-          err?.message ||
-          "Failed to fetch appointments"
-      );
-    } finally {
-      setLoading(false);
-    }
-  };
+    const mappedEvents = data
+      .map(mapApiAppointmentToEvent)
+      .filter((ev) => !!ev.start);
+
+    setEvents(mappedEvents);
+
+    const datesSet = new Set();
+    mappedEvents.forEach((event) => {
+      const dateStr = event.start instanceof Date
+        ? event.start.toISOString().split("T")[0]
+        : new Date(event.start).toISOString().split("T")[0];
+      datesSet.add(dateStr);
+    });
+    bookedDatesRef.current = datesSet;
+  } catch (error) {
+    setApiError("Failed to load appointments.");
+    console.error("API error:", error);
+  } finally {
+    setLoading(false);
+  }
+};
+
+
 
   useEffect(() => {
-    fetchAppointments();
-  }, []);
+    if (doctorId) {
+      fetchAppointments();
+    }
+  }, [doctorId]);
 
-  // ---------- Calendar handlers ----------
-  const handleDateClick = (arg) => {
-    setSelectedDate(arg.dateStr);
-    const t = arg.date.toTimeString().split(" ")[0].substring(0, 5); // HH:mm
-    setSelectedTime(t);
+  const renderEventContent = (eventInfo) => {
+    return (
+      <div className="fc-event-main">
+        <span>{eventInfo.timeText}</span>
+      </div>
+    );
+  };
+
+  const handleEventClick = (info) => {
+    setSelectedAppointments([info.event.extendedProps.raw]);
     setShowModal(true);
   };
 
-  const handleModalClose = () => {
+  const getAppointmentsByDate = (dateStr) => {
+    return events
+      .filter((event) => {
+        if (!event.start) return false;
+        const eventDate = event.start instanceof Date
+          ? event.start.toISOString().split("T")[0]
+          : new Date(event.start).toISOString().split("T")[0];
+        return eventDate === dateStr;
+      })
+      .map((event) => event.extendedProps.raw);
+  };
+
+  const handleDateClick = (arg) => {
+    const clickedDate = arg.dateStr;
+    const appointments = getAppointmentsByDate(clickedDate);
+    if (appointments.length > 0) {
+      setSelectedAppointments(appointments);
+      setSelectedDate(clickedDate);
+      setShowModal(true);
+    }
+  };
+
+  const closeModal = () => {
     setShowModal(false);
-    setTitle("");
-    setDescription("");
-  };
-
-  // ✅ POST API call to save new appointment
-  const handleSaveMeeting = async () => {
-    if (!title.trim()) {
-      alert("Please enter a title for the meeting");
-      return;
-    }
-
-    const newAppointmentData = {
-      doctorId: DOCTOR_ID,
-      patientId: "68c2c39a59e57e85e5419996", // You can make this dynamic
-      appointmentDate: selectedDate,
-      appointmentTime: selectedTime,
-      reason: description,
-      title: title.trim(),
-      status: "scheduled",
-    };
-
-    try {
-      const res = await axios.post(`${BASE_URL}/appointment`, newAppointmentData);
-
-      // On success, add the event to calendar
-      const newEvent = mapApiAppointmentToEvent(res.data.appointment);
-      setEvents((prev) => [...prev, newEvent]);
-
-      handleModalClose();
-    } catch (err) {
-      console.error("Failed to save appointment:", err);
-      alert("Failed to save appointment.");
-    }
-  };
-
-  // ✅ IMPROVED: eventRender for better layout, color, tooltip
-  const renderEventContent = (eventInfo) => {
-    const extendedProps = eventInfo.event.extendedProps;
-    const status = extendedProps.status || "Scheduled";
-    const patient = extendedProps.patient || "Patient";
-    const description = extendedProps.description || "";
-
-    // Color mapping
-    let bgColor = "bg-light";
-    if (status === "Completed") bgColor = "bg-success-subtle";
-    else if (status === "Cancelled") bgColor = "bg-danger-subtle";
-    else if (status === "Pending") bgColor = "bg-warning-subtle";
-    else if (status === "Scheduled") bgColor = "bg-primary-subtle";
-
-    // Full tooltip
-    const tooltip = `${eventInfo.event.title}\n${description}`;
-
-    return (
-      <div
-        className={`fc-event fc-event-draggable ${bgColor} p-1 rounded text-truncate d-flex align-items-center`}
-        title={tooltip}
-        style={{ minHeight: "36px", fontSize: "0.8rem" }}
-      >
-        <span className="fw-bold me-1" style={{ fontSize: "0.85rem" }}>
-          {eventInfo.timeText}
-        </span>
-        <span className="text-secondary me-1" style={{ fontSize: "0.75rem" }}>
-          {patient}
-        </span>
-        <span className="ms-auto badge bg-secondary" style={{ fontSize: "0.7rem" }}>
-          {status}
-        </span>
-      </div>
-    );
+    setSelectedAppointments([]);
+    setSelectedDate(null);
   };
 
   return (
@@ -227,23 +177,17 @@ const Calendar = () => {
           <button
             className="btn btn-sm btn-outline-secondary"
             onClick={fetchAppointments}
-            disabled={loading}
-            title="Refresh from server"
+            title="Refresh data"
           >
-            {loading ? (
-              <>
-                <span className="spinner-border spinner-border-sm me-1" />
-                Loading…
-              </>
-            ) : (
-              <>
-                <i className="fas fa-sync-alt me-1" />
-                Refresh
-              </>
-            )}
+            <i className="fas fa-sync-alt me-1" />
+            Refresh
           </button>
         </div>
       </div>
+
+      {loading && (
+        <div className="alert alert-info">Loading appointments...</div>
+      )}
 
       {apiError && (
         <div className="alert alert-danger d-flex justify-content-between align-items-center">
@@ -264,78 +208,91 @@ const Calendar = () => {
             right: "dayGridMonth,timeGridWeek,timeGridDay,listWeek",
           }}
           events={events}
-          eventContent={renderEventContent} // ✅ Improved rendering
-          height="700px" // ✅ Fixed height to avoid squishing
+          eventContent={renderEventContent}
+          eventClick={handleEventClick}
           dateClick={handleDateClick}
-          selectable={true}
+          dayCellContent={(arg) => {
+            const dateStr = arg.date.toISOString().split("T")[0];
+            const isBooked = bookedDatesRef.current.has(dateStr);
+            return (
+              <div className="fc-daygrid-day-content d-flex flex-column align-items-center">
+                <div className="fc-daygrid-day-number">{arg.dayNumberText}</div>
+                {isBooked && (
+                  <span className="badge bg-primary mt-1" style={{ fontSize: "0.65rem" }}>
+                    Booked
+                  </span>
+                )}
+              </div>
+            );
+          }}
+          dayCellDidMount={(arg) => {
+            const dateStr = arg.date.toISOString().split("T")[0];
+            const hasAppointments = events.some((event) => {
+              const eventDate = event.start instanceof Date
+                ? event.start.toISOString().split("T")[0]
+                : new Date(event.start).toISOString().split("T")[0];
+              return eventDate === dateStr;
+            });
+
+            if (hasAppointments) {
+              arg.el.style.backgroundColor = "#e3f2fd";
+              arg.el.style.borderRadius = "4px";
+              arg.el.style.cursor = "pointer";
+            }
+          }}
+          height="700px"
           weekends={true}
-          editable={true}
+          editable={false}
         />
       </div>
 
-      {/* Booking Modal (POST API now) */}
-      {showModal && (
-        <div className="modal show d-block" tabIndex="-1">
-          <div className="modal-dialog">
+      {/* Appointment Modal */}
+      {showModal && selectedAppointments.length > 0 && (
+        <div className="modal d-block" tabIndex="-1">
+          <div className="modal-dialog modal-dialog-centered modal-lg">
             <div className="modal-content">
               <div className="modal-header">
-                <h5 className="modal-title">Book a Meeting</h5>
-                <button type="button" className="btn-close" onClick={handleModalClose}></button>
+                <h5 className="modal-title">
+                  Appointments on {selectedDate}
+                </h5>
+                <button type="button" className="btn-close" onClick={closeModal}></button>
               </div>
               <div className="modal-body">
-                <div className="mb-3">
-                  <label className="form-label">Date</label>
-                  <input
-                    type="text"
-                    className="form-control"
-                    value={selectedDate}
-                    readOnly
-                  />
-                </div>
-                <div className="mb-3">
-                  <label className="form-label">Time</label>
-                  <input
-                    type="time"
-                    className="form-control"
-                    value={selectedTime}
-                    onChange={(e) => setSelectedTime(e.target.value)}
-                  />
-                </div>
-                <div className="mb-3">
-                  <label className="form-label">Meeting Title*</label>
-                  <input
-                    type="text"
-                    className="form-control"
-                    value={title}
-                    onChange={(e) => setTitle(e.target.value)}
-                    placeholder="Enter meeting title"
-                  />
-                </div>
-                <div className="mb-3">
-                  <label className="form-label">Description</label>
-                  <textarea
-                    className="form-control"
-                    value={description}
-                    onChange={(e) => setDescription(e.target.value)}
-                    rows="3"
-                    placeholder="Meeting details (optional)"
-                  />
-                </div>
+                {selectedAppointments.map((appt, index) => (
+                  <div key={appt._id || index} className="border rounded p-3 mb-3 bg-light">
+                    <div className="mb-2">
+                      <strong>Patient:</strong> {patientNameFrom(appt)}
+                    </div>
+                    <div className="mb-2">
+                      <strong>Date:</strong> {appt.appointmentDate}
+                    </div>
+                    <div className="mb-2">
+                      <strong>Time:</strong> {appt.appointmentTime}
+                      {appt.endTime && ` - ${appt.endTime}`}
+                    </div>
+                    <div className="mb-2">
+                      <strong>Status:</strong> {properCase(appt.status || "Scheduled")}
+                    </div>
+                    <div className="mb-2">
+                      <strong>Reason:</strong> {appt.reason || "N/A"}
+                    </div>
+                    {appt.notes && (
+                      <div className="mb-2">
+                        <strong>Notes:</strong> {appt.notes}
+                      </div>
+                    )}
+                  </div>
+                ))}
               </div>
               <div className="modal-footer">
-                <button type="button" className="btn btn-secondary" onClick={handleModalClose}>
-                  Cancel
-                </button>
-                <button type="button" className="btn btn-primary" onClick={handleSaveMeeting}>
-                  Book Meeting
+                <button type="button" className="btn btn-secondary" onClick={closeModal}>
+                  Close
                 </button>
               </div>
             </div>
           </div>
         </div>
       )}
-
-      {showModal && <div className="modal-backdrop show"></div>}
     </div>
   );
 };

@@ -95,7 +95,7 @@ const Clients = () => {
                   className="fas fa-stethoscope me-2"
                   style={{ color: "#f9591a" }}
                 />
-                <strong>Primary Condition:</strong> {patient.condition}
+        <strong>Reason:</strong> {patient.reason}
               </p>
               <p className="card-text mb-2">
                 <i className="bi bi-telephone me-2" style={{ color: "#f9591a" }}></i>
@@ -174,11 +174,11 @@ const Clients = () => {
                     </div>
                   </div>
                   <div className="mb-3">
-                    <label className="form-label med-form-label">
-                      <strong>Primary Condition:</strong>
-                    </label>
-                    <p className="form-control-plaintext">{patient.condition}</p>
-                  </div>
+  <label className="form-label med-form-label">
+    <strong>Reason:</strong>
+  </label>
+  <p className="form-control-plaintext">{patient.reason}</p>
+</div>
                 </div>
                 <div className="col-md-6">
                   <h5 className="mb-3">
@@ -218,19 +218,9 @@ const Clients = () => {
                       </label>
                       <p className="form-control-plaintext">{patient.bloodType || "N/A"}</p>
                     </div>
-                    <div className="col-md-6 mb-3">
-                      <label className="form-label med-form-label">
-                        <strong>Allergies:</strong>
-                      </label>
-                      <p className="form-control-plaintext">{patient.allergies || "None"}</p>
-                    </div>
+               
                   </div>
-                  <div className="mb-3">
-                    <label className="form-label med-form-label">
-                      <strong>Additional Notes:</strong>
-                    </label>
-                    <p className="form-control-plaintext">{patient.notes || "No additional notes."}</p>
-                  </div>
+          
                   <div className="mb-3">
                     <label className="form-label med-form-label">
                       <strong>Status:</strong>

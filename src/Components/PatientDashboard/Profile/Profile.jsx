@@ -6,7 +6,7 @@ import { faCamera, faUserCircle, faTimes, faEye, faEyeSlash } from "@fortawesome
 import axios from "axios";
 import API_URL from "../../../Baseurl/Baseurl";
 
-// ---------- Theme ----------
+// ---------- Theme ----------.
 const BRAND_ORANGE = '#ff6b00';
 
 // ---------- Helpers (module-scope) ----------

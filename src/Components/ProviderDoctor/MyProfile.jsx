@@ -46,6 +46,9 @@ const MyProfile = () => {
   const fileInputRef = useRef(null);
   const documentInputRef = useRef(null);
 
+  // 👁️ password visibility
+  const [showPassword, setShowPassword] = useState(false);
+
   // filled by GET
   const [profileData, setProfileData] = useState({
     fullName: '',
@@ -148,9 +151,6 @@ const MyProfile = () => {
       ? ''
       : String(rawFeeCandidate); // <-- preserve EXACT payload display
 
-    console.log("Specialty from API:", specialtyValue);
-    console.log("Consultation Fee RAW from API:", feeRaw);
-
     return {
       fullName: d?.name || d?.fullName || '',
       email: d?.email || '',
@@ -205,11 +205,7 @@ const MyProfile = () => {
     setIsLoading(true);
     setError(null);
     try {
-      console.log("Fetching doctor with ID:", DOCTOR_ID);
-
       const apiUrl = `${BASE_URL}/doctor?doctorId=${DOCTOR_ID}`;
-      console.log("API URL:", apiUrl);
-
       const res = await axios.get(apiUrl, {
         headers: {
           Accept: 'application/json',
@@ -217,15 +213,10 @@ const MyProfile = () => {
         },
       });
 
-      console.log("Full API Response:", res.data);
-
       const d = extractDoctor(res);
-      console.log("Extracted doctor object:", d);
-
       if (!d || typeof d !== 'object') throw new Error('Doctor not found');
 
       const mapped = apiToUi(d);
-      console.log("Mapped data:", mapped);
 
       // ensure specialty option exists in dropdown
       if (mapped.specialty && !specialties.includes(mapped.specialty)) {
@@ -244,7 +235,6 @@ const MyProfile = () => {
       );
       localStorage.setItem('profileData', JSON.stringify(mapped));
     } catch (err) {
-      console.error('GET /doctor?doctorId=... failed:', err);
       setError(
         err?.response?.data?.message ||
         err?.message ||
@@ -264,8 +254,6 @@ const MyProfile = () => {
       localStorage.setItem('profileData', JSON.stringify(profileData));
       localStorage.setItem('isAvailable', isAvailable.toString());
       const fd = uiToFormData();
-
-      console.log("Updating doctor with ID:", DOCTOR_ID);
 
       const url = `${BASE_URL}/doctor/${DOCTOR_ID}`;
       const res = await axios.put(url, fd, {
@@ -287,7 +275,6 @@ const MyProfile = () => {
         setExistingDocumentUrl(updated.documents);
       }
     } catch (err) {
-      console.error('PUT /doctor update failed:', err);
       const msg =
         err?.response?.data?.message ||
         err?.message ||
@@ -303,9 +290,6 @@ const MyProfile = () => {
   useEffect(() => {
     const savedAvailability = localStorage.getItem('isAvailable');
     if (savedAvailability) setIsAvailable(savedAvailability === 'true');
-
-    console.log("Doctor ID being used:", DOCTOR_ID);
-
     fetchDoctor();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [DOCTOR_ID]);
@@ -516,15 +500,30 @@ const MyProfile = () => {
                           </div>
                           <div className="col-md-6 mb-3">
                             <label htmlFor="password" className="form-label fw-semibold">Password</label>
-                            <input
-                              type="password"
-                              className="form-control"
-                              id="password"
-                              name="password"
-                              value={profileData.password}
-                              onChange={handleInputChange}
-                              placeholder="Update password"
-                            />
+
+                            {/* 👁️ input group with eye toggle */}
+                            <div className="input-group">
+                              <input
+                                type={showPassword ? 'text' : 'password'}
+                                className="form-control"
+                                id="password"
+                                name="password"
+                                value={profileData.password}
+                                onChange={handleInputChange}
+                                placeholder="Update password"
+                              />
+                              <button
+                                type="button"
+                                className="btn btn-outline-secondary"
+                                onClick={() => setShowPassword((s) => !s)}
+                                title={showPassword ? "Hide password" : "Show password"}
+                                aria-label={showPassword ? "Hide password" : "Show password"}
+                                tabIndex={-1}
+                              >
+                                <i className={`fas ${showPassword ? 'fa-eye-slash' : 'fa-eye'}`}></i>
+                              </button>
+                            </div>
+
                             <div className="form-text">
                               For security, your current password isn’t fetched. Enter a new one to update.
                             </div>

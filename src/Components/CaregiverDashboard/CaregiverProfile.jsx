@@ -20,7 +20,7 @@ const CaregiverProfile = () => {
     profile: "",
     age: "",
     dob: "",
-    certificate: "", // Now holds data URL or server URL
+    certificate: "", // Holds data URL or server URL
     bloodGroup: ""
   });
 
@@ -30,7 +30,6 @@ const CaregiverProfile = () => {
   const [isSaving, setIsSaving] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [loadError, setLoadError] = useState(null);
-  const [viewModalOpen, setViewModalOpen] = useState(false); // 👈 Modal state
 
   // Refs
   const profileInputRef = useRef(null);
@@ -231,7 +230,6 @@ const CaregiverProfile = () => {
         if (certificateFile) {
           form.append('certificate', certificateFile, certificateFile.name);
         } else if (caregiver.certificate) {
-          // If it's data URL, convert and append
           if (caregiver.certificate.startsWith('data:')) {
             const certBlob = dataURLtoBlob(caregiver.certificate);
             if (certBlob) {
@@ -239,7 +237,6 @@ const CaregiverProfile = () => {
               form.append('certificate', certBlob, fileName);
             }
           } else {
-            // Assume it's a server URL — send as string
             form.append('certificate', caregiver.certificate);
           }
         }
@@ -325,7 +322,7 @@ const CaregiverProfile = () => {
 
       const reader = new FileReader();
       reader.onload = (event) => {
-        setCaregiver(prev => ({ ...prev, certificate: event.target.result })); // 👈 store data URL
+        setCaregiver(prev => ({ ...prev, certificate: event.target.result })); // Store data URL
       };
       reader.readAsDataURL(file);
     }
@@ -333,23 +330,6 @@ const CaregiverProfile = () => {
 
   const triggerProfileUpload = () => profileInputRef.current?.click();
   const triggerCertificateUpload = () => certificateInputRef.current?.click();
-
-  // 👇 HELPER: Convert data URL to blob URL for safe preview
-  const dataUrlToBlobUrl = (dataUrl) => {
-    try {
-      const arr = dataUrl.split(',');
-      const mime = arr[0].match(/:(.*?);/)[1];
-      const bstr = atob(arr[1]);
-      let n = bstr.length;
-      const u8arr = new Uint8Array(n);
-      while (n--) u8arr[n] = bstr.charCodeAt(n);
-      const blob = new Blob([u8arr], { type: mime });
-      return URL.createObjectURL(blob);
-    } catch (err) {
-      console.error("Failed to create blob URL:", err);
-      return dataUrl; // fallback
-    }
-  };
 
   return (
     <div className="caregiver-profile-container py-4">
@@ -584,7 +564,7 @@ const CaregiverProfile = () => {
                               onChange={handleCertificateUpload}
                             />
 
-                            {/* ✅ VIEW & DOWNLOAD BUTTONS — BACK AND WORKING! */}
+                            {/* ✅ FIXED: VIEW & DOWNLOAD BUTTONS */}
                             {caregiver.certificate && (
                               <div className="mt-3 certificate-actions">
                                 <div className="d-flex align-items-center gap-2">
@@ -594,9 +574,21 @@ const CaregiverProfile = () => {
                                   <button
                                     type="button"
                                     className="btn btn-sm btn-outline-primary"
-                                    onClick={(e) => {
-                                      e.preventDefault();
-                                      setViewModalOpen(true);
+                                    onClick={() => {
+                                      // Open in new tab for reliable preview
+                                      const win = window.open();
+                                      win.document.write(`
+                                        <html>
+                                          <head><title>Preview</title></head>
+                                          <body style="margin:0; padding:0; display:flex; justify-content:center; align-items:center; height:100vh; background:#f5f5f5;">
+                                            ${caregiver.certificate.startsWith('data:image') 
+                                              ? `<img src="${caregiver.certificate}" style="max-width:90vw; max-height:90vh; object-fit:contain;" />`
+                                              : `<iframe src="${caregiver.certificate}" width="90%" height="90%" style="border:none;"></iframe>`
+                                            }
+                                          </body>
+                                        </html>
+                                      `);
+                                      win.document.close();
                                     }}
                                   >
                                     <FaEye className="me-1" /> View
@@ -644,118 +636,6 @@ const CaregiverProfile = () => {
           </div>
         </div>
       </div>
-
-      {/* 👇 PDF/IMAGE VIEW MODAL — FIXED WITH BLOB URL */}
-      {viewModalOpen && caregiver.certificate && (
-        <div 
-          className="pdf-view-modal-overlay" 
-          onClick={() => setViewModalOpen(false)}
-          style={{
-            position: 'fixed',
-            top: 0,
-            left: 0,
-            right: 0,
-            bottom: 0,
-            backgroundColor: 'rgba(0,0,0,0.5)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            zIndex: 1050,
-          }}
-        >
-          <div 
-            className="pdf-view-modal-content" 
-            onClick={e => e.stopPropagation()}
-            style={{
-              backgroundColor: 'white',
-              borderRadius: '8px',
-              width: '90%',
-              maxWidth: '800px',
-              maxHeight: '90vh',
-              display: 'flex',
-              flexDirection: 'column',
-              boxShadow: '0 5px 15px rgba(0,0,0,0.3)',
-            }}
-          >
-            <div 
-              className="pdf-view-modal-header"
-              style={{
-                padding: '15px 20px',
-                borderBottom: '1px solid #eee',
-                display: 'flex',
-                justifyContent: 'space-between',
-                alignItems: 'center',
-              }}
-            >
-              <h5 style={{ margin: 0, fontWeight: 600 }}>Preview Certificate</h5>
-              <button
-                type="button"
-                className="btn-close"
-                onClick={() => setViewModalOpen(false)}
-                style={{
-                  background: 'none',
-                  border: 'none',
-                  fontSize: '1.5rem',
-                  cursor: 'pointer',
-                  opacity: 0.7,
-                }}
-                onMouseOver={e => e.target.style.opacity = 1}
-                onMouseOut={e => e.target.style.opacity = 0.7}
-              >×</button>
-            </div>
-            <div 
-              className="pdf-view-modal-body"
-              style={{
-                flex: 1,
-                overflow: 'auto',
-                padding: '20px',
-                display: 'flex',
-                justifyContent: 'center',
-                alignItems: 'center',
-              }}
-            >
-              {caregiver.certificate.startsWith('image') ? (
-                <img
-                  src={caregiver.certificate}
-                  alt="Certificate Preview"
-                  style={{ maxWidth: '100%', maxHeight: '500px', objectFit: 'contain' }}
-                />
-              ) : (
-                <embed
-                  src={dataUrlToBlobUrl(caregiver.certificate)} // ✅ BLOB URL — NO MORE AUTO DOWNLOAD!
-                  type="application/pdf"
-                  width="100%"
-                  height="500px"
-                  style={{ border: '1px solid #ddd' }}
-                />
-              )}
-            </div>
-            <div 
-              className="pdf-view-modal-footer"
-              style={{
-                padding: '15px 20px',
-                borderTop: '1px solid #eee',
-                textAlign: 'right',
-              }}
-            >
-              <button
-                className="btn btn-secondary"
-                onClick={() => setViewModalOpen(false)}
-                style={{
-                  padding: '8px 16px',
-                  borderRadius: '6px',
-                  border: '1px solid #6c757d',
-                  background: '#6c757d',
-                  color: 'white',
-                  cursor: 'pointer',
-                }}
-              >
-                Close
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
 
       <style jsx>{`
         .caregiver-profile-container { background-color: #f8f9fa; min-height: 100vh; }
