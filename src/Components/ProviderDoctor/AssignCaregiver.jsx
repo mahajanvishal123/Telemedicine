@@ -14,6 +14,7 @@ const AssignCaregiver = () => {
     caregiverId: '',
     assignStartDate: '',
     assignEndDate: '',
+    reason: '', // Added reason field
     createdAt: ''
   });
 
@@ -28,6 +29,7 @@ const AssignCaregiver = () => {
       caregiverId: 'CG_67890',
       assignStartDate: '2025-04-01T09:00',
       assignEndDate: '2025-04-15T17:00',
+      reason: 'Post-surgery recovery assistance', // Added reason
       createdAt: '2025-03-30T10:30'
     },
     {
@@ -36,6 +38,7 @@ const AssignCaregiver = () => {
       caregiverId: 'CG_67891',
       assignStartDate: '2025-04-05T08:00',
       assignEndDate: '2025-04-20T18:00',
+      reason: 'Elderly care with mobility support', // Added reason
       createdAt: '2025-04-01T14:15'
     }
   ];
@@ -86,6 +89,7 @@ const AssignCaregiver = () => {
       caregiverId: '',
       assignStartDate: '',
       assignEndDate: '',
+      reason: '', // Reset reason field
       createdAt: ''
     });
     setFormMode('add');
@@ -202,6 +206,7 @@ const AssignCaregiver = () => {
                     <th className="py-3 px-4 text-uppercase fw-bold" style={{ color: '#F95918', fontSize: '0.85rem' }}>Assignment ID</th>
                     <th className="py-3 px-4 text-uppercase fw-bold" style={{ color: '#F95918', fontSize: '0.85rem' }}>Patient ID</th>
                     <th className="py-3 px-4 text-uppercase fw-bold" style={{ color: '#F95918', fontSize: '0.85rem' }}>Caregiver ID</th>
+                    <th className="py-3 px-4 text-uppercase fw-bold" style={{ color: '#F95918', fontSize: '0.85rem' }}>Reason</th>
                     <th className="py-3 px-4 text-uppercase fw-bold" style={{ color: '#F95918', fontSize: '0.85rem' }}>Start Date</th>
                     <th className="py-3 px-4 text-uppercase fw-bold" style={{ color: '#F95918', fontSize: '0.85rem' }}>End Date</th>
                     <th className="py-3 px-4 text-center text-uppercase fw-bold" style={{ color: '#F95918', fontSize: '0.85rem' }}>Actions</th>
@@ -220,6 +225,7 @@ const AssignCaregiver = () => {
                       <td className="py-3 px-4">#{assignment.id?.slice(-6)}</td>
                       <td className="py-3 px-4">{assignment.patientId}</td>
                       <td className="py-3 px-4">{assignment.caregiverId}</td>
+                      <td className="py-3 px-4">{assignment.reason}</td>
                       <td className="py-3 px-4">{formatDate(assignment.assignStartDate)}</td>
                       <td className="py-3 px-4">{formatDate(assignment.assignEndDate)}</td>
                       <td className="py-3 px-4">
@@ -372,6 +378,26 @@ const AssignCaregiver = () => {
                           placeholder="Enter caregiver ID"
                         />
                       </div>
+                      <div className="col-12">
+                        <label className="form-label fw-bold" style={{ color: '#333' }}>Reason for Assignment</label>
+                        <textarea
+                          className="form-control"
+                          name="reason"
+                          value={currentAssignment.reason}
+                          onChange={handleInputChange}
+                          required
+                          style={{ 
+                            borderColor: '#ddd',
+                            borderWidth: '1px',
+                            borderRadius: '8px',
+                            padding: '12px',
+                            backgroundColor: '#fff',
+                            color: '#333',
+                            minHeight: '100px'
+                          }}
+                          placeholder="Enter reason for caregiver assignment"
+                        />
+                      </div>
                       <div className="col-md-6">
                         <label className="form-label fw-bold" style={{ color: '#333' }}>Start Date & Time</label>
                         <input
@@ -501,6 +527,10 @@ const AssignCaregiver = () => {
                     <div className="row mb-3">
                       <div className="col-5 fw-bold" style={{ color: '#333' }}>Caregiver ID:</div>
                       <div className="col-7" style={{ color: '#333', fontWeight: '500' }}>{selectedAssignment.caregiverId}</div>
+                    </div>
+                    <div className="row mb-3">
+                      <div className="col-5 fw-bold" style={{ color: '#333' }}>Reason:</div>
+                      <div className="col-7" style={{ color: '#333', fontWeight: '500' }}>{selectedAssignment.reason}</div>
                     </div>
                     <div className="row mb-3">
                       <div className="col-5 fw-bold" style={{ color: '#333' }}>Start Date:</div>
