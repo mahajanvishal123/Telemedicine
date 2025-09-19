@@ -1,306 +1,490 @@
-import React from "react";
-import "./Caregiver.css";
+import React, { useState, useEffect } from "react";
+import axios from "axios";
+import API_URL from "../../Baseurl/Baseurl"; // Adjust path if needed
 
 const Dashboard = () => {
+  // ===== STATES =====
+  const [patients, setPatients] = useState([]); // For dropdown
+  const [selectedPatientId, setSelectedPatientId] = useState(""); // Selected patient or "all"
+
+  const [visitLogs, setVisitLogs] = useState([]); // Logs for selected patient or all
+  const [loadingVisitLogs, setLoadingVisitLogs] = useState(false);
+  const [visitLogsError, setVisitLogsError] = useState(null);
+
+  const [showViewModal, setShowViewModal] = useState(false);
+  const [viewingVisitLog, setViewingVisitLog] = useState(null);
+
+  const [filterPatientName, setFilterPatientName] = useState("");
+  const [currentPage, setCurrentPage] = useState(1);
+  const [rowsPerPage, setRowsPerPage] = useState(5);
+
+  // ===== NEW: Total Visit Logs Count (for card) =====
+  const [totalVisitLogsCount, setTotalVisitLogsCount] = useState(0);
+
+  // ===== FETCH PATIENTS FOR DROPDOWN =====
+  const fetchPatients = async () => {
+    try {
+      const user = JSON.parse(localStorage.getItem("user"));
+      if (!user || !user._id) {
+        throw new Error("No caregiver found");
+      }
+
+      const response = await axios.get(
+        `${API_URL}/patient?caregiverId=${user._id}`
+      );
+
+      let patientsData = [];
+      if (Array.isArray(response.data)) {
+        patientsData = response.data;
+      } else if (response.data && Array.isArray(response.data.data)) {
+        patientsData = response.data.data;
+      }
+
+      setPatients(patientsData);
+      if (patientsData.length > 0) {
+        setSelectedPatientId(patientsData[0]._id); // Auto-select first patient
+      }
+    } catch (err) {
+      console.error("Error fetching patients:", err);
+    }
+  };
+
+  // ===== FETCH VISIT LOGS FOR SELECTED PATIENT OR ALL =====
+  const fetchVisitLogs = async (patientId) => {
+    if (!patientId) return;
+
+    setLoadingVisitLogs(true);
+    setVisitLogsError(null);
+
+    try {
+      const user = JSON.parse(localStorage.getItem("user"));
+      if (!user || !user._id) throw new Error("No caregiver found");
+
+      // 👇 Build URL based on selection
+      const url =
+        patientId === "all"
+          ? `${API_URL}/visitlog?caregiverId=${user._id}`
+          : `${API_URL}/visitlog?patientId=${patientId}`;
+
+      const response = await axios.get(url);
+
+      if (response.data.status === true) {
+        const transformedLogs = response.data.data.map((log) => ({
+          id: log._id,
+          patientName: log.patientId?.name || "Unknown",
+          bloodPressure: log.bloodPressure || "N/A",
+          temperature: typeof log.temperature === "number" ? `${log.temperature}°F` : "N/A",
+          notes: log.notes || "No notes",
+          status: "Completed",
+          visitDate: new Date(log.createdAt).toLocaleDateString(),
+          visitTime: new Date(log.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+          caregiverName: "Unknown Caregiver",
+          patientId: log.patientId?._id || "N/A",
+          patientDetails: log.patientId, // Store full object for modal
+          ...log
+        }));
+
+        setVisitLogs(transformedLogs);
+      } else {
+        throw new Error("Failed to fetch logs");
+      }
+    } catch (err) {
+      console.error("Failed to fetch visit logs:", err);
+      setVisitLogsError("Failed to load visit logs. Please try again.");
+    } finally {
+      setLoadingVisitLogs(false);
+    }
+  };
+
+  // ===== FETCH TOTAL VISIT LOGS COUNT (for card) =====
+  const fetchTotalVisitLogsCount = async () => {
+    try {
+      const user = JSON.parse(localStorage.getItem("user"));
+      if (!user || !user._id) throw new Error("No caregiver found");
+
+      // 👇 Fetch all logs under this caregiver to count
+      const response = await axios.get(
+        `${API_URL}/visitlog?caregiverId=${user._id}`
+      );
+
+      if (response.data.status === true) {
+        setTotalVisitLogsCount(response.data.data.length || 0);
+      } else {
+        setTotalVisitLogsCount(0);
+      }
+    } catch (err) {
+      console.error("Error fetching total visit logs count:", err);
+      setTotalVisitLogsCount(0);
+    }
+  };
+
+  // ===== ON COMPONENT LOAD — FETCH PATIENTS & TOTAL COUNT =====
+  useEffect(() => {
+    fetchPatients();
+    fetchTotalVisitLogsCount();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // ===== WHEN PATIENT CHANGES — FETCH LOGS =====
+  useEffect(() => {
+    if (selectedPatientId) {
+      fetchVisitLogs(selectedPatientId);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedPatientId]);
+
+  // ===== HELPERS =====
+  const getStatusClass = (status) => "bg-success text-white";
+
+  const handlePatientChange = (e) => {
+    setSelectedPatientId(e.target.value);
+    setCurrentPage(1); // Reset pagination
+  };
+
+  // ===== FILTER & PAGINATION =====
+  const filteredVisitLogs = visitLogs.filter((visitLog) =>
+    filterPatientName
+      ? visitLog.patientName.toLowerCase().includes(filterPatientName.toLowerCase())
+      : true
+  );
+
+  const indexOfLastRow = currentPage * rowsPerPage;
+  const indexOfFirstRow = indexOfLastRow - rowsPerPage;
+  const currentRows =
+    rowsPerPage === "All"
+      ? filteredVisitLogs
+      : filteredVisitLogs.slice(indexOfFirstRow, indexOfLastRow);
+  const totalPages =
+    rowsPerPage === "All"
+      ? 1
+      : Math.ceil(filteredVisitLogs.length / rowsPerPage);
+  const paginate = (pageNumber) => setCurrentPage(pageNumber);
+
+  const resetFilters = () => {
+    setFilterPatientName("");
+    setCurrentPage(1);
+  };
+
+  const handleView = (visitLog) => {
+    setViewingVisitLog(visitLog);
+    setShowViewModal(true);
+  };
+
+  // ===== RENDER =====
   return (
-    <>
-      {/* Dashboard Home Section */}
-      <>
-        {/* Header */}
-        <div className="row align-items-center mb-4">
-          {/* Left Section: Heading + Subtitle */}
-          <div className="col-12 col-md-8">
-            <h3 className="dashboard-heading mb-1">Dashboard</h3>
-            <p className="text-muted mb-0">
-              Welcome back! Here's your overview for today.
-            </p>
-          </div>
+    <div className="container-fluid">
+      {/* Header */}
+      <div className="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center gap-3 mb-2">
+        <h3 className="dashboard-heading">Dashboard</h3>
+      </div>
 
-          {/* Right Section: Date */}
-          <div className="col-12 col-md-4 text-md-end mt-2 mt-md-0">
-            <small className="text-muted">
-              Today: Tuesday, September 02, 2025
-            </small>
-          </div>
-        </div>
-
-        {/* Stats Cards */}
-        <div className="row mb-4">
-          {/* Total Tasks */}
-          <div className="col-md-3 col-sm-6 mb-3">
-            <div className="card shadow-sm h-100 border-0 rounded-4" style={{ backgroundColor: "#fff5f0" }}>
-              <div className="card-body p-4">
-                <div className="d-flex justify-content-between align-items-center">
-                  <div>
-                    <p className="card-text text-muted mb-1 fw-semibold">Total Tasks</p>
-                    <h3 className="card-title mb-0 fw-bold" style={{ color: "#f9591a" }}>5</h3>
-                  </div>
-                  <div className="rounded-circle d-flex align-items-center justify-content-center" style={{ width: "50px", height: "50px", backgroundColor: "#ffe2d3" }}>
-                    <i className="fas fa-tasks" style={{ color: "#f9591a", fontSize: "20px" }} />
-                  </div>
+      {/* ==== DASHBOARD CARDS ==== */}
+      <div className="row mb-4">
+        {/* Total Patients Card */}
+        <div className="col-md-6 col-lg-3 mb-3">
+          <div className="card shadow-sm h-100 border-0 rounded-4" style={{ backgroundColor: "#f5f7ff" }}>
+            <div className="card-body p-4">
+              <div className="d-flex justify-content-between align-items-center">
+                <div>
+                  <p className="card-text text-muted mb-1 fw-semibold">Total Patients</p>
+                  <h3 className="card-title mb-0 fw-bold" style={{ color: "#0d6efd" }}>{patients.length}</h3>
                 </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Completed */}
-          <div className="col-md-3 col-sm-6 mb-3">
-            <div className="card shadow-sm h-100 border-0 rounded-4" style={{ backgroundColor: "#f0fff5" }}>
-              <div className="card-body p-4">
-                <div className="d-flex justify-content-between align-items-center">
-                  <div>
-                    <p className="card-text text-muted mb-1 fw-semibold">Completed</p>
-                    <h3 className="card-title mb-0 text-success fw-bold">2</h3>
-                  </div>
-                  <div className="rounded-circle d-flex align-items-center justify-content-center" style={{ width: "50px", height: "50px", backgroundColor: "#d6f5e3" }}>
-                    <i className="fas fa-check-circle" style={{ color: "#28a745", fontSize: "20px" }} />
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Pending */}
-          <div className="col-md-3 col-sm-6 mb-3">
-            <div className="card shadow-sm h-100 border-0 rounded-4" style={{ backgroundColor: "#fffdf2" }}>
-              <div className="card-body p-4">
-                <div className="d-flex justify-content-between align-items-center">
-                  <div>
-                    <p className="card-text text-muted mb-1 fw-semibold">Pending</p>
-                    <h3 className="card-title mb-0 text-warning fw-bold">3</h3>
-                  </div>
-                  <div className="rounded-circle d-flex align-items-center justify-content-center" style={{ width: "50px", height: "50px", backgroundColor: "#fff1c6" }}>
-                    <i className="fas fa-clock" style={{ color: "#ffc107", fontSize: "20px" }} />
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Patients Today */}
-          <div className="col-md-3 col-sm-6 mb-3">
-            <div className="card shadow-sm h-100 border-0 rounded-4" style={{ backgroundColor: "#f5f7ff" }}>
-              <div className="card-body p-4">
-                <div className="d-flex justify-content-between align-items-center">
-                  <div>
-                    <p className="card-text text-muted mb-1 fw-semibold">Patients Today</p>
-                    <h3 className="card-title mb-0 fw-bold" style={{ color: "#0d6efd" }}>4</h3>
-                  </div>
-                  <div className="rounded-circle d-flex align-items-center justify-content-center" style={{ width: "50px", height: "50px", backgroundColor: "#d6e3ff" }}>
-                    <i className="fas fa-user-injured" style={{ color: "#0d6efd", fontSize: "20px" }} />
-                  </div>
+                <div className="rounded-circle d-flex align-items-center justify-content-center" style={{ width: "50px", height: "50px", backgroundColor: "#d6e3ff" }}>
+                  <i className="fas fa-user-injured" style={{ color: "#0d6efd", fontSize: "20px" }} />
                 </div>
               </div>
             </div>
           </div>
         </div>
 
-
-        {/* Today's Tasks Section */}
-        <div className="card mb-4 shadow-sm border-0 rounded-4">
-          <div className="card-header bg-white border-0 rounded-top-4 py-3 px-4">
-            <h5 className="mb-0 fw-bold text-dark">
-              <i className="fas fa-clipboard-list me-2 text-primary" />
-              Today's Tasks
-            </h5>
-          </div>
-
-          <div className="card-body p-3">
-            <div className="row g-3">
-              {/* Task 1 - Completed */}
-              <div className="col-md-6 col-lg-4">
-                <div
-                  className="card h-100 border-0 rounded-4 shadow-sm"
-                  style={{ backgroundColor: "#f0fff5" }}
-                >
-                  <div className="card-body">
-                    <div className="d-flex justify-content-between align-items-start mb-3">
-                      <h5 className="fw-bold text-dark mb-0">John Doe</h5>
-                      <span className="badge bg-light text-dark px-3 py-2 shadow-sm rounded-pill">
-                        09:00 AM
-                      </span>
-                    </div>
-
-                    <p className="mb-2">
-                      <i className="fas fa-map-marker-alt me-2 text-primary" />
-                      <small className="text-muted">123 Main St, Springfield</small>
-                    </p>
-                    <p className="fw-semibold mb-3">
-                      <i className="fas fa-stethoscope me-2 text-primary" />
-                      Check vitals
-                    </p>
-
-                    <div className="d-flex justify-content-between align-items-center">
-                      <span className="text-success fw-semibold">
-                        <i className="fas fa-check me-1" />
-                        Completed
-                      </span>
-                      <i className="fas fa-check-circle text-success fs-5" />
-                    </div>
-                  </div>
+        {/* Total Visit Logs Card — NOW SHOWS TOTAL FOR ALL PATIENTS */}
+        <div className="col-md-6 col-lg-3 mb-3">
+          <div className="card shadow-sm h-100 border-0 rounded-4" style={{ backgroundColor: "#fff5f0" }}>
+            <div className="card-body p-4">
+              <div className="d-flex justify-content-between align-items-center">
+                <div>
+                  <p className="card-text text-muted mb-1 fw-semibold">Total Visit Logs</p>
+                  <h3 className="card-title mb-0 fw-bold" style={{ color: "#f9591a" }}>
+                    {loadingVisitLogs ? (
+                      <span className="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+                    ) : (
+                      totalVisitLogsCount
+                    )}
+                  </h3>
                 </div>
-              </div>
-
-              {/* Task 2 - Completed */}
-              <div className="col-md-6 col-lg-4">
-                <div
-                  className="card h-100 border-0 rounded-4 shadow-sm"
-                  style={{ backgroundColor: "#f0fff5" }}
-                >
-                  <div className="card-body">
-                    <div className="d-flex justify-content-between align-items-start mb-3">
-                      <h5 className="fw-bold text-dark mb-0">Jane Smith</h5>
-                      <span className="badge bg-light text-dark px-3 py-2 shadow-sm rounded-pill">
-                        10:30 AM
-                      </span>
-                    </div>
-
-                    <p className="mb-2">
-                      <i className="fas fa-map-marker-alt me-2 text-primary" />
-                      <small className="text-muted">456 Oak Ave, Downtown</small>
-                    </p>
-                    <p className="fw-semibold mb-3">
-                      <i className="fas fa-pills me-2 text-primary" />
-                      Medication review
-                    </p>
-
-                    <div className="d-flex justify-content-between align-items-center">
-                      <span className="text-success fw-semibold">
-                        <i className="fas fa-check me-1" />
-                        Completed
-                      </span>
-                      <i className="fas fa-check-circle text-success fs-5" />
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Task 3 - Pending */}
-              <div className="col-md-6 col-lg-4">
-                <div
-                  className="card h-100 border-0 rounded-4 shadow-sm"
-                  style={{ backgroundColor: "#fffdf2" }}
-                >
-                  <div className="card-body">
-                    <div className="d-flex justify-content-between align-items-start mb-3">
-                      <h5 className="fw-bold text-dark mb-0">Mike Johnson</h5>
-                      <span className="badge bg-light text-dark px-3 py-2 shadow-sm rounded-pill">
-                        11:45 AM
-                      </span>
-                    </div>
-
-                    <p className="mb-2">
-                      <i className="fas fa-map-marker-alt me-2 text-warning" />
-                      <small className="text-muted">789 Pine Rd, Westside</small>
-                    </p>
-                    <p className="fw-semibold mb-3">
-                      <i className="fas fa-walking me-2 text-warning" />
-                      Physical therapy
-                    </p>
-
-                    <div className="d-flex justify-content-between align-items-center">
-                      <span className="text-warning fw-semibold">
-                        <i className="fas fa-clock me-1" />
-                        Pending
-                      </span>
-                      <button
-                        className="btn btn-sm text-white fw-semibold rounded-pill"
-                        style={{ backgroundColor: "#f9591a" }}
-                      >
-                        <i className="fas fa-check me-1" />
-                        Complete
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Task 4 - Pending */}
-              <div className="col-md-6 col-lg-4">
-                <div
-                  className="card h-100 border-0 rounded-4 shadow-sm"
-                  style={{ backgroundColor: "#fffdf2" }}
-                >
-                  <div className="card-body">
-                    <div className="d-flex justify-content-between align-items-start mb-3">
-                      <h5 className="fw-bold text-dark mb-0">Sarah Wilson</h5>
-                      <span className="badge bg-light text-dark px-3 py-2 shadow-sm rounded-pill">
-                        02:15 PM
-                      </span>
-                    </div>
-
-                    <p className="mb-2">
-                      <i className="fas fa-map-marker-alt me-2 text-warning" />
-                      <small className="text-muted">321 Elm St, Northgate</small>
-                    </p>
-                    <p className="fw-semibold mb-3">
-                      <i className="fas fa-band-aid me-2 text-warning" />
-                      Wound care
-                    </p>
-
-                    <div className="d-flex justify-content-between align-items-center">
-                      <span className="text-warning fw-semibold">
-                        <i className="fas fa-clock me-1" />
-                        Pending
-                      </span>
-                      <button
-                        className="btn btn-sm text-white fw-semibold rounded-pill"
-                        style={{ backgroundColor: "#f9591a" }}
-                      >
-                        <i className="fas fa-check me-1" />
-                        Complete
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Task 5 - Pending */}
-              <div className="col-md-6 col-lg-4">
-                <div
-                  className="card h-100 border-0 rounded-4 shadow-sm"
-                  style={{ backgroundColor: "#fffdf2" }}
-                >
-                  <div className="card-body">
-                    <div className="d-flex justify-content-between align-items-start mb-3">
-                      <h5 className="fw-bold text-dark mb-0">Robert Brown</h5>
-                      <span className="badge bg-light text-dark px-3 py-2 shadow-sm rounded-pill">
-                        03:30 PM
-                      </span>
-                    </div>
-
-                    <p className="mb-2">
-                      <i className="fas fa-map-marker-alt me-2 text-warning" />
-                      <small className="text-muted">654 Maple Dr, Southpoint</small>
-                    </p>
-                    <p className="fw-semibold mb-3">
-                      <i className="fas fa-stethoscope me-2 text-warning" />
-                      Check vitals
-                    </p>
-
-                    <div className="d-flex justify-content-between align-items-center">
-                      <span className="text-warning fw-semibold">
-                        <i className="fas fa-clock me-1" />
-                        Pending
-                      </span>
-                      <button
-                        className="btn btn-sm text-white fw-semibold rounded-pill"
-                        style={{ backgroundColor: "#f9591a" }}
-                      >
-                        <i className="fas fa-check me-1" />
-                        Complete
-                      </button>
-                    </div>
-                  </div>
+                <div className="rounded-circle d-flex align-items-center justify-content-center" style={{ width: "50px", height: "50px", backgroundColor: "#ffe2d3" }}>
+                  <i className="fas fa-clipboard-list" style={{ color: "#f9591a", fontSize: "20px" }} />
                 </div>
               </div>
             </div>
           </div>
         </div>
 
+        {/* Optional Cards */}
+        <div className="col-md-6 col-lg-3 mb-3">
+          <div className="card shadow-sm h-100 border-0 rounded-4" style={{ backgroundColor: "#f0fff5" }}>
+            <div className="card-body p-4">
+              <div className="d-flex justify-content-between align-items-center">
+                <div>
+                  <p className="card-text text-muted mb-1 fw-semibold">Avg. BP Today</p>
+                  <h3 className="card-title mb-0 text-success fw-bold">120/80</h3>
+                </div>
+                <div className="rounded-circle d-flex align-items-center justify-content-center" style={{ width: "50px", height: "50px", backgroundColor: "#d6f5e3" }}>
+                  <i className="fas fa-heartbeat" style={{ color: "#28a745", fontSize: "20px" }} />
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
 
-      </>
-    </>
+        <div className="col-md-6 col-lg-3 mb-3">
+          <div className="card shadow-sm h-100 border-0 rounded-4" style={{ backgroundColor: "#fffdf2" }}>
+            <div className="card-body p-4">
+              <div className="d-flex justify-content-between align-items-center">
+                <div>
+                  <p className="card-text text-muted mb-1 fw-semibold">Last Visit</p>
+                  <h3 className="card-title mb-0 text-warning fw-bold">2h ago</h3>
+                </div>
+                <div className="rounded-circle d-flex align-items-center justify-content-center" style={{ width: "50px", height: "50px", backgroundColor: "#fff1c6" }}>
+                  <i className="fas fa-clock" style={{ color: "#ffc107", fontSize: "20px" }} />
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Patient Selection Dropdown — WITH "ALL PATIENTS" OPTION */}
+      <div className="row mb-4">
+        <div className="col-md-6">
+          <label className="form-label">Select Patient</label>
+          <select
+            className="form-select"
+            value={selectedPatientId}
+            onChange={handlePatientChange}
+          >
+            <option value="">-- Select Patient --</option>
+            <option value="all">All Patients</option> {/* 👈 ADDED */}
+            {patients.map((patient) => (
+              <option key={patient._id} value={patient._id}>
+                {patient.name} {patient.age ? `(${patient.age} yrs)` : ""}
+              </option>
+            ))}
+          </select>
+        </div>
+      </div>
+
+      {/* Loading and Error States */}
+      {loadingVisitLogs && <div className="alert alert-info">Loading visit logs…</div>}
+      {visitLogsError && (
+        <div className="alert alert-danger d-flex justify-content-between align-items-center">
+          <span>{visitLogsError}</span>
+          <button className="btn btn-sm btn-outline-light" onClick={() => fetchVisitLogs(selectedPatientId)}>Retry</button>
+        </div>
+      )}
+
+      {/* Filters & Entries */}
+      <div className="row">
+        <div className="d-flex justify-content-between align-items-center mb-3 col-md-3">
+          <div>
+            <label className="me-2">Show</label>
+            <select
+              className="form-select d-inline-block w-auto"
+              value={rowsPerPage}
+              onChange={(e) => {
+                setRowsPerPage(e.target.value === "All" ? "All" : parseInt(e.target.value));
+                setCurrentPage(1);
+              }}
+            >
+              <option value="3">3</option>
+              <option value="5">5</option>
+              <option value="8">8</option>
+              <option value="10">10</option>
+              <option value="25">25</option>
+              <option value="All">All</option>
+            </select>
+            <span className="ms-2">entries</span>
+          </div>
+        </div>
+        <div className="mb-4 col-md-9">
+          <div className="card">
+            <div className="card-body">
+              <div className="row g-3">
+                <div className="col-md-10">
+                  <input
+                    type="text"
+                    className="form-control"
+                    placeholder="Search by Patient Name..."
+                    value={filterPatientName}
+                    onChange={(e) => {
+                      setFilterPatientName(e.target.value);
+                      setCurrentPage(1);
+                    }}
+                  />
+                </div>
+                <div className="col-md-2">
+                  <button
+                    className="btn btn-outline-secondary btn-sm"
+                    onClick={resetFilters}
+                  >
+                    <i className="fas fa-sync me-1"></i> Reset Filters
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Table */}
+      <div className="row">
+        <div className="col-12">
+          <div className="card shadow">
+            <div className="card-body">
+              <div className="table-responsive">
+                <table className="table table-hover">
+                  <thead className="table-light">
+                    <tr>
+                      <th>SN.</th>
+                      <th>Patient Name</th>
+                      <th>Blood Pressure</th>
+                      <th>Temperature</th>
+                      <th>Notes</th>
+                      <th>Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {currentRows.length === 0 ? (
+                      <tr>
+                        <td colSpan={6} className="text-center text-muted">
+                          {selectedPatientId
+                            ? "No logs found"
+                            : "Please select a patient"}
+                        </td>
+                      </tr>
+                    ) : (
+                      currentRows.map((visitLog, index) => (
+                        <tr key={visitLog.id}>
+                          <td>{(currentPage - 1) * rowsPerPage + index + 1}</td>
+                          <td>{visitLog.patientName}</td>
+                          <td>{visitLog.bloodPressure}</td>
+                          <td>{visitLog.temperature}</td>
+                          <td>
+                            <div style={{ maxWidth: '200px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                              {visitLog.notes}
+                            </div>
+                          </td>
+                          <td>
+                            <div className="d-flex gap-2">
+                              <button 
+                                className="btn btn-sm" 
+                                onClick={() => handleView(visitLog)}
+                                title="View"
+                                style={{ color: "#F95918" }}
+                              >
+                                <i className="fas fa-eye"></i>
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      ))
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Pagination */}
+      {selectedPatientId && rowsPerPage !== "All" && (
+        <div className="card-footer bg-light d-flex justify-content-between align-items-center py-3">
+          <div className="text-muted small">
+            Showing {(currentPage - 1) * rowsPerPage + 1} to {Math.min(currentPage * rowsPerPage, filteredVisitLogs.length)} of {filteredVisitLogs.length} entries
+          </div>
+          <nav>
+            <ul className="pagination mb-0">
+              <li className={`page-item ${currentPage === 1 ? "disabled" : ""}`}>
+                <button className="page-link" onClick={() => paginate(currentPage - 1)}>
+                  Prev
+                </button>
+              </li>
+              {[...Array(totalPages)].map((_, i) => (
+                <li
+                  key={i}
+                  className={`page-item ${currentPage === i + 1 ? "active" : ""}`}
+                >
+                  <button className="page-link" onClick={() => paginate(i + 1)}>
+                    {i + 1}
+                  </button>
+                </li>
+              ))}
+              <li className={`page-item ${currentPage === totalPages ? "disabled" : ""}`}>
+                <button className="page-link" onClick={() => paginate(currentPage + 1)}>
+                  Next
+                </button>
+              </li>
+            </ul>
+          </nav>
+        </div>
+      )}
+
+      {/* ===== VIEW MODAL ===== */}
+      {showViewModal && viewingVisitLog && (
+        <div className="modal fade show" style={{ display: 'block', backgroundColor: 'rgba(0,0,0,0.5)' }} tabIndex="-1">
+          <div className="modal-dialog modal-lg">
+            <div className="modal-content">
+              <div className="modal-header text-black">
+                <h5 className="modal-title">Visit Log Details</h5>
+                <button
+                  type="button"
+                  className="btn-close btn-close-white"
+                  onClick={() => setShowViewModal(false)}
+                ></button>
+              </div>
+              <div className="modal-body">
+                <div className="row">
+                  <div className="col-md-6">
+                    <h6><strong>Patient Name:</strong></h6>
+                    <p>{viewingVisitLog.patientName}</p>
+                  </div>
+                  <div className="col-md-6">
+                    <h6><strong>Visit Date & Time:</strong></h6>
+                    <p>{viewingVisitLog.visitDate} at {viewingVisitLog.visitTime}</p>
+                  </div>
+                </div>
+                <div className="row">
+                  <div className="col-md-6">
+                    <h6><strong>Blood Pressure:</strong></h6>
+                    <p>{viewingVisitLog.bloodPressure}</p>
+                  </div>
+                  <div className="col-md-6">
+                    <h6><strong>Temperature:</strong></h6>
+                    <p>{viewingVisitLog.temperature}</p>
+                  </div>
+                </div>
+                <div className="row">
+                  <div className="col-12">
+                    <h6><strong>Notes:</strong></h6>
+                    <p className="bg-light p-3 rounded">{viewingVisitLog.notes || "No notes provided."}</p>
+                  </div>
+                </div>
+              </div>
+              <div className="modal-footer">
+                <button
+                  type="button"
+                  className="btn btn-secondary"
+                  onClick={() => setShowViewModal(false)}
+                >
+                  Close
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
   );
 };
 

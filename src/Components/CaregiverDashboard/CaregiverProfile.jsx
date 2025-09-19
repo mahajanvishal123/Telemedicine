@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import axios from 'axios';
 import {
   FaCamera, FaUser, FaEnvelope, FaLock, FaVenusMars, FaCalendarAlt,
-  FaIdCard, FaSave, FaCheck, FaTimes
+  FaIdCard, FaSave, FaCheck, FaTimes, FaEye, FaDownload
 } from 'react-icons/fa';
 import 'bootstrap/dist/css/bootstrap.min.css';
 import API_URL from '../../Baseurl/Baseurl';
@@ -20,18 +20,17 @@ const CaregiverProfile = () => {
     profile: "",
     age: "",
     dob: "",
-    certificate: "",
+    certificate: "", // Now holds data URL or server URL
     bloodGroup: ""
   });
 
   // UI state
   const [profileImage, setProfileImage] = useState(null);
-  const [certificateFile, setCertificateFile] = useState(null);
+  const [certificateFile, setCertificateFile] = useState(null); // File object for upload
   const [isSaving, setIsSaving] = useState(false);
-  const [saveSuccess, setSaveSuccess] = useState(false);
-  const [showToast, setShowToast] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [loadError, setLoadError] = useState(null);
+  const [viewModalOpen, setViewModalOpen] = useState(false); // 👈 Modal state
 
   // Refs
   const profileInputRef = useRef(null);
@@ -40,7 +39,6 @@ const CaregiverProfile = () => {
   // ---------- helpers ----------
   const safeJSON = (txt) => { try { return JSON.parse(txt); } catch { return null; } };
 
-  // login payload usually stored as 'user' with { token, role, user: {...} }
   const loginBlob = safeJSON(localStorage.getItem('user')) || {};
   const accessToken =
     localStorage.getItem('accessToken') ||
@@ -57,19 +55,11 @@ const CaregiverProfile = () => {
     }
   };
 
-  // STRONG source of truth for ID (no stale LS override)
   const resolveCaregiverId = () => {
     const params = new URLSearchParams(window.location.search);
     const fromQuery = params.get('id');
-
-    const fromUserObj = loginBlob?.user?._id || loginBlob?._id || null; // your login sample uses user._id
+    const fromUserObj = loginBlob?.user?._id || loginBlob?._id || null;
     const fromJwt = decodeJwtId();
-
-    // FINAL priority:
-    // 1) URL ?id=...
-    // 2) logged-in user._id (from login response)
-    // 3) JWT id
-    // 4) cached profile._id (last resort)
     const cachedProfile = safeJSON(localStorage.getItem('caregiverProfile')) || {};
     const fromCache = cachedProfile?._id || null;
 
@@ -80,7 +70,6 @@ const CaregiverProfile = () => {
       fromCache ||
       null;
 
-    // keep localStorage aligned with the authenticated identity (avoid stale ID)
     if (fromUserObj && resolved !== fromUserObj) {
       localStorage.setItem('caregiverId', fromUserObj);
     } else if (fromJwt && resolved !== fromJwt) {
@@ -95,7 +84,6 @@ const CaregiverProfile = () => {
   const trimStr = (v) => (typeof v === 'string' ? v.trim() : v);
   const normalizeDobForInput = (v) => (v ? String(v).trim().slice(0, 10) : '');
 
-  // Ensure we pick by _id even if server returns an array unexpectedly
   const pickFromAnyShapeById = (res, id) => {
     let d = res?.data;
     if (Array.isArray(d)) return d.find(x => String(x?._id) === String(id)) || null;
@@ -111,7 +99,6 @@ const CaregiverProfile = () => {
   };
 
   const mapAndSetByDoc = (doc, id) => {
-    // if API wrapped it, unwrap again
     const d = Array.isArray(doc) ? doc.find(x => x?._id === id) : doc;
     if (!d || typeof d !== 'object') throw new Error('Invalid caregiver payload');
 
@@ -119,20 +106,18 @@ const CaregiverProfile = () => {
       _id: d?._id || id,
       name: trimStr(d?.name) || '',
       email: trimStr(d?.email) || '',
-      // Never prefill hashed password into form
       password: (typeof d?.password === 'string' && d.password.startsWith('$')) ? '' : (trimStr(d?.password) || ''),
       gender: trimStr(d?.gender) || '',
       profile: trimStr(d?.profile) || '',
-      age: trimStr(d?.age) || '', // keep age separate
+      age: trimStr(d?.age) || '',
       dob: normalizeDobForInput(d?.dob),
-      certificate: trimStr(d?.certificate) || '',
+      certificate: trimStr(d?.certificate) || '', // Assume it's URL or data URL from server
       bloodGroup: trimStr(d?.bloodGroup) || ''
     };
 
     setCaregiver(mapped);
     if (mapped.profile) setProfileImage(mapped.profile);
 
-    // sync cache to the correct logged-in caregiver
     localStorage.setItem('caregiverId', mapped._id);
     localStorage.setItem('caregiverProfile', JSON.stringify(mapped));
   };
@@ -155,8 +140,6 @@ const CaregiverProfile = () => {
     };
 
     try {
-      // Prefer clean by-id endpoints ONLY
-      // 1) /caregiver/:id
       try {
         const res1 = await axios.get(`${BASE_URL}/caregiver/${CAREGIVER_ID}`, { headers });
         const d1 = pickFromAnyShapeById(res1, CAREGIVER_ID) || res1?.data;
@@ -166,7 +149,6 @@ const CaregiverProfile = () => {
         }
       } catch { /* continue fallback */ }
 
-      // 2) /caregiver?caregiverId=...
       const res2 = await axios.get(`${BASE_URL}/caregiver?caregiverId=${CAREGIVER_ID}`, { headers });
       const d2 = pickFromAnyShapeById(res2, CAREGIVER_ID) || res2?.data;
       if (!d2) throw new Error('Caregiver not found');
@@ -186,7 +168,6 @@ const CaregiverProfile = () => {
   }, []);
 
   // ---------- Submit (PUT by ID) ----------
-  // Util: convert dataURL to Blob for multipart
   const dataURLtoBlob = (dataurl) => {
     try {
       const arr = dataurl.split(',');
@@ -204,28 +185,24 @@ const CaregiverProfile = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setIsSaving(true);
-    setSaveSuccess(false);
 
-    // resolve target id: prefer state._id, else resolver
     const targetId = caregiver._id || resolveCaregiverId();
     if (!targetId) {
       setIsSaving(false);
-      setSaveSuccess(false);
-      setShowToast(true);
-      setTimeout(() => setShowToast(false), 3000);
-      console.error('No caregiver ID available for PUT');
+      Swal.fire({
+        icon: 'error',
+        title: 'Oops...',
+        text: 'No caregiver ID available. Please login again.',
+        confirmButtonColor: '#F95918',
+      });
       return;
     }
 
     const url = `${BASE_URL}/caregiver/${targetId}`;
-
     const headersBase = {
       ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
     };
 
-    // Decide payload type:
-    // - If there is a file (certificate) or profile is a base64 image, use multipart/form-data.
-    // - Else send JSON.
     const isDataUrlProfile = (profileImage || caregiver.profile || '').startsWith('data:');
     const useMultipart = !!certificateFile || isDataUrlProfile;
 
@@ -234,7 +211,6 @@ const CaregiverProfile = () => {
 
       if (useMultipart) {
         const form = new FormData();
-        // Primitive fields
         form.append('name', caregiver.name || '');
         form.append('email', caregiver.email || '');
         if (caregiver.password && caregiver.password.trim() !== '') {
@@ -245,7 +221,6 @@ const CaregiverProfile = () => {
         form.append('dob', caregiver.dob || '');
         form.append('bloodGroup', caregiver.bloodGroup || '');
 
-        // Profile: if dataURL, send as file; else send as string/URL
         if (isDataUrlProfile) {
           const blob = dataURLtoBlob(profileImage || caregiver.profile);
           if (blob) form.append('profile', blob, 'profile.jpg');
@@ -253,12 +228,20 @@ const CaregiverProfile = () => {
           form.append('profile', caregiver.profile);
         }
 
-        // Certificate file (if chosen)
         if (certificateFile) {
           form.append('certificate', certificateFile, certificateFile.name);
         } else if (caregiver.certificate) {
-          // keep existing string value if backend expects it
-          form.append('certificate', caregiver.certificate);
+          // If it's data URL, convert and append
+          if (caregiver.certificate.startsWith('data:')) {
+            const certBlob = dataURLtoBlob(caregiver.certificate);
+            if (certBlob) {
+              const fileName = certificateFile?.name || 'certificate.pdf';
+              form.append('certificate', certBlob, fileName);
+            }
+          } else {
+            // Assume it's a server URL — send as string
+            form.append('certificate', caregiver.certificate);
+          }
         }
 
         res = await axios.put(url, form, {
@@ -268,7 +251,6 @@ const CaregiverProfile = () => {
           },
         });
       } else {
-        // JSON payload
         const payload = {
           name: caregiver.name || '',
           email: caregiver.email || '',
@@ -290,27 +272,31 @@ const CaregiverProfile = () => {
         });
       }
 
-      // Success UI
       const updatedDoc = pickFromAnyShapeById(res, targetId) || res?.data || {};
       try {
         mapAndSetByDoc(updatedDoc, targetId);
-      } catch {
-        // If server doesn't echo doc, at least keep current state
-      }
+      } catch {}
 
       setIsSaving(false);
-      setSaveSuccess(true);
-      setShowToast(true);
-      setTimeout(() => {
-        setShowToast(false);
-        setSaveSuccess(false);
-      }, 2500);
+
+      Swal.fire({
+        icon: 'success',
+        title: 'Success!',
+        text: 'Profile updated successfully!',
+        confirmButtonColor: '#F95918',
+        confirmButtonText: 'OK',
+      });
+
     } catch (err) {
       console.error('PUT caregiver (by id) failed:', err);
       setIsSaving(false);
-      setSaveSuccess(false);
-      setShowToast(true);
-      setTimeout(() => setShowToast(false), 3500);
+
+      Swal.fire({
+        icon: 'error',
+        title: 'Oops...',
+        text: err?.response?.data?.message || 'Failed to update profile. Please try again.',
+        confirmButtonColor: '#F95918',
+      });
     }
   };
 
@@ -336,12 +322,34 @@ const CaregiverProfile = () => {
     const file = e.target.files?.[0];
     if (file) {
       setCertificateFile(file);
-      setCaregiver(prev => ({ ...prev, certificate: file.name })); // show file name
+
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        setCaregiver(prev => ({ ...prev, certificate: event.target.result })); // 👈 store data URL
+      };
+      reader.readAsDataURL(file);
     }
   };
 
   const triggerProfileUpload = () => profileInputRef.current?.click();
   const triggerCertificateUpload = () => certificateInputRef.current?.click();
+
+  // 👇 HELPER: Convert data URL to blob URL for safe preview
+  const dataUrlToBlobUrl = (dataUrl) => {
+    try {
+      const arr = dataUrl.split(',');
+      const mime = arr[0].match(/:(.*?);/)[1];
+      const bstr = atob(arr[1]);
+      let n = bstr.length;
+      const u8arr = new Uint8Array(n);
+      while (n--) u8arr[n] = bstr.charCodeAt(n);
+      const blob = new Blob([u8arr], { type: mime });
+      return URL.createObjectURL(blob);
+    } catch (err) {
+      console.error("Failed to create blob URL:", err);
+      return dataUrl; // fallback
+    }
+  };
 
   return (
     <div className="caregiver-profile-container py-4">
@@ -444,7 +452,6 @@ const CaregiverProfile = () => {
                         <h3 className="form-section-title">Personal Information</h3>
 
                         <div className="row">
-                          {/* Name */}
                           <div className="col-md-6 mb-3">
                             <div className="form-group">
                               <label className="form-label">
@@ -461,7 +468,6 @@ const CaregiverProfile = () => {
                             </div>
                           </div>
 
-                          {/* Email */}
                           <div className="col-md-6 mb-3">
                             <div className="form-group">
                               <label className="form-label">
@@ -478,7 +484,6 @@ const CaregiverProfile = () => {
                             </div>
                           </div>
 
-                          {/* Password */}
                           <div className="col-md-6 mb-3">
                             <div className="form-group">
                               <label className="form-label">
@@ -496,7 +501,6 @@ const CaregiverProfile = () => {
                             </div>
                           </div>
 
-                          {/* Gender */}
                           <div className="col-md-6 mb-3">
                             <div className="form-group">
                               <label className="form-label">
@@ -516,7 +520,6 @@ const CaregiverProfile = () => {
                             </div>
                           </div>
 
-                          {/* Age */}
                           <div className="col-md-6 mb-3">
                             <div className="form-group">
                               <label className="form-label">
@@ -533,7 +536,6 @@ const CaregiverProfile = () => {
                             </div>
                           </div>
 
-                          {/* Date of Birth */}
                           <div className="col-md-6 mb-3">
                             <div className="form-group">
                               <label className="form-label">
@@ -554,7 +556,6 @@ const CaregiverProfile = () => {
                       <div className="form-section">
                         <h3 className="form-section-title">Credentials</h3>
 
-                        {/* Certificate */}
                         <div className="form-group">
                           <label className="form-label">
                             <FaIdCard className="me-2" /> Certificate
@@ -564,7 +565,7 @@ const CaregiverProfile = () => {
                               <input
                                 type="text"
                                 className="form-control"
-                                value={caregiver.certificate || "No file chosen"}
+                                value={caregiver.certificate ? "File uploaded" : "No file chosen"}
                                 readOnly
                               />
                               <button
@@ -579,18 +580,48 @@ const CaregiverProfile = () => {
                               type="file"
                               ref={certificateInputRef}
                               className="d-none"
+                              accept=".pdf,.jpg,.jpeg,.png"
                               onChange={handleCertificateUpload}
                             />
-                            {certificateFile && (
-                              <div className="mt-2 file-badge">
-                                <span className="badge bg-primary">{certificateFile.name}</span>
+
+                            {/* ✅ VIEW & DOWNLOAD BUTTONS — BACK AND WORKING! */}
+                            {caregiver.certificate && (
+                              <div className="mt-3 certificate-actions">
+                                <div className="d-flex align-items-center gap-2">
+                                  <span className="badge bg-primary">
+                                    {certificateFile?.name || 'Uploaded File'}
+                                  </span>
+                                  <button
+                                    type="button"
+                                    className="btn btn-sm btn-outline-primary"
+                                    onClick={(e) => {
+                                      e.preventDefault();
+                                      setViewModalOpen(true);
+                                    }}
+                                  >
+                                    <FaEye className="me-1" /> View
+                                  </button>
+                                  <button
+                                    type="button"
+                                    className="btn btn-sm btn-outline-success"
+                                    onClick={() => {
+                                      const link = document.createElement('a');
+                                      link.href = caregiver.certificate;
+                                      link.download = certificateFile?.name || 'certificate.pdf';
+                                      document.body.appendChild(link);
+                                      link.click();
+                                      document.body.removeChild(link);
+                                    }}
+                                  >
+                                    <FaDownload className="me-1" /> Download
+                                  </button>
+                                </div>
                               </div>
                             )}
                           </div>
                         </div>
                       </div>
 
-                      {/* Save Button */}
                       <div className="form-actions">
                         <button type="submit" className="btn-save" disabled={isSaving}>
                           {isSaving ? (
@@ -609,34 +640,118 @@ const CaregiverProfile = () => {
                   </div>
                 </form>
               </div>
-
             </div>
           </div>
         </div>
       </div>
 
-      {/* Toast */}
-      {showToast && (
-        <div className="toast-container position-fixed bottom-0 end-0 p-3">
-          <div className={`toast show ${saveSuccess ? 'bg-success' : 'bg-danger'} text-white`}>
-            <div className="toast-header">
-              <strong className="me-auto">Notification</strong>
+      {/* 👇 PDF/IMAGE VIEW MODAL — FIXED WITH BLOB URL */}
+      {viewModalOpen && caregiver.certificate && (
+        <div 
+          className="pdf-view-modal-overlay" 
+          onClick={() => setViewModalOpen(false)}
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            backgroundColor: 'rgba(0,0,0,0.5)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 1050,
+          }}
+        >
+          <div 
+            className="pdf-view-modal-content" 
+            onClick={e => e.stopPropagation()}
+            style={{
+              backgroundColor: 'white',
+              borderRadius: '8px',
+              width: '90%',
+              maxWidth: '800px',
+              maxHeight: '90vh',
+              display: 'flex',
+              flexDirection: 'column',
+              boxShadow: '0 5px 15px rgba(0,0,0,0.3)',
+            }}
+          >
+            <div 
+              className="pdf-view-modal-header"
+              style={{
+                padding: '15px 20px',
+                borderBottom: '1px solid #eee',
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+              }}
+            >
+              <h5 style={{ margin: 0, fontWeight: 600 }}>Preview Certificate</h5>
               <button
                 type="button"
-                className="btn-close btn-close-white"
-                onClick={() => setShowToast(false)}
-              ></button>
+                className="btn-close"
+                onClick={() => setViewModalOpen(false)}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  fontSize: '1.5rem',
+                  cursor: 'pointer',
+                  opacity: 0.7,
+                }}
+                onMouseOver={e => e.target.style.opacity = 1}
+                onMouseOut={e => e.target.style.opacity = 0.7}
+              >×</button>
             </div>
-            <div className="toast-body d-flex align-items-center">
-              {saveSuccess ? (
-                <>
-                  <FaCheck className="me-2" /> Profile updated successfully!
-                </>
+            <div 
+              className="pdf-view-modal-body"
+              style={{
+                flex: 1,
+                overflow: 'auto',
+                padding: '20px',
+                display: 'flex',
+                justifyContent: 'center',
+                alignItems: 'center',
+              }}
+            >
+              {caregiver.certificate.startsWith('image') ? (
+                <img
+                  src={caregiver.certificate}
+                  alt="Certificate Preview"
+                  style={{ maxWidth: '100%', maxHeight: '500px', objectFit: 'contain' }}
+                />
               ) : (
-                <>
-                  <FaTimes className="me-2" /> Failed to update profile. Please try again.
-                </>
+                <embed
+                  src={dataUrlToBlobUrl(caregiver.certificate)} // ✅ BLOB URL — NO MORE AUTO DOWNLOAD!
+                  type="application/pdf"
+                  width="100%"
+                  height="500px"
+                  style={{ border: '1px solid #ddd' }}
+                />
               )}
+            </div>
+            <div 
+              className="pdf-view-modal-footer"
+              style={{
+                padding: '15px 20px',
+                borderTop: '1px solid #eee',
+                textAlign: 'right',
+              }}
+            >
+              <button
+                className="btn btn-secondary"
+                onClick={() => setViewModalOpen(false)}
+                style={{
+                  padding: '8px 16px',
+                  borderRadius: '6px',
+                  border: '1px solid #6c757d',
+                  background: '#6c757d',
+                  color: 'white',
+                  cursor: 'pointer',
+                }}
+              >
+                Close
+              </button>
             </div>
           </div>
         </div>
@@ -678,21 +793,22 @@ const CaregiverProfile = () => {
         .form-control, .form-select { border:1px solid #ced4da; border-radius:8px; padding:12px 15px; font-size:15px; transition:all .3s ease; }
         .form-control:focus, .form-select:focus { border-color:#4361ee; box-shadow:0 0 0 .2rem rgba(67,97,238,.25); }
         .certificate-upload { margin-bottom:10px; }
-        .file-badge { margin-top:10px; }
+        .btn-choose-file { background:#F95918; color:white; border:1px solid #F95918; padding:8px 16px; border-radius:8px; font-weight:600; font-size:14px; transition:all .3s ease; position:relative; overflow:hidden; }
+        .btn-choose-file:before { content:''; position:absolute; top:0; left:-100%; width:100%; height:100%; background:linear-gradient(90deg,transparent,rgba(255,255,255,.4),transparent); transition:left .7s ease; }
+        .btn-choose-file:hover:before { left:100%; }
+        .btn-choose-file:hover { background:#e04f15; border-color:#e04f15; transform: translateY(-2px); box-shadow:0 5px 15px rgba(249,89,24,.4); }
         .form-actions { display:flex; justify-content:flex-end; margin-top:20px; }
         .btn-save { background:#F95918; color:white; border:none; padding:12px 30px; border-radius:8px; font-weight:600; font-size:16px; transition:all .3s ease; position:relative; overflow:hidden; }
         .btn-save:before { content:''; position:absolute; top:0; left:-100%; width:100%; height:100%; background:linear-gradient(90deg,transparent,rgba(255,255,255,.4),transparent); transition:left .7s ease; }
         .btn-save:hover:before { left:100%; }
         .btn-save:hover { background:#e04f15; transform: translateY(-2px); box-shadow:0 5px 15px rgba(249,89,24,.4); }
         .btn-save:disabled { background:#6c757d; }
-        .btn-choose-file { background:#F95918; color:white; border:1px solid #F95918; padding:8px 16px; border-radius:8px; font-weight:600; font-size:14px; transition:all .3s ease; position:relative; overflow:hidden; }
-        .btn-choose-file:before { content:''; position:absolute; top:0; left:-100%; width:100%; height:100%; background:linear-gradient(90deg,transparent,rgba(255,255,255,.4),transparent); transition:left .7s ease; }
-        .btn-choose-file:hover:before { left:100%; }
-        .btn-choose-file:hover { background:#e04f15; border-color:#e04f15; transform: translateY(-2px); box-shadow:0 5px 15px rgba(249,89,24,.4); }
-        .toast-container { z-index:1050; }
-        .toast { border-radius:8px; box-shadow:0 5px 15px rgba(0,0,0,0.1); }
-        @media (max-width: 991px) {
-          .profile-right-column { padding-left:0; margin-top:30px; }
+        .certificate-actions .btn {
+          padding: 4px 10px;
+          font-size: 13px;
+        }
+        .certificate-actions .btn i {
+          font-size: 14px;
         }
       `}</style>
     </div>

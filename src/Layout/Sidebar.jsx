@@ -87,7 +87,7 @@ const Sidebar = ({ collapsed, setCollapsed }) => {
 
   const caregiverMenuItems = [
     { label: "Dashboard", path: "/caregiver/dashboard", icon: faTachometerAlt },
-    { label: "My Clients", path: "/caregiver/clients", icon: faUsers },
+    { label: "My Patients", path: "/caregiver/clients", icon: faUsers },
     { label: "Visit Log", path: "/caregiver/visit-log", icon: faStethoscope },
     { label: "View Visit Log", path: "/caregiver/view-visit-log", icon: faEye },
     { label: "My Profile", path: "/caregiver/profile", icon: faUser },

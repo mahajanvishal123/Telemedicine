@@ -1,98 +1,74 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
+import axios from "axios";
+import API_URL from "../../Baseurl/Baseurl"; // Adjust path if needed
 
 const Clients = () => {
   const navigate = useNavigate();
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedPatient, setSelectedPatient] = useState(null);
   const [showProfileModal, setShowProfileModal] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [patientsData, setPatientsData] = useState([]);
 
-  // Patient data array - you can move this to a separate file or fetch from API
-  const patientsData = [
-    {
-      id: 1,
-      name: "John Doe",
-      condition: "Diabetes",
-      contact: "+91 98765 43210",
-      status: "active",
-      statusClass: "healthcare-status-completed",
-      statusIcon: "fas fa-check",
-      dob: "1985-03-15",
-      gender: "Male",
-      email: "john.doe@example.com",
-      address: "123 Main St, New York, NY 10001",
-      bloodType: "A+",
-      allergies: "Penicillin",
-      notes: "Patient requires insulin injections twice daily."
-    },
-    {
-      id: 2,
-      name: "Jane Smith",
-      condition: "Hypertension",
-      contact: "+91 98765 43210",
-      status: "active",
-      statusClass: "healthcare-status-completed",
-      statusIcon: "fas fa-check",
-      dob: "1978-11-22",
-      gender: "Female",
-      email: "jane.smith@example.com",
-      address: "456 Oak Ave, Los Angeles, CA 90210",
-      bloodType: "O+",
-      allergies: "None",
-      notes: "Patient is on medication for blood pressure control."
-    },
-    {
-      id: 3,
-      name: "Mike Johnson",
-      condition: "Diabetes",
-      contact: "+91 98765 43210",
-      status: "pending",
-      statusClass: "healthcare-status-pending",
-      statusIcon: "fas fa-clock",
-      dob: "1990-07-08",
-      gender: "Male",
-      email: "mike.johnson@example.com",
-      address: "789 Pine Rd, Chicago, IL 60601",
-      bloodType: "B-",
-      allergies: "Latex",
-      notes: "Newly diagnosed with Type 2 Diabetes."
-    },
-    {
-      id: 4,
-      name: "Sarah Wilson",
-      condition: "Hypertension",
-      contact: "+91 98765 43210",
-      status: "pending",
-      statusClass: "healthcare-status-pending",
-      statusIcon: "fas fa-clock",
-      dob: "1982-05-30",
-      gender: "Female",
-      email: "sarah.wilson@example.com",
-      address: "321 Elm St, Houston, TX 77001",
-      bloodType: "AB+",
-      allergies: "Shellfish",
-      notes: "Patient has family history of heart disease."
-    },
-    {
-      id: 5,
-      name: "Robert Brown",
-      condition: "Asthma",
-      contact: "+91 98765 43210",
-      status: "pending",
-      statusClass: "healthcare-status-pending",
-      statusIcon: "fas fa-clock",
-      dob: "1975-09-12",
-      gender: "Male",
-      email: "robert.brown@example.com",
-      address: "654 Maple Dr, Phoenix, AZ 85001",
-      bloodType: "O-",
-      allergies: "Pollen, Dust",
-      notes: "Uses inhaler as needed for asthma symptoms."
-    }
-  ];
+  // Fetch patients assigned to logged-in caregiver
+  useEffect(() => {
+    const fetchPatients = async () => {
+      try {
+        const user = JSON.parse(localStorage.getItem("user"));
+        if (!user || !user._id) {
+          throw new Error("No caregiver found. Please login again.");
+        }
+
+        const caregiverId = user._id;
+
+        const response = await axios.get(
+          `${API_URL}/patient?caregiverId=${caregiverId}`
+        );
+
+        let patients = [];
+
+        if (Array.isArray(response.data)) {
+          patients = response.data;
+        } else if (response.data && response.data.data && Array.isArray(response.data.data)) {
+          patients = response.data.data;
+        } else {
+          throw new Error("Unexpected response format from server.");
+        }
+
+        // ✅ Map API data to match your existing UI structure
+        const transformedPatients = patients.map((patient) => ({
+          id: patient._id,
+          name: patient.name || "Unknown",
+          condition: patient.condition || "Not specified",
+          contact: patient.phone || "N/A",
+          status: "active", // You can adjust based on logic if needed
+          statusClass: "healthcare-status-completed",
+          statusIcon: "fas fa-check",
+          dob: patient.dob || "N/A",
+          gender: patient.gender || "N/A",
+          email: patient.email || "N/A",
+          address: patient.address || "N/A",
+          bloodType: patient.bloodGroup || "N/A",
+          allergies: "N/A", // Not in API, so placeholder
+          notes: patient.notes || "No additional notes.",
+        }));
+
+        setPatientsData(transformedPatients);
+      } catch (err) {
+        console.error("Error fetching patients:", err);
+        setError(err.message || "Failed to load patients. Please try again later.");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchPatients();
+  }, []);
 
   // Filter patients based on search query
-  const filteredPatients = patientsData.filter(patient => {
+  const filteredPatients = patientsData.filter((patient) => {
     const query = searchQuery.toLowerCase();
     return (
       patient.name.toLowerCase().includes(query) ||
@@ -101,7 +77,7 @@ const Clients = () => {
     );
   });
 
-  // Patient Card Component
+  // Patient Card Component (unchanged)
   const PatientCard = ({ patient }) => {
     return (
       <div className="col-12 col-sm-6 col-lg-4 p-3">
@@ -149,7 +125,7 @@ const Clients = () => {
     );
   };
 
-  // Patient Profile Modal Component
+  // Patient Profile Modal Component (unchanged)
   const PatientProfileModal = ({ patient, onClose }) => {
     if (!patient) return null;
 
@@ -159,9 +135,7 @@ const Clients = () => {
           <div className="modal-content med-modal-content">
             <div className="modal-header med-modal-header">
               <div className="d-flex align-items-center">
-             
                 <h5 className="modal-title med-modal-title">
-               
                   {patient.name}'s Profile
                 </h5>
               </div>
@@ -289,12 +263,10 @@ const Clients = () => {
       {/* Main Content */}
       <div className="col-md-9 col-lg-12 med-main-content">
         <div className="d-flex flex-column flex-md-row justify-content-between mb-4">
-          <h3 className="dashboard-heading mb-3 mb-md-0">
-            My Clients
-          </h3>
+          <h3 className="dashboard-heading mb-3 mb-md-0">My Patients</h3>
         </div>
 
-        {/* New Patient Modal */}
+        {/* New Patient Modal (unchanged, hidden by default) */}
         <div
           className="modal fade"
           id="newPatientModal"
@@ -523,6 +495,7 @@ const Clients = () => {
           </div>
         </div>
 
+        {/* Patient List Card */}
         <div className="med-card">
           <div className="med-card-header d-flex justify-content-between align-items-center">
             <h6>Assigned Patients</h6>
@@ -543,28 +516,50 @@ const Clients = () => {
                 }}
               />
             </div>
-            <div className="">
-              {filteredPatients.length === 0 ? (
-                <div className="text-center py-5">
-                  <i className="fas fa-search fa-3x mb-3 text-muted"></i>
-                  <p className="text-muted">No patients found matching your search.</p>
+
+            {/* Loading State */}
+            {loading && (
+              <div className="text-center py-5">
+                <div className="spinner-border text-primary" role="status">
+                  <span className="visually-hidden">Loading...</span>
                 </div>
-              ) : (
-                <div className="row g-0">
-                  {filteredPatients.map(patient => (
-                    <PatientCard key={patient.id} patient={patient} />
-                  ))}
-                </div>
-              )}
-            </div>
+                <p className="mt-3">Loading your patients...</p>
+              </div>
+            )}
+
+            {/* Error State */}
+            {error && !loading && (
+              <div className="alert alert-danger text-center" role="alert">
+                <i className="fas fa-exclamation-triangle me-2"></i>
+                {error}
+              </div>
+            )}
+
+            {/* No Results or Patient List */}
+            {!loading && !error && (
+              <div className="">
+                {filteredPatients.length === 0 ? (
+                  <div className="text-center py-5">
+                    <i className="fas fa-search fa-3x mb-3 text-muted"></i>
+                    <p className="text-muted">No patients found matching your search.</p>
+                  </div>
+                ) : (
+                  <div className="row g-0">
+                    {filteredPatients.map((patient) => (
+                      <PatientCard key={patient.id} patient={patient} />
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
           </div>
         </div>
 
         {/* Patient Profile Modal */}
         {showProfileModal && (
-          <PatientProfileModal 
-            patient={selectedPatient} 
-            onClose={() => setShowProfileModal(false)} 
+          <PatientProfileModal
+            patient={selectedPatient}
+            onClose={() => setShowProfileModal(false)}
           />
         )}
       </div>

@@ -55,18 +55,20 @@ const Dashboard = () => {
     return <div className="alert alert-danger">Error: {error}</div>;
   }
 
+  // Static placeholder data for new cards (to be replaced later via API)
+  const totalAppointments = 127; // Example static value
+  const totalRevenue = "$18,450"; // Example static value
+
   return (
     <div>
       <div className="d-flex justify-content-between align-items-center">
         <h1 className="dashboard-heading">Dashboard</h1>
       </div>
 
-      {/* Stats Cards Row */}
+      {/* Stats Cards Row 1 */}
       <div className="row">
-        {/* Doctors */}
-
-
-        <div className="col-xl-3 col-md-6 mb-4">
+        {/* Total Users */}
+        <div className="col-xl-4 col-md-6 mb-4">
           <div className="card border-left-warning shadow h-100 py-2">
             <div className="card-body">
               <div className="row no-gutters align-items-center">
@@ -82,8 +84,9 @@ const Dashboard = () => {
             </div>
           </div>
         </div>
-        {/* Total Doctors Card */}
-        <div className="col-xl-3 col-md-6 mb-4">
+
+        {/* Total Doctors */}
+        <div className="col-xl-4 col-md-6 mb-4">
           <Link to="/admin/doctor" style={{ textDecoration: "none" }}>
             <div className="card border-left-primary shadow h-100 py-2">
               <div className="card-body">
@@ -104,8 +107,8 @@ const Dashboard = () => {
           </Link>
         </div>
 
-        {/* Patients */}
-        <div className="col-xl-3 col-md-6 mb-4">
+        {/* Total Patients */}
+        <div className="col-xl-4 col-md-6 mb-4">
           <Link to="/admin/patient" style={{ textDecoration: "none" }}>
             <div className="card border-left-success shadow h-100 py-2">
               <div className="card-body">
@@ -125,9 +128,12 @@ const Dashboard = () => {
             </div>
           </Link>
         </div>
+      </div>
 
-        {/* Caregivers */}
-        <div className="col-xl-3 col-md-6 mb-4">
+      {/* Stats Cards Row 2 */}
+      <div className="row">
+        {/* Total Caregivers */}
+        <div className="col-xl-4 col-md-6 mb-4">
           <Link to="/admin/caregiver" style={{ textDecoration: "none" }}>
             <div className="card border-left-info shadow h-100 py-2">
               <div className="card-body">
@@ -148,30 +154,45 @@ const Dashboard = () => {
           </Link>
         </div>
 
-        {/* Users */}
-        <div className="col-xl-3 col-md-6 mb-4">
-          
-            <div className="card border-left-warning shadow h-100 py-2">
-              <div className="card-body">
-                <div className="row no-gutters align-items-center">
-                  <div className="col mr-2">
-                    <div className="text-xs font-weight-bold text-warning text-uppercase mb-1">
-                      Total Users</div>
-                    <div className="h5 mb-0 font-weight-bold text-gray-800">
-                      {dashboardData.totalUsers}
-                    </div>
+        {/* Total Appointments (Static for now) */}
+        <div className="col-xl-4 col-md-6 mb-4">
+          <div className="card border-left-secondary shadow h-100 py-2">
+            <div className="card-body">
+              <div className="row no-gutters align-items-center">
+                <div className="col mr-2">
+                  <div className="text-xs font-weight-bold text-secondary text-uppercase mb-1">
+                    Total Appointments</div>
+                  <div className="h5 mb-0 font-weight-bold text-gray-800">
+                    {dashboardData.totalAppointments}
                   </div>
-                  <div className="col-auto">
-                    <i className="fas fa-users fa-2x text-warning"></i>
-                  </div>
+                </div>
+                <div className="col-auto">
+                  <i className="fas fa-calendar-check fa-2x text-secondary"></i>
                 </div>
               </div>
             </div>
-         
+          </div>
         </div>
-        
-        {/* Total Users Card */}
-        
+
+        {/* Total Revenue (Static for now) */}
+        <div className="col-xl-4 col-md-6 mb-4">
+          <div className="card border-left-danger shadow h-100 py-2">
+            <div className="card-body">
+              <div className="row no-gutters align-items-center">
+                <div className="col mr-2">
+                  <div className="text-xs font-weight-bold text-danger text-uppercase mb-1">
+                    Total Revenue</div>
+                  <div className="h5 mb-0 font-weight-bold text-gray-800">
+                    {dashboardData.totalRevenue}
+                  </div>
+                </div>
+                <div className="col-auto">
+                  <i className="fas fa-dollar-sign fa-2x text-danger"></i>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
 
       {/* Table for recent signups */}
@@ -219,6 +240,8 @@ const Dashboard = () => {
           .border-left-success { border-left: 0.25rem solid #1cc88a !important; }
           .border-left-info { border-left: 0.25rem solid #36b9cc !important; }
           .border-left-warning { border-left: 0.25rem solid #f95918 !important; }
+          .border-left-secondary { border-left: 0.25rem solid #858796 !important; }
+          .border-left-danger { border-left: 0.25rem solid #e74a3b !important; }
           .card { border: 0; border-radius: 0.35rem; transition: transform 0.2s; }
           .card:hover { transform: scale(1.02); cursor: pointer; }
           .shadow { box-shadow: 0 0.15rem 1.75rem 0 rgba(58,59,69,0.15) !important; }

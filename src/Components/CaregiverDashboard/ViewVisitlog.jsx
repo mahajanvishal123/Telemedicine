@@ -97,7 +97,7 @@ const AddCaregiver = () => {
     if (selectedPatientId) {
       fetchVisitLogs(selectedPatientId);
     }
-    // eslint-disable-next-line react-hooks-exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedPatientId]);
 
   // ===== HELPERS =====
@@ -135,12 +135,13 @@ const AddCaregiver = () => {
 
   // ===== RENDER =====
   return (
-    <div className="">
+    <div className="container-fluid">
       {/* Header */}
       <div className="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center gap-3 mb-4">
         <h3 className="dashboard-heading">View Visit Log</h3>
       </div>
 
+  
       {/* Patient Selection Dropdown */}
       <div className="row mb-4">
         <div className="col-md-6">
@@ -193,27 +194,29 @@ const AddCaregiver = () => {
           </div>
         </div>
         <div className="mb-4 col-md-9">
-          <div className="card-body">
-            <div className="row g-3">
-              <div className="col-md-10">
-                <input
-                  type="text"
-                  className="form-control"
-                  placeholder="Search by Patient Name..."
-                  value={filterPatientName}
-                  onChange={(e) => {
-                    setFilterPatientName(e.target.value);
-                    setCurrentPage(1);
-                  }}
-                />
-              </div>
-              <div className="col-md-2">
-                <button
-                  className="btn btn-outline-secondary btn-sm"
-                  onClick={resetFilters}
-                >
-                  <i className="fas fa-sync me-1"></i> Reset Filters
-                </button>
+          <div className="card">
+            <div className="card-body">
+              <div className="row g-3">
+                <div className="col-md-10">
+                  <input
+                    type="text"
+                    className="form-control"
+                    placeholder="Search by Patient Name..."
+                    value={filterPatientName}
+                    onChange={(e) => {
+                      setFilterPatientName(e.target.value);
+                      setCurrentPage(1);
+                    }}
+                  />
+                </div>
+                <div className="col-md-2">
+                  <button
+                    className="btn btn-outline-secondary btn-sm"
+                    onClick={resetFilters}
+                  >
+                    <i className="fas fa-sync me-1"></i> Reset Filters
+                  </button>
+                </div>
               </div>
             </div>
           </div>
@@ -259,9 +262,10 @@ const AddCaregiver = () => {
                           <td>
                             <div className="d-flex gap-2">
                               <button 
-                                className="btn btn-sm btn-outline-primary" 
-                                onClick={() => handleView(visitLog)} 
+                                className="btn btn-sm" 
+                                onClick={() => handleView(visitLog)}
                                 title="View"
+                                style={{ color: "#F95918" }}
                               >
                                 <i className="fas fa-eye"></i>
                               </button>
@@ -311,66 +315,53 @@ const AddCaregiver = () => {
         </div>
       )}
 
-      {/* View Modal */}
+      {/* ===== VIEW MODAL ===== */}
       {showViewModal && viewingVisitLog && (
-        <div className="modal fade show d-block" style={{ backgroundColor: "rgba(0,0,0,0.5)" }} onClick={() => setShowViewModal(false)}>
-          <div className="modal-dialog modal-lg" onClick={(e) => e.stopPropagation()}>
+        <div className="modal fade show" style={{ display: 'block', backgroundColor: 'rgba(0,0,0,0.5)' }} tabIndex="-1">
+          <div className="modal-dialog modal-lg">
             <div className="modal-content">
-              <div className="modal-header">
+              <div className="modal-header text-black">
                 <h5 className="modal-title">Visit Log Details</h5>
-                <button type="button" className="btn-close" onClick={() => setShowViewModal(false)} />
+                <button
+                  type="button"
+                  className="btn-close btn-close-white"
+                  onClick={() => setShowViewModal(false)}
+                ></button>
               </div>
               <div className="modal-body">
                 <div className="row">
-                  <div className="col-md-12">
-                    <div className="card mb-3">
-                      <div className="card-header bg-danger text-white">
-                        <h5 className="mb-0">Patient Information</h5>
-                      </div>
-                      <div className="card-body">
-                        <div className="row">
-                          <div className="col-md-6">
-                            <p><strong>Patient Name:</strong> {viewingVisitLog.patientName}</p>
-                            <p><strong>Patient ID:</strong> {viewingVisitLog.patientId || "N/A"}</p>
-                            <p><strong>Age:</strong> {viewingVisitLog.patientDetails?.age || "N/A"}</p>
-                          </div>
-                          <div className="col-md-6">
-                            <p><strong>Visit Date:</strong> {viewingVisitLog.visitDate}</p>
-                            <p><strong>Visit Time:</strong> {viewingVisitLog.visitTime}</p>
-                            <p><strong>Status:</strong> 
-                              <span className={`badge ${getStatusClass(viewingVisitLog.status)} ms-2`}>
-                                {viewingVisitLog.status}
-                              </span>
-                            </p>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-
-                    <div className="card mb-3">
-                      <div className="card-body">
-                        <p><strong>Notes:</strong></p>
-                        <p className="border p-3 bg-light">{viewingVisitLog.notes}</p>
-                      </div>
-                    </div>
-
-                    <div className="card">
-                      <div className="card-body">
-                        <div className="row">
-                          <div className="col-md-6">
-                            <p><strong>Blood Pressure:</strong> {viewingVisitLog.bloodPressure}</p>
-                          </div>
-                          <div className="col-md-6">
-                            <p><strong>Temperature:</strong> {viewingVisitLog.temperature}</p>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
+                  <div className="col-md-6">
+                    <h6><strong>Patient Name:</strong></h6>
+                    <p>{viewingVisitLog.patientName}</p>
+                  </div>
+                  <div className="col-md-6">
+                    <h6><strong>Visit Date & Time:</strong></h6>
+                    <p>{viewingVisitLog.visitDate} at {viewingVisitLog.visitTime}</p>
+                  </div>
+                </div>
+                <div className="row">
+                  <div className="col-md-6">
+                    <h6><strong>Blood Pressure:</strong></h6>
+                    <p>{viewingVisitLog.bloodPressure}</p>
+                  </div>
+                  <div className="col-md-6">
+                    <h6><strong>Temperature:</strong></h6>
+                    <p>{viewingVisitLog.temperature}</p>
+                  </div>
+                </div>
+                <div className="row">
+                  <div className="col-12">
+                    <h6><strong>Notes:</strong></h6>
+                    <p className="bg-light p-3 rounded">{viewingVisitLog.notes || "No notes provided."}</p>
                   </div>
                 </div>
               </div>
               <div className="modal-footer">
-                <button type="button" className="btn btn-secondary" onClick={() => setShowViewModal(false)}>
+                <button
+                  type="button"
+                  className="btn btn-secondary"
+                  onClick={() => setShowViewModal(false)}
+                >
                   Close
                 </button>
               </div>

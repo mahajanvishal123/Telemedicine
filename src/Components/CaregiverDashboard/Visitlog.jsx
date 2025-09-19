@@ -1,13 +1,14 @@
 import React, { useState, useEffect } from "react";
 import axios from "axios";
+
 import API_URL from "../../Baseurl/Baseurl"; // Adjust path if needed
+import "./Caregiver.css";
 
 const Visitlog = () => {
   const [patients, setPatients] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [selectedPatient, setSelectedPatient] = useState("");
-  const [submissionStatus, setSubmissionStatus] = useState(""); // For success/error message
   const [formData, setFormData] = useState({
     bloodPressure: "",
     temperature: "",
@@ -65,7 +66,6 @@ const Visitlog = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setSubmissionStatus("");
 
     try {
       // Validate required fields
@@ -101,8 +101,17 @@ const Visitlog = () => {
       const response = await axios.post(`${API_URL}/visitlog`, payload);
 
       if (response.data.status === true) {
-        setSubmissionStatus("success");
-        alert("Visit log submitted successfully!");
+        // ✅ Show Sweet Success Alert
+        Swal.fire({
+          icon: 'success',
+          title: 'Success!',
+          text: 'Visit log submitted successfully!',
+          confirmButtonText: 'OK',
+          customClass: {
+            confirmButton: 'btn btn-success'
+          }
+        });
+
         // Reset form
         setFormData({
           bloodPressure: "",
@@ -116,8 +125,16 @@ const Visitlog = () => {
       }
     } catch (err) {
       console.error("Submission error:", err);
-      setSubmissionStatus("error");
-      alert("Error: " + (err.response?.data?.message || err.message));
+      // ❌ Show Sweet Error Alert
+      Swal.fire({
+        icon: 'error',
+        title: 'Oops...',
+        text: "Error: " + (err.response?.data?.message || err.message),
+        confirmButtonText: 'Try Again',
+        customClass: {
+          confirmButton: 'btn btn-danger'
+        }
+      });
     }
   };
 
@@ -278,17 +295,7 @@ const Visitlog = () => {
                 Submit Log
               </button>
 
-              {/* Optional: Show status message */}
-              {submissionStatus === "success" && (
-                <div className="alert alert-success mt-3">
-                  Visit log submitted successfully!
-                </div>
-              )}
-              {submissionStatus === "error" && (
-                <div className="alert alert-danger mt-3">
-                  Failed to submit visit log. Please try again.
-                </div>
-              )}
+              {/* ❗ Removed old status divs — handled by SweetAlert now */}
             </form>
           </div>
         </div>
