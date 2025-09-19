@@ -137,16 +137,21 @@ const Caregiver = () => {
     setShowDocModal(true);
   };
 
+  // Handle direct document download
+  const handleDownloadDocument = (doc) => {
+    // Create a temporary link to trigger download
+    const link = document.createElement('a');
+    link.href = doc.url;
+    link.download = doc.name;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
   // Handle option selection
   const handleViewOption = (option) => {
     if (option === 'download') {
-      // Create a temporary link to trigger download
-      const link = document.createElement('a');
-      link.href = docToView.url;
-      link.download = docToView.name;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
+      handleDownloadDocument(docToView);
       setShowDocModal(false);
     } else if (option === 'newTab') {
       window.open(docToView.url, '_blank');
@@ -485,12 +490,22 @@ const Caregiver = () => {
                                     <i className={`fas ${getFileIcon(doc.type)} me-2`}></i>
                                     {doc.name}
                                   </div>
-                                  <button
-                                    className="btn btn-sm btn-outline-primary"
-                                    onClick={() => handleViewDocument(doc)}
-                                  >
-                                    View
-                                  </button>
+                                  <div>
+                                    <button
+                                      className="btn btn-sm btn-outline-primary me-2"
+                                      onClick={() => handleViewDocument(doc)}
+                                      title="View Document"
+                                    >
+                                      <i className="fas fa-eye"></i>
+                                    </button>
+                                    <button
+                                      className="btn btn-sm btn-outline-success"
+                                      onClick={() => handleDownloadDocument(doc)}
+                                      title="Download Document"
+                                    >
+                                      <i className="fas fa-download"></i>
+                                    </button>
+                                  </div>
                                 </li>
                               ))}
                             </ul>
@@ -583,63 +598,78 @@ const Caregiver = () => {
         </div>
       )}
 
-{/* 📄 Document Preview Modal */}
-{showDocModal && docToView && (
-  <div
-    className="modal fade show d-block"
-    style={{ backgroundColor: "rgba(0,0,0,0.5)" }}
-    onClick={() => setShowDocModal(false)}
-  >
-    <div
-      className="modal-dialog modal-xl"
-      style={{ maxWidth: "95%", height: "90%" }}
-      onClick={(e) => e.stopPropagation()}
-    >
-      <div className="modal-content" style={{ height: "100%" }}>
-        <div className="modal-header">
-          <h5 className="modal-title">{docToView.name}</h5>
-          <button
-            type="button"
-            className="btn-close"
-            onClick={() => setShowDocModal(false)}
-          />
+      {/* 📄 Document Preview Modal */}
+      {showDocModal && docToView && !showDocOptions && (
+        <div
+          className="modal fade show d-block"
+          style={{ backgroundColor: "rgba(0,0,0,0.5)" }}
+          onClick={() => setShowDocModal(false)}
+        >
+          <div
+            className="modal-dialog modal-xl"
+            style={{ maxWidth: "95%", height: "90%" }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="modal-content" style={{ height: "100%" }}>
+              <div className="modal-header">
+                <h5 className="modal-title">{docToView.name}</h5>
+                <button
+                  type="button"
+                  className="btn-close"
+                  onClick={() => setShowDocModal(false)}
+                />
+              </div>
+
+              <div className="modal-body p-0" style={{ height: "calc(100% - 56px)" }}>
+                {docToView.url.match(/\.(jpeg|jpg|png|gif|png)$/i) ? (
+                  <img
+                    src={docToView.url}
+                    alt={docToView.name}
+                    className="w-100 h-100"
+                    style={{ objectFit: "contain" }}
+                  />
+                ) : docToView.url.match(/\.pdf$/i) ? (
+                  <iframe
+                    src={docToView.url}
+                    title={docToView.name}
+                    width="100%"
+                    height="100%"
+                    style={{ border: "none" }}
+                  />
+                ) : (
+                  <iframe
+                    src={`https://docs.google.com/gview?url=${encodeURIComponent(
+                      docToView.url
+                    )}&embedded=true`}
+                    title={docToView.name}
+                    width="100%"
+                    height="100%"
+                    style={{ border: "none" }}
+                  />
+                )}
+              </div>
+              
+              <div className="modal-footer">
+                <button
+                  type="button"
+                  className="btn btn-success"
+                  onClick={() => handleDownloadDocument(docToView)}
+                >
+                  <i className="fas fa-download me-2"></i>
+                  Download
+                </button>
+                <button
+                  type="button"
+                  className="btn btn-secondary"
+                  onClick={() => setShowDocModal(false)}
+                >
+                  Close
+                </button>
+              </div>
+            </div>
+          </div>
         </div>
-
-        <div className="modal-body p-0" style={{ height: "calc(100% - 56px)" }}>
-          {docToView.url.match(/\.(jpeg|jpg|png|gif|png)$/i) ? (
-            <img
-              src={docToView.url}
-              alt={docToView.name}
-              className="w-100 h-100"
-              style={{ objectFit: "contain" }}
-            />
-          ) : docToView.url.match(/\.pdf$/i) ? (
-            <iframe
-              src={docToView.url}
-              title={docToView.name}
-              width="100%"
-              height="100%"
-              style={{ border: "none" }}
-            />
-          ) : (
-            <iframe
-              src={`https://docs.google.com/gview?url=${encodeURIComponent(
-                docToView.url
-              )}&embedded=true`}
-              title={docToView.name}
-              width="100%"
-              height="100%"
-              style={{ border: "none" }}
-            />
-          )}
-        </div>
-      </div>
-    </div>
-  </div>
-)}
-
-
-
+      )}
     </div>
   );
 };
