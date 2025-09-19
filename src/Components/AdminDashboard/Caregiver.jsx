@@ -16,6 +16,10 @@ const Caregiver = () => {
   const [showViewModal, setShowViewModal] = useState(false);
   const [viewingCaregiver, setViewingCaregiver] = useState(null);
 
+  // 🔹 Document Preview Modal State
+  const [showDocModal, setShowDocModal] = useState(false);
+  const [docToView, setDocToView] = useState(null);
+
   // 🔹 Pagination states
   const [currentPage, setCurrentPage] = useState(1);
   const [rowsPerPage, setRowsPerPage] = useState(5); // Default 5
@@ -153,77 +157,69 @@ const Caregiver = () => {
         <h3 className="dashboard-heading">Caregivers List</h3>
       </div>
 
-<div className="row mb-3">
-{/* Top: Entries Dropdown */}
-      <div className="mb-3 d-flex align-items-center col-md-3">
-        <label className="me-2 mb-0">Show</label>
-        <select
-          className="form-select form-select-sm w-auto"
-          value={rowsPerPage}
-          onChange={(e) => {
-            setRowsPerPage(e.target.value === "All" ? "All" : parseInt(e.target.value));
-            setCurrentPage(1);
-          }}
-        >
-          <option value="3">3</option>
-          <option value="5">5</option>
-          <option value="10">10</option>
-          <option value="25">25</option>
-          <option value="All">All</option>
-        </select>
-        <span className="ms-2 mb-0">Entries</span>
-      </div>
-      {/* 🔹 FILTERS SECTION */}
-      <div className="col-md-9">
-        <div className="card-header bg-light">
+      <div className="row mb-3">
+        {/* Top: Entries Dropdown */}
+        <div className="mb-3 d-flex align-items-center col-md-3">
+          <label className="me-2 mb-0">Show</label>
+          <select
+            className="form-select form-select-sm w-auto"
+            value={rowsPerPage}
+            onChange={(e) => {
+              setRowsPerPage(e.target.value === "All" ? "All" : parseInt(e.target.value));
+              setCurrentPage(1);
+            }}
+          >
+            <option value="3">3</option>
+            <option value="5">5</option>
+            <option value="10">10</option>
+            <option value="25">25</option>
+            <option value="All">All</option>
+          </select>
+          <span className="ms-2 mb-0">Entries</span>
         </div>
-        <div className="card-body">
-          <div className="row g-3">
-            <div className="col-md-5">
-            
-              <input
-                type="text"
-                className="form-control"
-                id="filterName"
-                placeholder="Search by caregiver name..."
-                value={filterName}
-                onChange={(e) => {
-                  setFilterName(e.target.value);
-                  setCurrentPage(1); // Reset to page 1 on filter change
-                }}
-              />
+        {/* 🔹 FILTERS SECTION */}
+        <div className="col-md-9">
+          <div className="card-header bg-light"></div>
+          <div className="card-body">
+            <div className="row g-3">
+              <div className="col-md-5">
+                <input
+                  type="text"
+                  className="form-control"
+                  id="filterName"
+                  placeholder="Search by caregiver name..."
+                  value={filterName}
+                  onChange={(e) => {
+                    setFilterName(e.target.value);
+                    setCurrentPage(1);
+                  }}
+                />
+              </div>
+              <div className="col-md-5">
+                <input
+                  type="email"
+                  className="form-control"
+                  id="filterEmail"
+                  placeholder="Search by email..."
+                  value={filterEmail}
+                  onChange={(e) => {
+                    setFilterEmail(e.target.value);
+                    setCurrentPage(1);
+                  }}
+                />
+              </div>
+              <div className="mt-3 col-md-2">
+                <button
+                  className="btn btn-outline-secondary btn-sm"
+                  onClick={resetFilters}
+                >
+                  <i className="fas fa-sync me-1"></i> Reset Filters
+                </button>
+              </div>
             </div>
-            <div className="col-md-5">
-          
-              <input
-                type="email"
-                className="form-control"
-                id="filterEmail"
-                placeholder="Search by email..."
-                value={filterEmail}
-                onChange={(e) => {
-                  setFilterEmail(e.target.value);
-                  setCurrentPage(1);
-                }}
-              />
-            </div>
-            <div className="mt-3 col-md-2">
-            <button
-              className="btn btn-outline-secondary btn-sm"
-              onClick={resetFilters}
-            >
-              <i className="fas fa-sync me-1"></i> Reset Filters
-            </button>
-           
           </div>
-          </div>
-          
         </div>
       </div>
-</div>
-      
-
-      
 
       {/* Table */}
       {loadingCaregivers && <div className="alert alert-info">Loading caregivers…</div>}
@@ -239,116 +235,117 @@ const Caregiver = () => {
       {!loadingCaregivers && !caregiversError && (
         <div className="card shadow ">
           <div className="card-body">
-          <div className="table-responsive">
-            <table className="table table-hover align-middle">
-              <thead className="table-light">
-                <tr>
-                  <th>ID</th>
-                  <th>Photo</th>
-                  <th>Name</th>
-                  <th>Email</th>
-                  <th>Gender</th>
-                  <th>Role</th>
-                  <th>Experience</th>
-                  <th>Status</th>
-                  <th>Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {currentRows.length === 0 ? (
+            <div className="table-responsive">
+              <table className="table table-hover align-middle">
+                <thead className="table-light">
                   <tr>
-                    <td colSpan={9} className="text-center text-muted">
-                      No caregivers found matching your filters.
-                    </td>
+                    <th>ID</th>
+                    <th>Photo</th>
+                    <th>Name</th>
+                    <th>Email</th>
+                    <th>Gender</th>
+                    <th>Role</th>
+                    <th>Experience</th>
+                    <th>Status</th>
+                    <th>Actions</th>
                   </tr>
-                ) : (
-                  currentRows.map((caregiver, index) => (
-                    <tr key={caregiver.id}>
-                      <td>{(currentPage - 1) * rowsPerPage + index + 1}</td>
-                      <td className="text-center">
-                        <img
-                          src={caregiver.profilePicture}
-                          alt={caregiver.name}
-                          className="rounded-circle"
-                          style={{ width: "40px", height: "40px", objectFit: "cover" }}
-                          onError={handleImageError}
-                        />
-                      </td>
-                      <td>{caregiver.name}</td>
-                      <td>{caregiver.email}</td>
-                      <td>{caregiver.gender}</td>
-                      <td>{caregiver.role}</td>
-                      <td>{caregiver.yearsExperience} years</td>
-                      <td>
-                        <span className={`badge ${getStatusClass(caregiver.status)} rounded-pill`}>
-                          {caregiver.status}
-                        </span>
-                      </td>
-                      <td>
-                        <button
-                          className="btn btn-sm"
-                          onClick={() => handleView(caregiver)}
-                          title="View"
-                        >
-                          <i className="fas fa-eye" style={{ color: "#FF3500" }}></i>
-                        </button>
+                </thead>
+                <tbody>
+                  {currentRows.length === 0 ? (
+                    <tr>
+                      <td colSpan={9} className="text-center text-muted">
+                        No caregivers found matching your filters.
                       </td>
                     </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
+                  ) : (
+                    currentRows.map((caregiver, index) => (
+                      <tr key={caregiver.id}>
+                        <td>{(currentPage - 1) * rowsPerPage + index + 1}</td>
+                        <td className="text-center">
+                          <img
+                            src={caregiver.profilePicture}
+                            alt={caregiver.name}
+                            className="rounded-circle"
+                            style={{ width: "40px", height: "40px", objectFit: "cover" }}
+                            onError={handleImageError}
+                          />
+                        </td>
+                        <td>{caregiver.name}</td>
+                        <td>{caregiver.email}</td>
+                        <td>{caregiver.gender}</td>
+                        <td>{caregiver.role}</td>
+                        <td>{caregiver.yearsExperience} years</td>
+                        <td>
+                          <span className={`badge ${getStatusClass(caregiver.status)} rounded-pill`}>
+                            {caregiver.status}
+                          </span>
+                        </td>
+                        <td>
+                          <button
+                            className="btn btn-sm"
+                            onClick={() => handleView(caregiver)}
+                            title="View"
+                          >
+                            <i className="fas fa-eye" style={{ color: "#FF3500" }}></i>
+                          </button>
+                        </td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
           </div>
-             </div>
-        
         </div>
       )}
-  {/* ✅ Footer: Pagination */}
-          <div className="card-footer bg-light d-flex justify-content-between align-items-center py-3">
-            <div className="text-muted small">
-              Showing {(currentPage - 1) * rowsPerPage + 1} to {Math.min(currentPage * rowsPerPage, filteredCaregivers.length)} of {filteredCaregivers.length} entries
-            </div>
 
-            {rowsPerPage !== "All" && (
-              <nav>
-                <ul className="pagination mb-0">
-                  <li className={`page-item ${currentPage === 1 ? 'disabled' : ''}`}>
-                    <button
-                      className="page-link"
-                      onClick={() => paginate(currentPage - 1)}
-                      disabled={currentPage === 1}
-                    >
-                      Prev
-                    </button>
-                  </li>
+      {/* ✅ Footer: Pagination */}
+      <div className="card-footer bg-light d-flex justify-content-between align-items-center py-3">
+        <div className="text-muted small">
+          Showing {(currentPage - 1) * rowsPerPage + 1} to {Math.min(currentPage * rowsPerPage, filteredCaregivers.length)} of {filteredCaregivers.length} entries
+        </div>
 
-                  {[...Array(totalPages)].map((_, i) => (
-                    <li
-                      key={i}
-                      className={`page-item ${currentPage === i + 1 ? 'active' : ''}`}
-                    >
-                      <button
-                        className="page-link"
-                        onClick={() => paginate(i + 1)}
-                      >
-                        {i + 1}
-                      </button>
-                    </li>
-                  ))}
+        {rowsPerPage !== "All" && (
+          <nav>
+            <ul className="pagination mb-0">
+              <li className={`page-item ${currentPage === 1 ? 'disabled' : ''}`}>
+                <button
+                  className="page-link"
+                  onClick={() => paginate(currentPage - 1)}
+                  disabled={currentPage === 1}
+                >
+                  Prev
+                </button>
+              </li>
 
-                  <li className={`page-item ${currentPage === totalPages ? 'disabled' : ''}`}>
-                    <button
-                      className="page-link"
-                      onClick={() => paginate(currentPage + 1)}
-                      disabled={currentPage === totalPages}
-                    >
-                      Next
-                    </button>
-                  </li>
-                </ul>
-              </nav>
-            )}
-          </div>
+              {[...Array(totalPages)].map((_, i) => (
+                <li
+                  key={i}
+                  className={`page-item ${currentPage === i + 1 ? 'active' : ''}`}
+                >
+                  <button
+                    className="page-link"
+                    onClick={() => paginate(i + 1)}
+                  >
+                    {i + 1}
+                  </button>
+                </li>
+              ))}
+
+              <li className={`page-item ${currentPage === totalPages ? 'disabled' : ''}`}>
+                <button
+                  className="page-link"
+                  onClick={() => paginate(currentPage + 1)}
+                  disabled={currentPage === totalPages}
+                >
+                  Next
+                </button>
+              </li>
+            </ul>
+          </nav>
+        )}
+      </div>
+
       {/* View Caregiver Modal */}
       {showViewModal && viewingCaregiver && (
         <div
@@ -387,36 +384,18 @@ const Caregiver = () => {
                         <h5 className="card-title">Personal Information</h5>
                         <div className="row">
                           <div className="col-sm-6">
-                            <p>
-                              <strong>Email:</strong> {viewingCaregiver.email}
-                            </p>
-                            <p>
-                              <strong>Phone:</strong> {viewingCaregiver.mobile}
-                            </p>
-                            <p>
-                              <strong>Gender:</strong> {viewingCaregiver.gender}
-                            </p>
-                            <p>
-                              <strong>Date of Birth:</strong> {viewingCaregiver.dateOfBirth}
-                            </p>
+                            <p><strong>Email:</strong> {viewingCaregiver.email}</p>
+                            <p><strong>Phone:</strong> {viewingCaregiver.mobile}</p>
+                            <p><strong>Gender:</strong> {viewingCaregiver.gender}</p>
+                            <p><strong>Date of Birth:</strong> {viewingCaregiver.dateOfBirth}</p>
                           </div>
                           <div className="col-sm-6">
-                            <p>
-                              <strong>Blood Group:</strong> {viewingCaregiver.bloodGroup}
-                            </p>
-                            <p>
-                              <strong>Age:</strong> {viewingCaregiver.age}
-                            </p>
-                            <p>
-                              <strong>Join Date:</strong> {viewingCaregiver.joinDate}
-                            </p>
+                            <p><strong>Blood Group:</strong> {viewingCaregiver.bloodGroup}</p>
+                            <p><strong>Age:</strong> {viewingCaregiver.age}</p>
+                            <p><strong>Join Date:</strong> {viewingCaregiver.joinDate}</p>
                             <p>
                               <strong>Status:</strong>{" "}
-                              <span
-                                className={`badge ${getStatusClass(
-                                  viewingCaregiver.status
-                                )} ms-2`}
-                              >
+                              <span className={`badge ${getStatusClass(viewingCaregiver.status)} ms-2`}>
                                 {viewingCaregiver.status}
                               </span>
                             </p>
@@ -427,15 +406,10 @@ const Caregiver = () => {
                     <div className="card mb-3">
                       <div className="card-body">
                         <h5 className="card-title">Professional Information</h5>
-                        <p>
-                          <strong>Experience:</strong> {viewingCaregiver.yearsExperience} years
-                        </p>
-                        <p>
-                          <strong>Skills:</strong> {viewingCaregiver.skills}
-                        </p>
-                        <p>
-                          <strong>Certification:</strong> {viewingCaregiver.certification}
-                        </p>
+                        <p><strong>Experience:</strong> {viewingCaregiver.yearsExperience} years</p>
+                        <p><strong>Skills:</strong> {viewingCaregiver.skills}</p>
+                        <p><strong>Certification:</strong> {viewingCaregiver.certification}</p>
+
                         {viewingCaregiver.documents && viewingCaregiver.documents.length > 0 && (
                           <div className="mt-3">
                             <h6>Documents:</h6>
@@ -446,14 +420,15 @@ const Caregiver = () => {
                                   className="list-group-item d-flex justify-content-between align-items-center"
                                 >
                                   {doc.name}
-                                  <a
-                                    href={doc.url}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
+                                  <button
                                     className="btn btn-sm btn-outline-primary"
+                                    onClick={() => {
+                                      setDocToView(doc);
+                                      setShowDocModal(true);
+                                    }}
                                   >
                                     View
-                                  </a>
+                                  </button>
                                 </li>
                               ))}
                             </ul>
@@ -464,9 +439,7 @@ const Caregiver = () => {
                     <div className="card">
                       <div className="card-body">
                         <h5 className="card-title">Contact Information</h5>
-                        <p>
-                          <strong>Address:</strong> {viewingCaregiver.address}
-                        </p>
+                        <p><strong>Address:</strong> {viewingCaregiver.address}</p>
                       </div>
                     </div>
                   </div>
@@ -480,6 +453,35 @@ const Caregiver = () => {
                 >
                   Close
                 </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 📄 Document Preview Modal */}
+      {showDocModal && docToView && (
+        <div
+          className="modal fade show d-block"
+          style={{ backgroundColor: "rgba(0,0,0,0.5)" }}
+          onClick={() => setShowDocModal(false)}
+        >
+          <div className="modal-dialog modal-xl" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-content">
+              <div className="modal-header">
+                <h5 className="modal-title">{docToView.name}</h5>
+                <button
+                  type="button"
+                  className="btn-close"
+                  onClick={() => setShowDocModal(false)}
+                />
+              </div>
+              <div className="modal-body" style={{ minHeight: "80vh" }}>
+                <iframe
+                  src={docToView.url}
+                  title={docToView.name}
+                  className="w-100 h-100 border-0"
+                />
               </div>
             </div>
           </div>
