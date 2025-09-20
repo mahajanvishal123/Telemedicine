@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import API_URL from "../Baseurl/Baseurl";
 
+
 const Login = () => {
   const navigate = useNavigate();
   const [showPassword, setShowPassword] = useState(false);
@@ -36,33 +37,63 @@ const Login = () => {
       });
 
       const data = await response.json();
-      console.log("Login API Response:", data); // 👈 Debugging ke liye
+      console.log("Login API Response:", data);
 
       if (response.ok) {
-        // ✅ Step 1: Response ka structure check karo
-        // Agar API returns { status, data: { accessToken, user } }
+        // ✅ Extract token & user
         let token = data.accessToken || data.token || data?.data?.accessToken || data?.data?.token;
         let userData = data.user || data?.data?.user;
 
         if (!userData || !userData.role) {
-          alert("Role missing in API response!");
+          Swal.fire({
+            title: 'Error!',
+            text: 'Role missing in API response!',
+            icon: 'error',
+            confirmButtonText: 'OK',
+            confirmButtonColor: '#d33',
+          });
           return;
         }
 
-        // ✅ Step 2: Save token & role
+        // ✅ Save to localStorage
         if (token) {
           localStorage.setItem("accessToken", token);
         }
         localStorage.setItem("role", userData.role);
         localStorage.setItem("user", JSON.stringify(userData));
 
-        // ✅ Step 3: Set user
-        setUser(userData);
+        // ✅ Show SweetAlert on Success
+        Swal.fire({
+          title: 'Login Successful!',
+          text: `Welcome back, ${userData.name || 'User'}! Redirecting to your dashboard...`,
+          icon: 'success',
+          timer: 2000,
+          showConfirmButton: false,
+          backdrop: true,
+          didClose: () => {
+            setUser(userData); // Trigger useEffect for redirect
+          }
+        });
+
       } else {
-        alert(data.message || "Login failed");
+        // ❌ Show error alert
+        Swal.fire({
+          title: 'Login Failed!',
+          text: data.message || "Invalid credentials. Please try again.",
+          icon: 'error',
+          confirmButtonText: 'Try Again',
+          confirmButtonColor: '#d33',
+        });
       }
     } catch (error) {
       console.error("Error during login:", error);
+      Swal.fire({
+        title: 'Error!',
+        text: 'Something went wrong. Please try again later.',
+        icon: 'error',
+        confirmButtonText: 'OK',
+        confirmButtonColor: '#d33',
+      });
     } finally {
       setLoading(false);
     }
@@ -70,24 +101,33 @@ const Login = () => {
 
   // Redirect based on role
   useEffect(() => {
-    const role = localStorage.getItem("role");
-    if (user && role) {
-      switch (role.toLowerCase()) {
+    if (user) {
+      const role = user.role?.toLowerCase();
+      let redirectPath = "/";
+
+      switch (role) {
         case "patient":
-          navigate("/patient/dashboard");
+          redirectPath = "/patient/dashboard";
           break;
         case "doctor":
-          navigate("/doctor/dashboard");
+          redirectPath = "/doctor/dashboard";
           break;
         case "caregiver":
-          navigate("/caregiver/dashboard");
+          redirectPath = "/caregiver/dashboard";
           break;
         case "admin":
-          navigate("/admin/dashboard");
+          redirectPath = "/admin/dashboard";
           break;
         default:
-          navigate("/");
+          redirectPath = "/";
       }
+
+      // Delay redirect slightly for better UX after SweetAlert
+      const timer = setTimeout(() => {
+        navigate(redirectPath);
+      }, 300); // 300ms delay after SweetAlert closes
+
+      return () => clearTimeout(timer);
     }
   }, [user, navigate]);
 
@@ -204,7 +244,14 @@ const Login = () => {
                   }}
                   disabled={loading}
                 >
-                  {loading ? "Logging in..." : "Login"}
+                  {loading ? (
+                    <>
+                      <span className="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                      Logging in...
+                    </>
+                  ) : (
+                    "Login"
+                  )}
                 </button>
               </form>
 

@@ -1,12 +1,340 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import 'bootstrap/dist/css/bootstrap.min.css';
-import { Container, Row, Col, Button } from 'react-bootstrap';
+import { Container, Row, Col, Button, Modal } from 'react-bootstrap';
+import axios from 'axios';
+
+import { useNavigate } from 'react-router-dom';
 
 const PricingPage = () => {
+  const [showModal, setShowModal] = useState(false);
+  const navigate = useNavigate();
+
+  const handleClose = () => setShowModal(false);
+  const handleShow = () => setShowModal(true);
+
+  // ✅ Patient Signup Modal Component (Embedded)
+// ✅ Patient Signup Modal Component (Embedded) — UPDATED: Password removed, Place added
+const PatientSignupModal = () => {
+  const [fullName, setFullName] = useState("");
+  const [email, setEmail] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
+  const [errorMessage, setErrorMessage] = useState("");
+
+  // Patient-specific fields
+  const [dob, setDob] = useState("");
+  const [age, setAge] = useState("");
+  const [bloodGroup, setBloodGroup] = useState("");
+  const [place, setPlace] = useState(""); // ✅ NEW FIELD: Place
+
+  // Profile Image & Gender
+  const [profile, setProfileImage] = useState(null);
+  const [previewUrl, setPreviewUrl] = useState("");
+  const [gender, setGender] = useState("");
+
+  // Auto-calculate age
+  const handleDobChange = (e) => {
+    const selectedDob = e.target.value;
+    setDob(selectedDob);
+    if (selectedDob) {
+      const today = new Date();
+      const birthDate = new Date(selectedDob);
+      let calculatedAge = today.getFullYear() - birthDate.getFullYear();
+      const monthDiff = today.getMonth() - birthDate.getMonth();
+      if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
+        calculatedAge--;
+      }
+      setAge(calculatedAge.toString());
+    } else {
+      setAge("");
+    }
+  };
+
+  // Handle profile image
+  const handleProfileImageChange = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      setProfileImage(file);
+      setPreviewUrl(URL.createObjectURL(file));
+    } else {
+      setProfileImage(null);
+      setPreviewUrl("");
+    }
+  };
+
+  // Cleanup preview URL
+  useEffect(() => {
+    return () => {
+      if (previewUrl) {
+        URL.revokeObjectURL(previewUrl);
+      }
+    };
+  }, [previewUrl]);
+
+  // Handle Signup (Only for Patient) — WITHOUT PASSWORD
+  const handleSignup = async (e) => {
+    e.preventDefault();
+
+    setIsLoading(true);
+    setErrorMessage("");
+
+    try {
+      const formData = new FormData();
+      formData.append("name", fullName);
+      formData.append("email", email);
+      formData.append("gender", gender);
+      if (profile) formData.append("profile", profile);
+      formData.append("dob", dob);
+      formData.append("age", age);
+      formData.append("bloodGroup", bloodGroup);
+      formData.append("place", place); // ✅ Sending place to backend
+
+      const url = `${API_URL}/patient`; // ✅ Hardcoded for patient
+      console.log("Signup URL:", url);
+
+      const response = await axios.post(url, formData, {
+        headers: { "Content-Type": "multipart/form-data" },
+      });
+
+      const userData = response.data.user || response.data;
+      localStorage.setItem("isAuthenticated", "true");
+      localStorage.setItem("user", JSON.stringify(userData));
+      localStorage.setItem("role", "patient");
+
+      // Success Alert
+      Swal.fire({
+        title: 'Success!',
+        text: 'Your account has been created successfully! Redirecting to login...',
+        icon: 'success',
+        timer: 2000,
+        showConfirmButton: false,
+        backdrop: true,
+        didClose: () => {
+          navigate("/login");
+          handleClose();
+        }
+      });
+
+    } catch (error) {
+      console.error("Signup failed:", error);
+      const errorMsg =
+        error.response?.data?.message ||
+        error.response?.data?.errors?.[0]?.msg ||
+        error.response?.data ||
+        "Signup failed. Please check your details and try again.";
+
+      setErrorMessage(errorMsg);
+
+      Swal.fire({
+        title: 'Error!',
+        text: errorMsg,
+        icon: 'error',
+        confirmButtonText: 'Try Again',
+        confirmButtonColor: '#d33',
+      });
+
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  return (
+    <Modal show={showModal} onHide={handleClose} size="lg" centered>
+      <Modal.Header closeButton>
+        <Modal.Title>Create Patient Account</Modal.Title>
+      </Modal.Header>
+      <Modal.Body>
+        <form onSubmit={handleSignup}>
+          {/* Full Name */}
+          <div className="mb-3">
+            <label className="form-label">Full Name</label>
+            <input
+              type="text"
+              className="form-control"
+              value={fullName}
+              onChange={(e) => setFullName(e.target.value)}
+              required
+            />
+          </div>
+
+          {/* Email */}
+          <div className="mb-3">
+            <label className="form-label">Email</label>
+            <input
+              type="email"
+              className="form-control"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              required
+            />
+          </div>
+
+          {/* ❌ Password Fields REMOVED */}
+
+          {/* Gender */}
+          <div className="mb-3">
+            <label className="form-label">Gender</label>
+            <div>
+              <div className="form-check form-check-inline">
+                <input
+                  className="form-check-input"
+                  type="radio"
+                  name="gender"
+                  id="male"
+                  value="Male"
+                  checked={gender === "Male"}
+                  onChange={(e) => setGender(e.target.value)}
+                  required
+                />
+                <label className="form-check-label" htmlFor="male">Male</label>
+              </div>
+              <div className="form-check form-check-inline">
+                <input
+                  className="form-check-input"
+                  type="radio"
+                  name="gender"
+                  id="female"
+                  value="Female"
+                  checked={gender === "Female"}
+                  onChange={(e) => setGender(e.target.value)}
+                  required
+                />
+                <label className="form-check-label" htmlFor="female">Female</label>
+              </div>
+              <div className="form-check form-check-inline">
+                <input
+                  className="form-check-input"
+                  type="radio"
+                  name="gender"
+                  id="other"
+                  value="Other"
+                  checked={gender === "Other"}
+                  onChange={(e) => setGender(e.target.value)}
+                  required
+                />
+                <label className="form-check-label" htmlFor="other">Other</label>
+              </div>
+            </div>
+          </div>
+
+          {/* Profile Picture */}
+          <div className="mb-3">
+            <label className="form-label">Profile Picture (Optional)</label>
+            <input
+              type="file"
+              className="form-control"
+              accept="image/*"
+              onChange={handleProfileImageChange}
+            />
+            {previewUrl && (
+              <div className="mt-2">
+                <img
+                  src={previewUrl}
+                  alt="Profile Preview"
+                  style={{
+                    width: "80px",
+                    height: "80px",
+                    borderRadius: "50%",
+                    objectFit: "cover",
+                    border: "2px solid #d35400",
+                  }}
+                />
+              </div>
+            )}
+          </div>
+
+          {/* DOB */}
+          <div className="mb-3">
+            <label className="form-label">Date of Birth</label>
+            <input
+              type="date"
+              className="form-control"
+              value={dob}
+              onChange={handleDobChange}
+              required
+            />
+          </div>
+
+          {/* Age (Auto-filled) */}
+          <div className="mb-3">
+            <label className="form-label">Age</label>
+            <input
+              type="number"
+              className="form-control"
+              value={age}
+              readOnly
+              placeholder="Auto-calculated from DOB"
+            />
+          </div>
+
+          {/* Blood Group */}
+          <div className="mb-3">
+            <label className="form-label">Blood Group</label>
+            <select
+              className="form-select"
+              value={bloodGroup}
+              onChange={(e) => setBloodGroup(e.target.value)}
+              required
+            >
+              <option value="">Select Blood Group</option>
+              <option value="A+">A+</option>
+              <option value="A-">A-</option>
+              <option value="B+">B+</option>
+              <option value="B-">B-</option>
+              <option value="AB+">AB+</option>
+              <option value="AB-">AB-</option>
+              <option value="O+">O+</option>
+              <option value="O-">O-</option>
+            </select>
+          </div>
+
+          {/* ✅ NEW FIELD: Place */}
+          <div className="mb-3">
+            <label className="form-label">Place / City</label>
+            <input
+              type="text"
+              className="form-control"
+              placeholder="Enter your city or locality"
+              value={place}
+              onChange={(e) => setPlace(e.target.value)}
+              required
+            />
+          </div>
+
+          {errorMessage && (
+            <div className="alert alert-danger">{errorMessage}</div>
+          )}
+
+          <div className="d-grid mt-4">
+            <button
+              type="submit"
+              className="btn"
+              disabled={isLoading}
+              style={{
+                backgroundColor: '#d35400',
+                borderColor: '#d35400',
+                color: 'white',
+                fontWeight: '600',
+                padding: '10px',
+                borderRadius: '8px',
+              }}
+            >
+              {isLoading ? (
+                <>
+                  <span className="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                  Creating Account...
+                </>
+              ) : (
+                "Sign Up"
+              )}
+            </button>
+          </div>
+        </form>
+      </Modal.Body>
+    </Modal>
+  );
+};
   return (
     <div className="bg-light">
-
-
       {/* Hero Section */}
       <section className="py-5">
         <Container>
@@ -69,15 +397,16 @@ const PricingPage = () => {
                 </ul>
                 <Button
                   variant="light"
-                  className="w-100 py-2 border-0 text-white mt-[42px]"
+                  className="w-100 py-2 border-0 text-white mt-4"
                   style={{
                     backgroundColor: '#d35400',
                     borderColor: '#d35400',
                     fontWeight: '600',
                     borderRadius: '8px',
                   }}
+                  onClick={handleShow} // ✅ Open Modal
                 >
-                  Find a Doctor →
+                  Book Now →
                 </Button>
               </div>
             </Col>
@@ -156,8 +485,9 @@ const PricingPage = () => {
                     fontWeight: '600',
                     borderRadius: '8px',
                   }}
+                  onClick={handleShow} // ✅ Open Modal
                 >
-                  Start Membership →
+                  Book Now →
                 </Button>
               </div>
             </Col>
@@ -225,32 +555,18 @@ const PricingPage = () => {
                     fontWeight: '600',
                     borderRadius: '8px',
                   }}
+                  onClick={handleShow} // ✅ Open Modal
                 >
-                  Protect Your Family →
+                  Book Now →
                 </Button>
               </div>
             </Col>
           </Row>
-
-          {/* Enterprise CTA */}
-          {/* <div className="text-center mt-5">
-            <p className="text-muted mb-3">Need a custom solution for your organization?</p>
-            <Button
-              variant="light"
-              className="px-5 py-2 border-0"
-              style={{
-                backgroundColor: '#f8f9fa',
-                color: '#001f4d',
-                fontWeight: '600',
-                borderRadius: '8px',
-                boxShadow: '0 2px 6px rgba(0,0,0,0.05)',
-              }}
-            >
-              Contact Enterprise Sales
-            </Button>
-          </div> */}
         </Container>
       </section>
+
+      {/* ✅ Render Modal Here */}
+      <PatientSignupModal />
     </div>
   );
 };

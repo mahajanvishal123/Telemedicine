@@ -151,8 +151,18 @@ const Signup = () => {
       localStorage.setItem("user", JSON.stringify(userData));
       localStorage.setItem("role", role);
 
-      // Redirect
-      navigate("/login");
+      // 🎉 Show SweetAlert on Success → Auto redirect after 2 seconds
+      Swal.fire({
+        title: 'Success!',
+        text: 'Your account has been created successfully! Redirecting to login...',
+        icon: 'success',
+        timer: 2000,
+        showConfirmButton: false,
+        backdrop: true,
+        didClose: () => {
+          navigate("/login");
+        }
+      });
 
     } catch (error) {
       console.error("Signup failed:", error);
@@ -167,12 +177,23 @@ const Signup = () => {
         console.log("Error:", error.message);
       }
 
-      setErrorMessage(
+      const errorMsg =
         error.response?.data?.message ||
         error.response?.data?.errors?.[0]?.msg ||
         error.response?.data ||
-        "Signup failed. Please check your details and try again."
-      );
+        "Signup failed. Please check your details and try again.";
+
+      setErrorMessage(errorMsg);
+
+      // ❌ Show SweetAlert on Error
+      Swal.fire({
+        title: 'Error!',
+        text: errorMsg,
+        icon: 'error',
+        confirmButtonText: 'Try Again',
+        confirmButtonColor: '#d33',
+      });
+
     } finally {
       setIsLoading(false);
     }

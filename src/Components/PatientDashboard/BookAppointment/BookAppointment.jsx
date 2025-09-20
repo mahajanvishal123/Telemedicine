@@ -1,6 +1,23 @@
 import React, { useState, useEffect } from "react";
-import { Container, Row, Col, Card, Button, Badge, Form, Modal, Spinner } from "react-bootstrap";
-import { FaUserMd, FaStar, FaCheckCircle, FaCalendarAlt, FaChevronRight, FaChevronLeft } from "react-icons/fa";
+import {
+  Container,
+  Row,
+  Col,
+  Card,
+  Button,
+  Badge,
+  Form,
+  Modal,
+  Spinner,
+} from "react-bootstrap";
+import {
+  FaUserMd,
+  FaStar,
+  FaCheckCircle,
+  FaCalendarAlt,
+  FaChevronRight,
+  FaChevronLeft,
+} from "react-icons/fa";
 import "./BookAppointment.css";
 import Base_Url from "../../../Baseurl/Baseurl";
 import axios from "axios";
@@ -9,7 +26,7 @@ const steps = [
   { label: "Select Specialty", icon: <FaUserMd /> },
   { label: "Choose Doctor", icon: <FaUserMd /> },
   { label: "Select Date & Time", icon: <FaCalendarAlt /> },
-  { label: "Confirm & Pay", icon: <FaCheckCircle /> }, // Updated label
+  { label: "Confirm & Pay", icon: <FaCheckCircle /> },
 ];
 
 export default function BookAppointment() {
@@ -30,7 +47,7 @@ export default function BookAppointment() {
   const [bookingProcessing, setBookingProcessing] = useState(false);
   const [bookingSuccess, setBookingSuccess] = useState(false);
   const [appointmentData, setAppointmentData] = useState(null);
-  const [paymentData, setPaymentData] = useState(null); // ✅ ADDED
+  const [paymentData, setPaymentData] = useState(null);
 
   // ✅ FETCH SPECIALTIES — STEP 1
   useEffect(() => {
@@ -39,7 +56,7 @@ export default function BookAppointment() {
         const response = await axios.get(`${Base_Url}/doctor/specialist`);
         const apiData = response.data;
 
-        const transformed = apiData.map(item => {
+        const transformed = apiData.map((item) => {
           let name = item.specialty
             .replace("logist", "logy")
             .replace("Neurologists", "Neurology")
@@ -85,11 +102,13 @@ export default function BookAppointment() {
           .replace("Pulmonology", "Pulmonologist")
           .replace("Oncology", "Oncologist");
 
-        const response = await axios.get(`${Base_Url}/doctor/specialist/doctordata/${apiSpecialty}`);
+        const response = await axios.get(
+          `${Base_Url}/doctor/specialist/doctordata/${apiSpecialty}`
+        );
 
         const { doctors: apiDoctors } = response.data;
 
-        const transformedDoctors = apiDoctors.map(doc => ({
+        const transformedDoctors = apiDoctors.map((doc) => ({
           _id: doc._id,
           name: doc.name,
           profile: doc.profile,
@@ -125,10 +144,10 @@ export default function BookAppointment() {
 
       try {
         const response = await axios.get(`${Base_Url}/slot`, {
-          params: { doctorId: selectedDoctor._id }
+          params: { doctorId: selectedDoctor._id },
         });
 
-        const availableSlots = response.data.filter(slot => !slot.isBooked);
+        const availableSlots = response.data.filter((slot) => !slot.isBooked);
 
         const grouped = availableSlots.reduce((acc, slot) => {
           const dateStr = new Date(slot.date).toDateString();
@@ -150,7 +169,7 @@ export default function BookAppointment() {
     fetchSlots();
   }, [step, selectedDoctor]);
 
-  const filteredSpecialties = specialties.filter(spec =>
+  const filteredSpecialties = specialties.filter((spec) =>
     spec.name.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
@@ -202,40 +221,64 @@ export default function BookAppointment() {
       }
 
       const patientId = user._id;
-      const paymentAmount = selectedDoctor.fee ? parseInt(selectedDoctor.fee) + 25 : 25;
+      const paymentAmount = selectedDoctor.fee
+        ? parseInt(selectedDoctor.fee) + 25
+        : 25;
 
-      // ✅ GENERATE APPOINTMENT ID ON FRONTEND
-      const appointmentId = "APP-" + Date.now().toString(36).toUpperCase() + Math.random().toString(36).substr(2, 4);
+      console.log("🚀 Creating appointment with:", {
+        patientId,
+        doctorId: selectedDoctor._id,
+        slotId: selectedSlot._id,
+        reason: notes || "No reason provided",
+      });
 
       // 🚀 STEP 1: CREATE APPOINTMENT
-      await axios.post(`${Base_Url}/appointment`, {
+      const appointmentResponse = await axios.post(`${Base_Url}/appointment`, {
         patientId,
         doctorId: selectedDoctor._id,
         reason: notes || "No reason provided",
         slotId: selectedSlot._id,
-        appointmentId,
         status: "pending",
       });
 
-      // ✅ Save appointment data
+      const createdAppointment = appointmentResponse.data;
+      console.log("✅ Appointment created:", createdAppointment);
+
+      // ✅ Validate that backend returned _id
+      if (!createdAppointment || !createdAppointment._id) {
+        throw new Error(
+          "Appointment creation failed. No _id returned from server."
+        );
+      }
+
+      // ✅ Save the REAL MongoDB _id returned by backend
       setAppointmentData({
-        appointmentId,
+        _id: createdAppointment._id,
         patientId,
         doctorId: selectedDoctor._id,
         slotId: selectedSlot._id,
+      });
+
+      console.log("💳 Processing payment with:", {
+        patientId,
+        doctorId: selectedDoctor._id,
+        appointmentId: createdAppointment._id,
+        paymentAmount,
       });
 
       // 🚀 STEP 2: PROCESS PAYMENT → /payment
       const paymentResponse = await axios.post(`${Base_Url}/payment`, {
         patientId,
         doctorId: selectedDoctor._id,
-        appointmentId,
-        paymentAmount,
+        appointmentId: createdAppointment._id, // ✅ Real appointmentId from DB
+        paymentAmount, // ✅ e.g., 1500
       });
 
-      // ✅ Save payment data — exactly what you asked
+      console.log("✅ Payment success:", paymentResponse.data);
+
+      // ✅ Save payment data
       setPaymentData({
-        appointmentId,
+        appointmentId: createdAppointment._id,
         patientId,
         doctorId: selectedDoctor._id,
         paymentAmount,
@@ -244,18 +287,22 @@ export default function BookAppointment() {
       });
 
       setBookingSuccess(true);
-
     } catch (err) {
-      console.error("Payment failed:", err.response?.data || err.message);
+      console.error("🚨 Payment process FAILED:", err.response?.data || err.message || err);
 
-      if (err.response && err.response.status === 400) {
-        alert("Invalid request: " + (err.response.data.message || "Check details."));
-      } else if (err.response && err.response.status === 401) {
+      // Temporary: Show exact error for debugging
+      alert("Error: " + (err.response?.data?.message || err.message || "Unknown error"));
+
+      if (err.response?.status === 400) {
+        alert(
+          "Invalid request: " + (err.response.data.message || "Check details.")
+        );
+      } else if (err.response?.status === 401) {
         alert("Unauthorized: Please log in again.");
-      } else if (err.response && err.response.status === 500) {
+      } else if (err.response?.status === 500) {
         alert("Server error. Try again later.");
       } else {
-        alert("Payment failed. Please try again.");
+        alert("Payment failed. Please try again. Error: " + (err.message || "Unknown"));
       }
     } finally {
       setBookingProcessing(false);
@@ -273,15 +320,22 @@ export default function BookAppointment() {
               {steps.map((s, idx) => (
                 <div key={s.label} className="d-flex align-items-center">
                   <div
-                    className={`book-step-circle ${step === idx ? "active" : step > idx ? "done" : ""}`}
+                    className={`book-step-circle ${
+                      step === idx ? "active" : step > idx ? "done" : ""
+                    }`}
                   >
                     {step > idx ? <FaCheckCircle color="#fff" /> : s.icon}
                   </div>
-                  <div className="ms-2 fw-bold" style={{ color: step === idx ? "#FF6A00" : "#bbb" }}>
+                  <div
+                    className="ms-2 fw-bold"
+                    style={{ color: step === idx ? "#FF6A00" : "#bbb" }}
+                  >
                     {s.label}
                   </div>
                   {idx < steps.length - 1 && (
-                    <div className="mx-2" style={{ fontSize: "1.5em", color: "#bbb" }}>›</div>
+                    <div className="mx-2" style={{ fontSize: "1.5em", color: "#bbb" }}>
+                      ›
+                    </div>
                   )}
                 </div>
               ))}
@@ -317,7 +371,9 @@ export default function BookAppointment() {
                   filteredSpecialties.map((spec) => (
                     <Col xs={12} md={4} lg={3} className="mb-3" key={spec.name}>
                       <Card
-                        className={`book-specialty-card ${selectedSpecialty === spec.name ? "selected" : ""}`}
+                        className={`book-specialty-card ${
+                          selectedSpecialty === spec.name ? "selected" : ""
+                        }`}
                         onClick={() => setSelectedSpecialty(spec.name)}
                       >
                         <Card.Body>
@@ -326,7 +382,10 @@ export default function BookAppointment() {
                               <FaUserMd color="#fff" />
                             </div>
                             <div className="ms-auto text-end">
-                              <span className="fw-bold" style={{ color: "#FF6A00" }}>
+                              <span
+                                className="fw-bold"
+                                style={{ color: "#FF6A00" }}
+                              >
                                 {spec.count} doctors available
                               </span>
                             </div>
@@ -342,25 +401,15 @@ export default function BookAppointment() {
                   </div>
                 )}
               </Row>
-              
             )}
-            
           </>
-          
         )}
-        
-
 
         {/* Step 2: Choose Doctor */}
-        
         {step === 1 && (
-          
           <>
-          
-            <h4 className="mb-3 mt-4 fw-bold">Available Docto
-              rs</h4>
+            <h4 className="mb-3 mt-4 fw-bold">Available Doctors</h4>
             {selectedSpecialty && (
-              
               <div className="mb-2 text-muted">{selectedSpecialty} Specialists</div>
             )}
 
@@ -377,40 +426,47 @@ export default function BookAppointment() {
               doctors.map((doc) => (
                 <Card
                   key={doc._id}
-                  className={`book-doctor-card mb-3 ${selectedDoctor && selectedDoctor._id === doc._id ? "selected" : ""}`}
+                  className={`book-doctor-card mb-3 ${
+                    selectedDoctor && selectedDoctor._id === doc._id
+                      ? "selected"
+                      : ""
+                  }`}
                   onClick={() => setSelectedDoctor(doc)}
                 >
                   <Card.Body>
                     <Row>
                       <Col xs={2} className="d-flex align-items-center justify-content-center">
-                        <div className="book-doctor-avatar" style={{ position: 'relative', width: '50px', height: '50px' }}>
+                        <div
+                          className="book-doctor-avatar"
+                          style={{ position: "relative", width: "50px", height: "50px" }}
+                        >
                           {doc.profile && doc.profile.trim() !== "" ? (
                             <img
                               src={doc.profile}
                               alt={doc.name}
                               style={{
-                                width: '100%',
-                                height: '100%',
-                                borderRadius: '50%',
-                                objectFit: 'cover',
-                                border: '2px solid #FF6A00'
+                                width: "100%",
+                                height: "100%",
+                                borderRadius: "50%",
+                                objectFit: "cover",
+                                border: "2px solid #FF6A00",
                               }}
                               onError={(e) => {
-                                e.target.style.display = 'none';
-                                e.target.nextSibling.style.display = 'flex';
+                                e.target.style.display = "none";
+                                e.target.nextSibling.style.display = "flex";
                               }}
                             />
                           ) : null}
                           {!doc.profile || doc.profile.trim() === "" ? (
                             <div
                               style={{
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                width: '100%',
-                                height: '100%',
-                                borderRadius: '50%',
-                                background: '#FF6A00',
+                                display: "flex",
+                                alignItems: "center",
+                                justifyContent: "center",
+                                width: "100%",
+                                height: "100%",
+                                borderRadius: "50%",
+                                background: "#FF6A00",
                               }}
                             >
                               <FaUserMd size={28} color="#fff" />
@@ -418,14 +474,14 @@ export default function BookAppointment() {
                           ) : (
                             <div
                               style={{
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                width: '100%',
-                                height: '100%',
-                                borderRadius: '50%',
-                                background: '#FF6A00',
-                                position: 'absolute',
+                                display: "flex",
+                                alignItems: "center",
+                                justifyContent: "center",
+                                width: "100%",
+                                height: "100%",
+                                borderRadius: "50%",
+                                background: "#FF6A00",
+                                position: "absolute",
                                 top: 0,
                                 left: 0,
                               }}
@@ -446,13 +502,16 @@ export default function BookAppointment() {
                         )}
                         {(doc.openingTime || doc.closingTime) && (
                           <div className="text-muted">
-                            <strong>Available:</strong> {doc.openingTime || "—"} to {doc.closingTime || "—"}
+                            <strong>Available:</strong> {doc.openingTime || "—"} to{" "}
+                            {doc.closingTime || "—"}
                           </div>
                         )}
                         {doc.gender && (
                           <div className="text-muted small">
                             <strong>Gender:</strong> {doc.gender}
-                            {doc.licenseNo && <> • <strong>License:</strong> {doc.licenseNo}</>}
+                            {doc.licenseNo && (
+                              <> • <strong>License:</strong> {doc.licenseNo}</>
+                            )}
                           </div>
                         )}
                       </Col>
@@ -461,7 +520,9 @@ export default function BookAppointment() {
                         {doc.fee ? (
                           <>
                             <div className="text-muted small">Consultation Fee</div>
-                            <div className="fw-bold" style={{ color: "#FF6A00" }}>${doc.fee}</div>
+                            <div className="fw-bold" style={{ color: "#FF6A00" }}>
+                              ${doc.fee}
+                            </div>
                           </>
                         ) : (
                           <>
@@ -475,7 +536,9 @@ export default function BookAppointment() {
                 </Card>
               ))
             ) : (
-              <div className="alert alert-info text-center">No doctors available for this specialty.</div>
+              <div className="alert alert-info text-center">
+                No doctors available for this specialty.
+              </div>
             )}
           </>
         )}
@@ -486,29 +549,32 @@ export default function BookAppointment() {
             <h4 className="mb-3 mt-4 fw-bold">Select Date & Time</h4>
             <Card className="mb-4">
               <Card.Body className="d-flex align-items-center">
-                <div className="book-doctor-avatar" style={{ position: 'relative', width: '50px', height: '50px' }}>
+                <div
+                  className="book-doctor-avatar"
+                  style={{ position: "relative", width: "50px", height: "50px" }}
+                >
                   {selectedDoctor.profile && selectedDoctor.profile.trim() !== "" ? (
                     <img
                       src={selectedDoctor.profile}
                       alt={selectedDoctor.name}
                       style={{
-                        width: '100%',
-                        height: '100%',
-                        borderRadius: '50%',
-                        objectFit: 'cover',
-                        border: '2px solid #FF6A00'
+                        width: "100%",
+                        height: "100%",
+                        borderRadius: "50%",
+                        objectFit: "cover",
+                        border: "2px solid #FF6A00",
                       }}
                     />
                   ) : (
                     <div
                       style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        width: '100%',
-                        height: '100%',
-                        borderRadius: '50%',
-                        background: '#FF6A00',
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        width: "100%",
+                        height: "100%",
+                        borderRadius: "50%",
+                        background: "#FF6A00",
                       }}
                     >
                       <FaUserMd size={28} color="#fff" />
@@ -536,8 +602,8 @@ export default function BookAppointment() {
             ) : Object.keys(slots).length > 0 ? (
               Object.entries(slots).map(([dateStr, daySlots]) => {
                 const dateObj = new Date(daySlots[0].date);
-                const options = { weekday: 'long', day: 'numeric', month: 'short' };
-                const formattedDate = dateObj.toLocaleDateString('en-US', options);
+                const options = { weekday: "long", day: "numeric", month: "short" };
+                const formattedDate = dateObj.toLocaleDateString("en-US", options);
                 const isToday = dateObj.toDateString() === new Date().toDateString();
 
                 return (
@@ -549,7 +615,9 @@ export default function BookAppointment() {
                       {daySlots.map((slot) => (
                         <Button
                           key={slot._id}
-                          variant={selectedSlot?._id === slot._id ? "primary" : "outline-secondary"}
+                          variant={
+                            selectedSlot?._id === slot._id ? "primary" : "outline-secondary"
+                          }
                           style={{
                             background: selectedSlot?._id === slot._id ? "#FF6A00" : "#fff",
                             color: selectedSlot?._id === slot._id ? "#fff" : "#333",
@@ -566,13 +634,17 @@ export default function BookAppointment() {
                 );
               })
             ) : (
-              <div className="alert alert-info text-center">No available slots for this doctor.</div>
+              <div className="alert alert-info text-center">
+                No available slots for this doctor.
+              </div>
             )}
 
             {selectedSlot && (
               <Card className="mt-4">
                 <Card.Body>
-                  <div className="fw-bold mb-2" style={{ color: "#4caf50" }}>Appointment Summary</div>
+                  <div className="fw-bold mb-2" style={{ color: "#4caf50" }}>
+                    Appointment Summary
+                  </div>
                   <Row>
                     <Col>Date</Col>
                     <Col>Time</Col>
@@ -580,17 +652,21 @@ export default function BookAppointment() {
                   </Row>
                   <Row>
                     <Col>
-                      {new Date(selectedSlot.date).toLocaleDateString('en-US', {
-                        weekday: 'short',
-                        month: 'short',
-                        day: 'numeric'
+                      {new Date(selectedSlot.date).toLocaleDateString("en-US", {
+                        weekday: "short",
+                        month: "short",
+                        day: "numeric",
                       })}
                     </Col>
                     <Col>{selectedSlot.startTime}</Col>
                     <Col>
                       {(() => {
-                        const start = new Date(`1970-01-01T${selectedSlot.startTime.replace(' ', '').toLowerCase()}`);
-                        const end = new Date(`1970-01-01T${selectedSlot.endTime.replace(' ', '').toLowerCase()}`);
+                        const start = new Date(
+                          `1970-01-01T${selectedSlot.startTime.replace(" ", "").toLowerCase()}`
+                        );
+                        const end = new Date(
+                          `1970-01-01T${selectedSlot.endTime.replace(" ", "").toLowerCase()}`
+                        );
                         const diff = (end - start) / (1000 * 60);
                         return `${diff} minutes`;
                       })()}
@@ -609,32 +685,37 @@ export default function BookAppointment() {
             <div className="mb-2 text-muted">Review your appointment details</div>
             <Card className="mb-4">
               <Card.Body>
-                <div className="fw-bold mb-2" style={{ color: "#FF6A00" }}>Appointment Details</div>
+                <div className="fw-bold mb-2" style={{ color: "#FF6A00" }}>
+                  Appointment Details
+                </div>
                 <Row>
                   <Col xs={2}>
-                    <div className="book-doctor-avatar" style={{ position: 'relative', width: '50px', height: '50px' }}>
+                    <div
+                      className="book-doctor-avatar"
+                      style={{ position: "relative", width: "50px", height: "50px" }}
+                    >
                       {selectedDoctor.profile && selectedDoctor.profile.trim() !== "" ? (
                         <img
                           src={selectedDoctor.profile}
                           alt={selectedDoctor.name}
                           style={{
-                            width: '100%',
-                            height: '100%',
-                            borderRadius: '50%',
-                            objectFit: 'cover',
-                            border: '2px solid #FF6A00'
+                            width: "100%",
+                            height: "100%",
+                            borderRadius: "50%",
+                            objectFit: "cover",
+                            border: "2px solid #FF6A00",
                           }}
                         />
                       ) : (
                         <div
                           style={{
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            width: '100%',
-                            height: '100%',
-                            borderRadius: '50%',
-                            background: '#FF6A00',
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            width: "100%",
+                            height: "100%",
+                            borderRadius: "50%",
+                            background: "#FF6A00",
                           }}
                         >
                           <FaUserMd size={28} color="#fff" />
@@ -655,7 +736,9 @@ export default function BookAppointment() {
                     {selectedDoctor.fee ? (
                       <>
                         <div className="text-muted small">Consultation Fee</div>
-                        <div className="fw-bold" style={{ color: "#FF6A00" }}>${selectedDoctor.fee}</div>
+                        <div className="fw-bold" style={{ color: "#FF6A00" }}>
+                          ${selectedDoctor.fee}
+                        </div>
                       </>
                     ) : (
                       <div className="text-muted">Fee not specified</div>
@@ -666,33 +749,39 @@ export default function BookAppointment() {
                 <Row className="mt-3">
                   <Col>Date</Col>
                   <Col className="fw-bold">
-                    {new Date(selectedSlot.date).toLocaleDateString('en-US', {
-                      weekday: 'long',
-                      year: 'numeric',
-                      month: 'long',
-                      day: 'numeric'
+                    {new Date(selectedSlot.date).toLocaleDateString("en-US", {
+                      weekday: "long",
+                      year: "numeric",
+                      month: "long",
+                      day: "numeric",
                     })}
                   </Col>
                   <Col>Time</Col>
                   <Col className="fw-bold">{selectedSlot.startTime}</Col>
                   <Col>Type</Col>
-                  <Col className="fw-bold" style={{ color: "#4caf50" }}>Video Call</Col>
+                  <Col className="fw-bold" style={{ color: "#4caf50" }}>
+                    Video Call
+                  </Col>
                 </Row>
               </Card.Body>
             </Card>
 
             <Card className="mb-4">
               <Card.Body>
-                <div className="fw-bold mb-2" style={{ color: "#FF6A00" }}>Additional Notes (Optional)</div>
+                <div className="fw-bold mb-2" style={{ color: "#FF6A00" }}>
+                  Additional Notes (Optional)
+                </div>
                 <Form.Control
                   as="textarea"
                   rows={3}
                   maxLength={500}
                   placeholder="Describe your symptoms or reason for visit..."
                   value={notes}
-                  onChange={e => setNotes(e.target.value)}
+                  onChange={(e) => setNotes(e.target.value)}
                 />
-                <div className="text-muted mt-1" style={{ fontSize: "0.85em" }}>{notes.length}/500 characters</div>
+                <div className="text-muted mt-1" style={{ fontSize: "0.85em" }}>
+                  {notes.length}/500 characters
+                </div>
               </Card.Body>
             </Card>
           </>
@@ -700,11 +789,7 @@ export default function BookAppointment() {
 
         {/* Navigation Buttons */}
         <div className="d-flex justify-content-between mt-4">
-          <Button
-            variant="outline-secondary"
-            onClick={handleBack}
-            disabled={step === 0}
-          >
+          <Button variant="outline-secondary" onClick={handleBack} disabled={step === 0}>
             <FaChevronLeft /> Back
           </Button>
           <Button
@@ -729,21 +814,26 @@ export default function BookAppointment() {
         size="lg"
       >
         <Modal.Header closeButton>
-          <Modal.Title>Complete Payment</Modal.Title> {/* Updated */}
+          <Modal.Title>Complete Payment</Modal.Title>
         </Modal.Header>
         <Modal.Body>
           {!bookingSuccess ? (
             selectedDoctor && selectedSlot ? (
               <>
                 <div className="text-center mb-4">
-                  <h4>Pay ${selectedDoctor.fee ? parseInt(selectedDoctor.fee) + 25 : 25} to {selectedDoctor.name}</h4>
+                  <h4>
+                    Pay $
+                    {selectedDoctor.fee ? parseInt(selectedDoctor.fee) + 25 : 25} to{" "}
+                    {selectedDoctor.name}
+                  </h4>
                   <p className="text-muted">
-                    {new Date(selectedSlot.date).toLocaleDateString('en-US', {
-                      weekday: 'long',
-                      year: 'numeric',
-                      month: 'long',
-                      day: 'numeric'
-                    })} at {selectedSlot.startTime}
+                    {new Date(selectedSlot.date).toLocaleDateString("en-US", {
+                      weekday: "long",
+                      year: "numeric",
+                      month: "long",
+                      day: "numeric",
+                    })}{" "}
+                    at {selectedSlot.startTime}
                   </p>
                 </div>
 
@@ -757,11 +847,11 @@ export default function BookAppointment() {
                       <Col>Date</Col>
                       <Col>
                         {selectedSlot?.date
-                          ? new Date(selectedSlot.date).toLocaleDateString('en-US', {
-                              weekday: 'long',
-                              year: 'numeric',
-                              month: 'long',
-                              day: 'numeric'
+                          ? new Date(selectedSlot.date).toLocaleDateString("en-US", {
+                              weekday: "long",
+                              year: "numeric",
+                              month: "long",
+                              day: "numeric",
                             })
                           : "N/A"}
                       </Col>
@@ -782,22 +872,28 @@ export default function BookAppointment() {
                     variant="success"
                     size="lg"
                     disabled={bookingProcessing}
-                    onClick={handlePayment} // ✅ Updated function name
+                    onClick={handlePayment}
                   >
                     {bookingProcessing ? (
                       <>
                         <Spinner size="sm" /> Processing...
                       </>
                     ) : (
-                      "Pay Now" // ✅ Updated text
+                      "Pay Now"
                     )}
                   </Button>
                 </div>
               </>
             ) : (
               <div className="text-center py-5">
-                <div className="text-danger">⚠️ Doctor or time slot not selected. Please go back and complete your selection.</div>
-                <Button variant="secondary" className="mt-3" onClick={() => setShowConfirmModal(false)}>
+                <div className="text-danger">
+                  ⚠️ Doctor or time slot not selected. Please go back and complete your selection.
+                </div>
+                <Button
+                  variant="secondary"
+                  className="mt-3"
+                  onClick={() => setShowConfirmModal(false)}
+                >
                   Close
                 </Button>
               </div>
@@ -817,7 +913,7 @@ export default function BookAppointment() {
                       <div className="fw-bold mb-3">Appointment Details</div>
                       <Row>
                         <Col>Appointment ID</Col>
-                        <Col className="fw-bold text-primary">{appointmentData.appointmentId}</Col>
+                        <Col className="fw-bold text-primary">{appointmentData._id}</Col>
                       </Row>
                       <Row>
                         <Col>Patient ID</Col>
@@ -835,11 +931,11 @@ export default function BookAppointment() {
                         <Col>Date</Col>
                         <Col>
                           {selectedSlot?.date
-                            ? new Date(selectedSlot.date).toLocaleDateString('en-US', {
-                                weekday: 'long',
-                                year: 'numeric',
-                                month: 'long',
-                                day: 'numeric'
+                            ? new Date(selectedSlot.date).toLocaleDateString("en-US", {
+                                weekday: "long",
+                                year: "numeric",
+                                month: "long",
+                                day: "numeric",
                               })
                             : "N/A"}
                         </Col>
@@ -852,10 +948,14 @@ export default function BookAppointment() {
                       {paymentData && (
                         <>
                           <hr />
-                          <div className="fw-bold mb-2" style={{ color: "#28a745" }}>Payment Details</div>
+                          <div className="fw-bold mb-2" style={{ color: "#28a745" }}>
+                            Payment Details
+                          </div>
                           <Row>
                             <Col>Payment Amount</Col>
-                            <Col className="fw-bold" style={{ color: "#FF6A00" }}>${paymentData.paymentAmount}</Col>
+                            <Col className="fw-bold" style={{ color: "#FF6A00" }}>
+                              ${paymentData.paymentAmount}
+                            </Col>
                           </Row>
                           <Row>
                             <Col>Transaction ID</Col>
@@ -863,7 +963,9 @@ export default function BookAppointment() {
                           </Row>
                           <Row>
                             <Col>Status</Col>
-                            <Col className="fw-bold" style={{ color: "#28a745" }}>SUCCESS</Col>
+                            <Col className="fw-bold" style={{ color: "#28a745" }}>
+                              SUCCESS
+                            </Col>
                           </Row>
                         </>
                       )}
