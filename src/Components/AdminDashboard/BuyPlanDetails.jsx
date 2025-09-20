@@ -2,32 +2,36 @@ import React, { useState } from 'react';
 
 const BuyPlanDetails = () => {
   // Sample data - replace with your actual data source
-  const planData = [
+  const [planData, setPlanData] = useState([
     {
       fullName: "John Smith",
       email: "john.smith@example.com",
       place: "New York",
-      planType: "Premium"
+      planType: "Premium",
+      status: "Pending"
     },
     {
       fullName: "Sarah Johnson",
       email: "sarah.j@example.com",
       place: "Los Angeles",
-      planType: "Basic"
+      planType: "Basic",
+      status: "Approved"
     },
     {
       fullName: "Michael Chen",
       email: "m.chen@example.com",
       place: "San Francisco",
-      planType: "Enterprise"
+      planType: "Enterprise",
+      status: "Rejected"
     },
     {
       fullName: "Emma Williams",
       email: "emma.w@example.com",
       place: "Chicago",
-      planType: "Premium"
+      planType: "Premium",
+      status: "Pending"
     }
-  ];
+  ]);
 
   // State for sorting
   const [sortConfig, setSortConfig] = useState({ key: null, direction: 'ascending' });
@@ -74,17 +78,18 @@ const BuyPlanDetails = () => {
       item.fullName.toLowerCase().includes(filter.toLowerCase()) ||
       item.email.toLowerCase().includes(filter.toLowerCase()) ||
       item.place.toLowerCase().includes(filter.toLowerCase()) ||
-      item.planType.toLowerCase().includes(filter.toLowerCase())
+      item.planType.toLowerCase().includes(filter.toLowerCase()) ||
+      item.status.toLowerCase().includes(filter.toLowerCase())
     );
   };
 
   // Function to export data as CSV
   const exportToCSV = () => {
-    const headers = ["Full Name", "Email", "Place", "Plan Type"];
+    const headers = ["Full Name", "Email", "Place", "Plan Type", "Status"];
     const csvContent = [
       headers.join(','),
       ...getFilteredData().map(item => 
-        [item.fullName, item.email, item.place, item.planType].join(',')
+        [item.fullName, item.email, item.place, item.planType, item.status].join(',')
       )
     ].join('\n');
 
@@ -137,10 +142,55 @@ const BuyPlanDetails = () => {
     }
   };
 
+  // Function to get status badge style
+  const getStatusBadgeStyle = (status) => {
+    const baseStyle = {
+      padding: '4px 10px',
+      borderRadius: '12px',
+      fontWeight: '500',
+      fontSize: '0.8rem',
+      textTransform: 'capitalize',
+      letterSpacing: '0.5px'
+    };
+
+    switch(status) {
+      case 'Approved':
+        return {
+          ...baseStyle,
+          backgroundColor: '#e8f5e9',
+          color: '#2e7d32',
+          border: '1px solid #a5d6a7'
+        };
+      case 'Rejected':
+        return {
+          ...baseStyle,
+          backgroundColor: '#ffebee',
+          color: '#c62828',
+          border: '1px solid #ef9a9a'
+        };
+      case 'Pending':
+        return {
+          ...baseStyle,
+          backgroundColor: '#fff8e1',
+          color: '#ff8f00',
+          border: '1px solid #ffe082'
+        };
+      default:
+        return baseStyle;
+    }
+  };
+
   // Function to get sort indicator
   const getSortIndicator = (key) => {
     if (sortConfig.key !== key) return null;
     return sortConfig.direction === 'ascending' ? ' ↑' : ' ↓';
+  };
+
+  // Function to handle status change
+  const handleStatusChange = (index, newStatus) => {
+    const updatedData = [...planData];
+    updatedData[index].status = newStatus;
+    setPlanData(updatedData);
   };
 
   // Get filtered and sorted data
@@ -167,7 +217,7 @@ const BuyPlanDetails = () => {
                 <input
                   type="text"
                   className="form-control border-start-0"
-                  placeholder="Search by name, email, place or plan type..."
+                  placeholder="Search by name, email, place, plan type or status..."
                   value={filter}
                   onChange={handleFilterChange}
                 />
@@ -237,6 +287,21 @@ const BuyPlanDetails = () => {
                   >
                     Plan Type{getSortIndicator('planType')}
                   </th>
+                  <th 
+                    scope="col" 
+                    className="py-3 px-4 clickable-header" 
+                    style={{ color: '#495057', fontWeight: '600', borderBottom: '2px solid #dee2e6', cursor: 'pointer' }}
+                    onClick={() => handleSort('status')}
+                  >
+                    Status{getSortIndicator('status')}
+                  </th>
+                  <th 
+                    scope="col" 
+                    className="py-3 px-4" 
+                    style={{ color: '#495057', fontWeight: '600', borderBottom: '2px solid #dee2e6' }}
+                  >
+                    Action
+                  </th>
                 </tr>
               </thead>
               <tbody>
@@ -277,11 +342,34 @@ const BuyPlanDetails = () => {
                           {plan.planType}
                         </span>
                       </td>
+                      <td className="py-3 px-4">
+                        <span style={getStatusBadgeStyle(plan.status)}>
+                          {plan.status}
+                        </span>
+                      </td>
+                      <td className="py-3 px-4">
+                        <div className="d-flex gap-2">
+                          <button 
+                            className="btn btn-sm btn-success"
+                            onClick={() => handleStatusChange(index, 'Approved')}
+                            disabled={plan.status === 'Approved'}
+                          >
+                            Approve
+                          </button>
+                          <button 
+                            className="btn btn-sm btn-danger"
+                            onClick={() => handleStatusChange(index, 'Rejected')}
+                            disabled={plan.status === 'Rejected'}
+                          >
+                            Reject
+                          </button>
+                        </div>
+                      </td>
                     </tr>
                   ))
                 ) : (
                   <tr>
-                    <td colSpan="4" className="text-center py-4">
+                    <td colSpan="6" className="text-center py-4">
                       <div className="text-muted">
                         <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" className="bi bi-exclamation-circle mb-2" viewBox="0 0 16 16">
                           <path d="M8 15A7 7 0 1 1 8 1a7 7 0 0 1 0 14zm0 1A8 8 0 1 0 8 0a8 8 0 0 0 0 16z"/>
