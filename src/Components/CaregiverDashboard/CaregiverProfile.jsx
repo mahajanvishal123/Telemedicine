@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import axios from 'axios';
+import Swal from 'sweetalert2';
 import {
   FaCamera, FaUser, FaEnvelope, FaLock, FaVenusMars, FaCalendarAlt,
   FaIdCard, FaSave, FaCheck, FaTimes, FaEye, FaDownload
@@ -20,7 +21,12 @@ const CaregiverProfile = () => {
     profile: "",
     age: "",
     dob: "",
+<<<<<<< HEAD
     certificate: "", // Holds data URL or server URL
+=======
+    certificate: "",       // URL or empty
+    certificateName: "",   // ORIGINAL file name we want to show/persist
+>>>>>>> 758afd2789adcc6cf93d30d1d25f2d672233ed62
     bloodGroup: ""
   });
 
@@ -38,6 +44,35 @@ const CaregiverProfile = () => {
   // ---------- helpers ----------
   const safeJSON = (txt) => { try { return JSON.parse(txt); } catch { return null; } };
 
+<<<<<<< HEAD
+=======
+  // keep a tiny map of original names per caregiver in LS
+  const CERT_MAP_KEY = 'cg_cert_names';
+  const readCertNameMap = () => safeJSON(localStorage.getItem(CERT_MAP_KEY)) || {};
+  const writeCertNameMap = (id, name) => {
+    const m = readCertNameMap();
+    if (id) {
+      if (name) m[id] = name;
+      else delete m[id];
+      localStorage.setItem(CERT_MAP_KEY, JSON.stringify(m));
+    }
+  };
+
+  // derive a friendly name from a URL as a last resort
+  const nameFromUrl = (url) => {
+    if (!url) return "";
+    try {
+      const last = decodeURIComponent(url.split('/').pop().split('?')[0]);
+      // strip very long Cloudinary public-ids (optional)
+      if (!last || last.length > 80) return "";
+      return last;
+    } catch {
+      return "";
+    }
+  };
+
+  // login payload usually stored as 'user' with { token, role, user: {...} }
+>>>>>>> 758afd2789adcc6cf93d30d1d25f2d672233ed62
   const loginBlob = safeJSON(localStorage.getItem('user')) || {};
   const accessToken =
     localStorage.getItem('accessToken') ||
@@ -57,8 +92,15 @@ const CaregiverProfile = () => {
   const resolveCaregiverId = () => {
     const params = new URLSearchParams(window.location.search);
     const fromQuery = params.get('id');
+<<<<<<< HEAD
     const fromUserObj = loginBlob?.user?._id || loginBlob?._id || null;
     const fromJwt = decodeJwtId();
+=======
+
+    const fromUserObj = loginBlob?.user?._id || loginBlob?._id || null;
+    const fromJwt = decodeJwtId();
+
+>>>>>>> 758afd2789adcc6cf93d30d1d25f2d672233ed62
     const cachedProfile = safeJSON(localStorage.getItem('caregiverProfile')) || {};
     const fromCache = cachedProfile?._id || null;
 
@@ -69,6 +111,7 @@ const CaregiverProfile = () => {
       fromCache ||
       null;
 
+<<<<<<< HEAD
     if (fromUserObj && resolved !== fromUserObj) {
       localStorage.setItem('caregiverId', fromUserObj);
     } else if (fromJwt && resolved !== fromJwt) {
@@ -77,6 +120,9 @@ const CaregiverProfile = () => {
       localStorage.setItem('caregiverId', resolved);
     }
 
+=======
+    if (resolved) localStorage.setItem('caregiverId', resolved);
+>>>>>>> 758afd2789adcc6cf93d30d1d25f2d672233ed62
     return resolved;
   };
 
@@ -101,6 +147,11 @@ const CaregiverProfile = () => {
     const d = Array.isArray(doc) ? doc.find(x => x?._id === id) : doc;
     if (!d || typeof d !== 'object') throw new Error('Invalid caregiver payload');
 
+    // Pull a remembered original name if API doesn't send certificateName
+    const rememberedName = readCertNameMap()[id] || "";
+    const derivedName = nameFromUrl(trimStr(d?.certificate));
+    const finalCertName = trimStr(d?.certificateName) || rememberedName || derivedName || '';
+
     const mapped = {
       _id: d?._id || id,
       name: trimStr(d?.name) || '',
@@ -110,15 +161,27 @@ const CaregiverProfile = () => {
       profile: trimStr(d?.profile) || '',
       age: trimStr(d?.age) || '',
       dob: normalizeDobForInput(d?.dob),
+<<<<<<< HEAD
       certificate: trimStr(d?.certificate) || '', // Assume it's URL or data URL from server
+=======
+      certificate: trimStr(d?.certificate) || '',
+      certificateName: finalCertName,
+>>>>>>> 758afd2789adcc6cf93d30d1d25f2d672233ed62
       bloodGroup: trimStr(d?.bloodGroup) || ''
     };
 
     setCaregiver(mapped);
     if (mapped.profile) setProfileImage(mapped.profile);
 
+<<<<<<< HEAD
+=======
+    // persist to LS for refresh safety
+>>>>>>> 758afd2789adcc6cf93d30d1d25f2d672233ed62
     localStorage.setItem('caregiverId', mapped._id);
     localStorage.setItem('caregiverProfile', JSON.stringify(mapped));
+
+    // also refresh our name map if API now has a name
+    if (finalCertName) writeCertNameMap(mapped._id, finalCertName);
   };
 
   // ---------- GET by ID ----------
@@ -139,6 +202,10 @@ const CaregiverProfile = () => {
     };
 
     try {
+<<<<<<< HEAD
+=======
+      // Try clean by-id endpoint
+>>>>>>> 758afd2789adcc6cf93d30d1d25f2d672233ed62
       try {
         const res1 = await axios.get(`${BASE_URL}/caregiver/${CAREGIVER_ID}`, { headers });
         const d1 = pickFromAnyShapeById(res1, CAREGIVER_ID) || res1?.data;
@@ -146,8 +213,12 @@ const CaregiverProfile = () => {
           mapAndSetByDoc((Array.isArray(d1) ? pickFromAnyShapeById({ data: d1 }, CAREGIVER_ID) : d1), CAREGIVER_ID);
           return;
         }
-      } catch { /* continue fallback */ }
+      } catch { /* continue */ }
 
+<<<<<<< HEAD
+=======
+      // Fallback query
+>>>>>>> 758afd2789adcc6cf93d30d1d25f2d672233ed62
       const res2 = await axios.get(`${BASE_URL}/caregiver?caregiverId=${CAREGIVER_ID}`, { headers });
       const d2 = pickFromAnyShapeById(res2, CAREGIVER_ID) || res2?.data;
       if (!d2) throw new Error('Caregiver not found');
@@ -206,6 +277,14 @@ const CaregiverProfile = () => {
     const useMultipart = !!certificateFile || isDataUrlProfile;
 
     try {
+      Swal.fire({
+        title: 'Updating Profile',
+        text: 'Please wait while we update your profile...',
+        icon: 'info',
+        allowOutsideClick: false,
+        didOpen: () => Swal.showLoading(),
+      });
+
       let res;
 
       if (useMultipart) {
@@ -220,15 +299,16 @@ const CaregiverProfile = () => {
         form.append('dob', caregiver.dob || '');
         form.append('bloodGroup', caregiver.bloodGroup || '');
 
+        // profile
         if (isDataUrlProfile) {
           const blob = dataURLtoBlob(profileImage || caregiver.profile);
           if (blob) form.append('profile', blob, 'profile.jpg');
-        } else if (caregiver.profile) {
-          form.append('profile', caregiver.profile);
         }
 
+        // certificate: send file if picked, otherwise keep server-side as is (do not send URL string here)
         if (certificateFile) {
           form.append('certificate', certificateFile, certificateFile.name);
+<<<<<<< HEAD
         } else if (caregiver.certificate) {
           if (caregiver.certificate.startsWith('data:')) {
             const certBlob = dataURLtoBlob(caregiver.certificate);
@@ -239,7 +319,15 @@ const CaregiverProfile = () => {
           } else {
             form.append('certificate', caregiver.certificate);
           }
+=======
+>>>>>>> 758afd2789adcc6cf93d30d1d25f2d672233ed62
         }
+
+        // send original name always (best effort)
+        form.append(
+          'certificateName',
+          certificateFile ? certificateFile.name : (caregiver.certificateName || '')
+        );
 
         res = await axios.put(url, form, {
           headers: {
@@ -248,6 +336,7 @@ const CaregiverProfile = () => {
           },
         });
       } else {
+        // JSON update (no new files)
         const payload = {
           name: caregiver.name || '',
           email: caregiver.email || '',
@@ -255,7 +344,9 @@ const CaregiverProfile = () => {
           age: caregiver.age || '',
           dob: caregiver.dob || '',
           bloodGroup: caregiver.bloodGroup || '',
+          // keep existing certificate URL untouched
           certificate: caregiver.certificate || '',
+          certificateName: caregiver.certificateName || '',
           profile: caregiver.profile || '',
           ...(caregiver.password && caregiver.password.trim() !== '' ? { password: caregiver.password.trim() } : {}),
         };
@@ -272,6 +363,7 @@ const CaregiverProfile = () => {
       const updatedDoc = pickFromAnyShapeById(res, targetId) || res?.data || {};
       try {
         mapAndSetByDoc(updatedDoc, targetId);
+<<<<<<< HEAD
       } catch {}
 
       setIsSaving(false);
@@ -294,6 +386,51 @@ const CaregiverProfile = () => {
         text: err?.response?.data?.message || 'Failed to update profile. Please try again.',
         confirmButtonColor: '#F95918',
       });
+=======
+      } catch {
+        // if server didn't echo, at least persist the chosen name locally
+        const name = certificateFile?.name || caregiver.certificateName || '';
+        if (name) writeCertNameMap(targetId, name);
+        const patched = { ...caregiver, certificateName: name };
+        localStorage.setItem('caregiverProfile', JSON.stringify(patched));
+        setCaregiver(patched);
+      }
+
+      // persist chosen name to our local map (so refresh keeps it)
+      const latestName = certificateFile?.name || caregiver.certificateName || '';
+      if (latestName) writeCertNameMap(targetId, latestName);
+
+      setIsSaving(false);
+      setSaveSuccess(true);
+      setShowToast(true);
+
+      Swal.fire({
+        title: 'Success!',
+        text: 'Your profile has been updated successfully',
+        icon: 'success',
+        timer: 2000,
+        showConfirmButton: false
+      });
+
+      setTimeout(() => {
+        setShowToast(false);
+        setSaveSuccess(false);
+      }, 2500);
+    } catch (err) {
+      console.error('PUT caregiver (by id) failed:', err);
+      setIsSaving(false);
+      setSaveSuccess(false);
+      setShowToast(true);
+
+      Swal.fire({
+        title: 'Error!',
+        text: err?.response?.data?.message || err?.message || 'Failed to update profile',
+        icon: 'error',
+        confirmButtonText: 'OK'
+      });
+
+      setTimeout(() => setShowToast(false), 3500);
+>>>>>>> 758afd2789adcc6cf93d30d1d25f2d672233ed62
     }
   };
 
@@ -318,18 +455,34 @@ const CaregiverProfile = () => {
   const handleCertificateUpload = (e) => {
     const file = e.target.files?.[0];
     if (file) {
+      // ✅ DO NOT overwrite certificate URL with file.name
       setCertificateFile(file);
+<<<<<<< HEAD
 
       const reader = new FileReader();
       reader.onload = (event) => {
         setCaregiver(prev => ({ ...prev, certificate: event.target.result })); // Store data URL
       };
       reader.readAsDataURL(file);
+=======
+      setCaregiver(prev => ({
+        ...prev,
+        certificateName: file.name,  // keep the original name
+        // keep prev.certificate as-is (URL will come from server after upload)
+      }));
+>>>>>>> 758afd2789adcc6cf93d30d1d25f2d672233ed62
     }
   };
 
   const triggerProfileUpload = () => profileInputRef.current?.click();
   const triggerCertificateUpload = () => certificateInputRef.current?.click();
+
+  // A single, always-correct display name for the input
+  const certificateDisplayName =
+    (certificateFile && certificateFile.name) ||
+    caregiver.certificateName ||
+    nameFromUrl(caregiver.certificate) ||
+    "No file chosen";
 
   return (
     <div className="caregiver-profile-container py-4">
@@ -545,7 +698,11 @@ const CaregiverProfile = () => {
                               <input
                                 type="text"
                                 className="form-control"
+<<<<<<< HEAD
                                 value={caregiver.certificate ? "File uploaded" : "No file chosen"}
+=======
+                                value={certificateDisplayName}
+>>>>>>> 758afd2789adcc6cf93d30d1d25f2d672233ed62
                                 readOnly
                               />
                               <button
@@ -683,9 +840,38 @@ const CaregiverProfile = () => {
         .btn-save:hover:before { left:100%; }
         .btn-save:hover { background:#e04f15; transform: translateY(-2px); box-shadow:0 5px 15px rgba(249,89,24,.4); }
         .btn-save:disabled { background:#6c757d; }
+<<<<<<< HEAD
         .certificate-actions .btn {
           padding: 4px 10px;
           font-size: 13px;
+=======
+        .btn-choose-file { background:#F95918; color:white; border:1px solid #F95918; padding:8px 16px; border-radius:8px; font-weight:600; font-size:14px; transition:all .3s ease; position:relative; overflow:hidden; }
+        .btn-choose-file:before { content:''; position:absolute; top:0; left:-100%; width:100%; height:100%; background:linear-gradient(90deg,transparent,rgba(255,255,255,.4),transparent); transition:left .7s ease; }
+        .btn-choose-file:hover:before { left:100%; }
+        .btn-choose-file:hover { background:#e04f15; border-color:#e04f15; transform: translateY(-2px); box-shadow:0 5px 15px rgba(249,89,24,.4); }
+        .toast-container { z-index:1050; }
+        .toast { border-radius:8px; box-shadow:0 5px 15px rgba(0,0,0,0.1); }
+
+        /* 👁️ Password field styles */
+        .pw-wrapper { position: relative; }
+        .pw-input { padding-right: 44px; }
+        .pw-toggle {
+          position: absolute;
+          right: 12px;
+          top: 50%;
+          transform: translateY(-50%);
+          border: none;
+          background: transparent;
+          width: 36px;
+          height: 36px;
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          cursor: pointer;
+          font-size: 18px;
+          color: #6c757d;
+          border-radius: 6px;
+>>>>>>> 758afd2789adcc6cf93d30d1d25f2d672233ed62
         }
         .certificate-actions .btn i {
           font-size: 14px;
