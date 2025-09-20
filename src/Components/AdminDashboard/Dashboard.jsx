@@ -69,11 +69,7 @@ const Dashboard = () => {
       {/* Stats Cards Row 1 */}
       <div className="row">
         {/* Total Users */}
-<<<<<<< HEAD
         <div className="col-xl-4 col-md-6 mb-4">
-=======
-        <div className="col-xl-3 col-md-6 mb-4">
->>>>>>> 758afd2789adcc6cf93d30d1d25f2d672233ed62
           <div className="card border-left-warning shadow h-100 py-2">
             <div className="card-body">
               <div className="row no-gutters align-items-center">
@@ -91,11 +87,7 @@ const Dashboard = () => {
         </div>
 
         {/* Total Doctors */}
-<<<<<<< HEAD
         <div className="col-xl-4 col-md-6 mb-4">
-=======
-        <div className="col-xl-3 col-md-6 mb-4">
->>>>>>> 758afd2789adcc6cf93d30d1d25f2d672233ed62
           <Link to="/admin/doctor" style={{ textDecoration: "none" }}>
             <div className="card border-left-primary shadow h-100 py-2">
               <div className="card-body">
@@ -117,11 +109,7 @@ const Dashboard = () => {
         </div>
 
         {/* Total Patients */}
-<<<<<<< HEAD
         <div className="col-xl-4 col-md-6 mb-4">
-=======
-        <div className="col-xl-3 col-md-6 mb-4">
->>>>>>> 758afd2789adcc6cf93d30d1d25f2d672233ed62
           <Link to="/admin/patient" style={{ textDecoration: "none" }}>
             <div className="card border-left-success shadow h-100 py-2">
               <div className="card-body">
@@ -143,15 +131,10 @@ const Dashboard = () => {
         </div>
       </div>
 
-<<<<<<< HEAD
       {/* Stats Cards Row 2 */}
       <div className="row">
         {/* Total Caregivers */}
         <div className="col-xl-4 col-md-6 mb-4">
-=======
-        {/* Total Caregivers */}
-        <div className="col-xl-3 col-md-6 mb-4">
->>>>>>> 758afd2789adcc6cf93d30d1d25f2d672233ed62
           <Link to="/admin/caregiver" style={{ textDecoration: "none" }}>
             <div className="card border-left-info shadow h-100 py-2">
               <div className="card-body">
@@ -172,7 +155,6 @@ const Dashboard = () => {
           </Link>
         </div>
 
-<<<<<<< HEAD
         {/* Total Appointments (Static for now) */}
         <div className="col-xl-4 col-md-6 mb-4">
           <div className="card border-left-secondary shadow h-100 py-2">
@@ -195,25 +177,14 @@ const Dashboard = () => {
 
         {/* Total Revenue (Static for now) */}
         <div className="col-xl-4 col-md-6 mb-4">
-=======
-        {/* ✅ Total Earnings */}
-        <div className="col-xl-3 col-md-6 mb-4">
->>>>>>> 758afd2789adcc6cf93d30d1d25f2d672233ed62
           <div className="card border-left-danger shadow h-100 py-2">
             <div className="card-body">
               <div className="row no-gutters align-items-center">
                 <div className="col mr-2">
                   <div className="text-xs font-weight-bold text-danger text-uppercase mb-1">
-<<<<<<< HEAD
                     Total Revenue</div>
                   <div className="h5 mb-0 font-weight-bold text-gray-800">
                     {dashboardData.totalRevenue}
-=======
-                    Total Earnings
-                  </div>
-                  <div className="h5 mb-0 font-weight-bold text-gray-800">
-                    ${Number(dashboardData.totalEarnings ?? 0).toLocaleString()}
->>>>>>> 758afd2789adcc6cf93d30d1d25f2d672233ed62
                   </div>
                 </div>
                 <div className="col-auto">
@@ -223,10 +194,6 @@ const Dashboard = () => {
             </div>
           </div>
         </div>
-<<<<<<< HEAD
-=======
-
->>>>>>> 758afd2789adcc6cf93d30d1d25f2d672233ed62
       </div>
 
       {/* Table for recent signups */}
@@ -274,12 +241,8 @@ const Dashboard = () => {
           .border-left-success { border-left: 0.25rem solid #1cc88a !important; }
           .border-left-info { border-left: 0.25rem solid #36b9cc !important; }
           .border-left-warning { border-left: 0.25rem solid #f95918 !important; }
-<<<<<<< HEAD
           .border-left-secondary { border-left: 0.25rem solid #858796 !important; }
           .border-left-danger { border-left: 0.25rem solid #e74a3b !important; }
-=======
-          .border-left-danger { border-left: 0.25rem solid #e74a3b !important; } /* ✅ for earnings card */
->>>>>>> 758afd2789adcc6cf93d30d1d25f2d672233ed62
           .card { border: 0; border-radius: 0.35rem; transition: transform 0.2s; }
           .card:hover { transform: scale(1.02); cursor: pointer; }
           .shadow { box-shadow: 0 0.15rem 1.75rem 0 rgba(58,59,69,0.15) !important; }

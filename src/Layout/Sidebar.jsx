@@ -20,6 +20,7 @@ import {
   faDedent,
   faRightLeft,
   faTags,
+  faIdCard,
 } from "@fortawesome/free-solid-svg-icons";
 import "./Sidebar.css";
 
@@ -105,6 +106,7 @@ const Sidebar = ({ collapsed, setCollapsed }) => {
     { label: "All Patient", path: "/admin/patient", icon: faUsers },
     { label: "Verification", path: "/admin/verification", icon: faCheckCircle },
     { label: "Plans Manager", path: "/admin/plansManager", icon: faTags },
+    { label: "Plan Details", path: "/admin/BuyPlanDetails", icon:   faIdCard},
     { label: "Appointments", path: "/admin/appointments", icon: faCalendarCheck },
     
   ];

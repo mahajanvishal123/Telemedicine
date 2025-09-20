@@ -21,12 +21,8 @@ const CaregiverProfile = () => {
     profile: "",
     age: "",
     dob: "",
-<<<<<<< HEAD
-    certificate: "", // Holds data URL or server URL
-=======
     certificate: "",       // URL or empty
     certificateName: "",   // ORIGINAL file name we want to show/persist
->>>>>>> 758afd2789adcc6cf93d30d1d25f2d672233ed62
     bloodGroup: ""
   });
 
@@ -44,8 +40,6 @@ const CaregiverProfile = () => {
   // ---------- helpers ----------
   const safeJSON = (txt) => { try { return JSON.parse(txt); } catch { return null; } };
 
-<<<<<<< HEAD
-=======
   // keep a tiny map of original names per caregiver in LS
   const CERT_MAP_KEY = 'cg_cert_names';
   const readCertNameMap = () => safeJSON(localStorage.getItem(CERT_MAP_KEY)) || {};
@@ -72,7 +66,6 @@ const CaregiverProfile = () => {
   };
 
   // login payload usually stored as 'user' with { token, role, user: {...} }
->>>>>>> 758afd2789adcc6cf93d30d1d25f2d672233ed62
   const loginBlob = safeJSON(localStorage.getItem('user')) || {};
   const accessToken =
     localStorage.getItem('accessToken') ||
@@ -92,15 +85,10 @@ const CaregiverProfile = () => {
   const resolveCaregiverId = () => {
     const params = new URLSearchParams(window.location.search);
     const fromQuery = params.get('id');
-<<<<<<< HEAD
-    const fromUserObj = loginBlob?.user?._id || loginBlob?._id || null;
-    const fromJwt = decodeJwtId();
-=======
 
     const fromUserObj = loginBlob?.user?._id || loginBlob?._id || null;
     const fromJwt = decodeJwtId();
 
->>>>>>> 758afd2789adcc6cf93d30d1d25f2d672233ed62
     const cachedProfile = safeJSON(localStorage.getItem('caregiverProfile')) || {};
     const fromCache = cachedProfile?._id || null;
 
@@ -111,18 +99,7 @@ const CaregiverProfile = () => {
       fromCache ||
       null;
 
-<<<<<<< HEAD
-    if (fromUserObj && resolved !== fromUserObj) {
-      localStorage.setItem('caregiverId', fromUserObj);
-    } else if (fromJwt && resolved !== fromJwt) {
-      localStorage.setItem('caregiverId', fromJwt);
-    } else if (resolved) {
-      localStorage.setItem('caregiverId', resolved);
-    }
-
-=======
     if (resolved) localStorage.setItem('caregiverId', resolved);
->>>>>>> 758afd2789adcc6cf93d30d1d25f2d672233ed62
     return resolved;
   };
 
@@ -161,22 +138,15 @@ const CaregiverProfile = () => {
       profile: trimStr(d?.profile) || '',
       age: trimStr(d?.age) || '',
       dob: normalizeDobForInput(d?.dob),
-<<<<<<< HEAD
-      certificate: trimStr(d?.certificate) || '', // Assume it's URL or data URL from server
-=======
       certificate: trimStr(d?.certificate) || '',
       certificateName: finalCertName,
->>>>>>> 758afd2789adcc6cf93d30d1d25f2d672233ed62
       bloodGroup: trimStr(d?.bloodGroup) || ''
     };
 
     setCaregiver(mapped);
     if (mapped.profile) setProfileImage(mapped.profile);
 
-<<<<<<< HEAD
-=======
     // persist to LS for refresh safety
->>>>>>> 758afd2789adcc6cf93d30d1d25f2d672233ed62
     localStorage.setItem('caregiverId', mapped._id);
     localStorage.setItem('caregiverProfile', JSON.stringify(mapped));
 
@@ -202,10 +172,7 @@ const CaregiverProfile = () => {
     };
 
     try {
-<<<<<<< HEAD
-=======
       // Try clean by-id endpoint
->>>>>>> 758afd2789adcc6cf93d30d1d25f2d672233ed62
       try {
         const res1 = await axios.get(`${BASE_URL}/caregiver/${CAREGIVER_ID}`, { headers });
         const d1 = pickFromAnyShapeById(res1, CAREGIVER_ID) || res1?.data;
@@ -215,10 +182,7 @@ const CaregiverProfile = () => {
         }
       } catch { /* continue */ }
 
-<<<<<<< HEAD
-=======
       // Fallback query
->>>>>>> 758afd2789adcc6cf93d30d1d25f2d672233ed62
       const res2 = await axios.get(`${BASE_URL}/caregiver?caregiverId=${CAREGIVER_ID}`, { headers });
       const d2 = pickFromAnyShapeById(res2, CAREGIVER_ID) || res2?.data;
       if (!d2) throw new Error('Caregiver not found');
@@ -308,19 +272,6 @@ const CaregiverProfile = () => {
         // certificate: send file if picked, otherwise keep server-side as is (do not send URL string here)
         if (certificateFile) {
           form.append('certificate', certificateFile, certificateFile.name);
-<<<<<<< HEAD
-        } else if (caregiver.certificate) {
-          if (caregiver.certificate.startsWith('data:')) {
-            const certBlob = dataURLtoBlob(caregiver.certificate);
-            if (certBlob) {
-              const fileName = certificateFile?.name || 'certificate.pdf';
-              form.append('certificate', certBlob, fileName);
-            }
-          } else {
-            form.append('certificate', caregiver.certificate);
-          }
-=======
->>>>>>> 758afd2789adcc6cf93d30d1d25f2d672233ed62
         }
 
         // send original name always (best effort)
@@ -363,30 +314,6 @@ const CaregiverProfile = () => {
       const updatedDoc = pickFromAnyShapeById(res, targetId) || res?.data || {};
       try {
         mapAndSetByDoc(updatedDoc, targetId);
-<<<<<<< HEAD
-      } catch {}
-
-      setIsSaving(false);
-
-      Swal.fire({
-        icon: 'success',
-        title: 'Success!',
-        text: 'Profile updated successfully!',
-        confirmButtonColor: '#F95918',
-        confirmButtonText: 'OK',
-      });
-
-    } catch (err) {
-      console.error('PUT caregiver (by id) failed:', err);
-      setIsSaving(false);
-
-      Swal.fire({
-        icon: 'error',
-        title: 'Oops...',
-        text: err?.response?.data?.message || 'Failed to update profile. Please try again.',
-        confirmButtonColor: '#F95918',
-      });
-=======
       } catch {
         // if server didn't echo, at least persist the chosen name locally
         const name = certificateFile?.name || caregiver.certificateName || '';
@@ -430,7 +357,6 @@ const CaregiverProfile = () => {
       });
 
       setTimeout(() => setShowToast(false), 3500);
->>>>>>> 758afd2789adcc6cf93d30d1d25f2d672233ed62
     }
   };
 
@@ -457,20 +383,11 @@ const CaregiverProfile = () => {
     if (file) {
       // ✅ DO NOT overwrite certificate URL with file.name
       setCertificateFile(file);
-<<<<<<< HEAD
-
-      const reader = new FileReader();
-      reader.onload = (event) => {
-        setCaregiver(prev => ({ ...prev, certificate: event.target.result })); // Store data URL
-      };
-      reader.readAsDataURL(file);
-=======
       setCaregiver(prev => ({
         ...prev,
         certificateName: file.name,  // keep the original name
         // keep prev.certificate as-is (URL will come from server after upload)
       }));
->>>>>>> 758afd2789adcc6cf93d30d1d25f2d672233ed62
     }
   };
 
@@ -698,11 +615,7 @@ const CaregiverProfile = () => {
                               <input
                                 type="text"
                                 className="form-control"
-<<<<<<< HEAD
-                                value={caregiver.certificate ? "File uploaded" : "No file chosen"}
-=======
                                 value={certificateDisplayName}
->>>>>>> 758afd2789adcc6cf93d30d1d25f2d672233ed62
                                 readOnly
                               />
                               <button
@@ -840,11 +753,6 @@ const CaregiverProfile = () => {
         .btn-save:hover:before { left:100%; }
         .btn-save:hover { background:#e04f15; transform: translateY(-2px); box-shadow:0 5px 15px rgba(249,89,24,.4); }
         .btn-save:disabled { background:#6c757d; }
-<<<<<<< HEAD
-        .certificate-actions .btn {
-          padding: 4px 10px;
-          font-size: 13px;
-=======
         .btn-choose-file { background:#F95918; color:white; border:1px solid #F95918; padding:8px 16px; border-radius:8px; font-weight:600; font-size:14px; transition:all .3s ease; position:relative; overflow:hidden; }
         .btn-choose-file:before { content:''; position:absolute; top:0; left:-100%; width:100%; height:100%; background:linear-gradient(90deg,transparent,rgba(255,255,255,.4),transparent); transition:left .7s ease; }
         .btn-choose-file:hover:before { left:100%; }
@@ -871,7 +779,6 @@ const CaregiverProfile = () => {
           font-size: 18px;
           color: #6c757d;
           border-radius: 6px;
->>>>>>> 758afd2789adcc6cf93d30d1d25f2d672233ed62
         }
         .certificate-actions .btn i {
           font-size: 14px;
